@@ -40,9 +40,26 @@
 
   window.addEventListener('hashchange', route);
 
-  /* Menú de usuario */
+  /* Menú de usuario con los datos de la sesión */
   var userBtn = document.querySelector('[data-action="toggle-user"]');
   var userMenu = document.getElementById('user-menu');
+  var session = window.ZAuth && ZAuth.current();
+  if (session) {
+    var exp = new Date(session.exp);
+    userBtn.textContent = session.name + ' · ' + session.role;
+    document.getElementById('user-name').textContent = session.name;
+    document.getElementById('user-meta').textContent = session.role + ' · ' + session.email;
+    document.getElementById('user-exp').textContent = 'Tu sesión vence a las ' + String(exp.getHours()).padStart(2, '0') + ':' + String(exp.getMinutes()).padStart(2, '0') + ' h.';
+  }
+  document.querySelector('[data-action="logout"]').addEventListener('click', function () {
+    Z.confirm({
+      icon: 'arrow-ur', safe: true,
+      title: '¿Cerrar sesión?',
+      lead: 'Los cambios que hiciste en este entorno de diseño se perderán al salir.',
+      cancel: 'Seguir en el panel', confirm: 'Cerrar sesión',
+      onConfirm: function () { ZAuth.logout(); }
+    });
+  });
   function setUser(open) { userMenu.hidden = !open; userBtn.setAttribute('aria-expanded', String(open)); }
   userBtn.addEventListener('click', function (e) { e.stopPropagation(); setUser(userMenu.hidden); });
   document.addEventListener('click', function (e) { if (!userMenu.hidden && !e.target.closest('.user')) setUser(false); });

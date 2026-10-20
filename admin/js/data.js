@@ -2,7 +2,7 @@
 window.Z = window.Z || {};
 
 Z.TODAY = '2026-10-20';
-Z.IMG = '../img/';
+Z.IMG = '../assets/img/';
 
 Z.ZONES = ['Arbolada', 'Residencial Cumbres', 'Santa Fe', 'Lagos del Sol', 'Aqua Residencial', 'Jardines del Sur', 'Huayacán'];
 Z.TYPES = ['Casa', 'Casa en condominio', 'Townhouse'];

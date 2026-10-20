@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="../assets/css/styles.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -44,13 +44,15 @@
   <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17v4M17 19h4"/></symbol>
   <symbol id="i-ig" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></symbol>
   <symbol id="i-fb" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
 </svg>
 
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
 
 <header class="site-header">
   <div class="container site-header__inner">
-    <a class="logo" href="index.html" aria-label="Zugar Inmobiliaria, ir al inicio">
+    <a class="logo" href="../index.html" aria-label="Zugar Inmobiliaria, ir al inicio">
       <span class="logo__name">Zugar<span class="logo__dot">.</span></span>
       <span class="logo__tag">Inmobiliaria · Cancún</span>
     </a>
@@ -67,7 +69,6 @@
       </ul>
       <div class="site-nav__actions">
         <a class="btn btn--on-dark" href="https://wa.me/529985550142?text=Hola%2C%20busco%20una%20casa%20en%20Canc%C3%BAn." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>Escríbenos por WhatsApp</a>
-        <a class="btn btn--gold" href="agendar-cita.html"><svg class="icon" aria-hidden="true"><use href="#i-cal"/></svg>Agendar cita</a>
       </div>
     </nav>
   </div>
@@ -78,7 +79,7 @@
     <div class="detail-top" style="padding-top:1.5rem">
       <nav class="breadcrumb" aria-label="Ruta de navegación">
         <ol>
-          <li><a href="index.html">Inicio</a></li>
+          <li><a href="../index.html">Inicio</a></li>
           <li><a href="propiedades.html?operacion=venta">Venta</a></li>
           <li><a href="propiedades.html?operacion=venta&amp;tipo=casa">Casas</a></li>
           <li><a href="propiedades.html?operacion=venta&amp;zona=huayacan">Huayacán</a></li>
@@ -104,13 +105,13 @@
 
     <div class="gallery">
       <div class="gallery__main">
-        <div class="photo"><img src="img/huayacan-01.jpg" alt="Sala y comedor a doble altura con ventanales hacia el jardín" loading="lazy"></div>
+        <div class="photo"><img src="../assets/img/huayacan-01.jpg" alt="Sala y comedor a doble altura con ventanales hacia el jardín" loading="lazy"></div>
         <span class="gallery__count"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-images"/></svg>1 / 20 fotos</span>
       </div>
-      <div class="gallery__side"><div class="photo"><img src="img/huayacan-02.jpg" alt="Cocina integral de madera con barra y ventana al jardín" loading="lazy"></div></div>
-      <div class="gallery__side"><div class="photoedroom"><img src="img/huayacan-03.jpg" alt="Recámara principal con cama matrimonial y luz natural" loading="lazy"></div></div>
+      <div class="gallery__side"><div class="photo"><img src="../assets/img/huayacan-02.jpg" alt="Cocina integral de madera con barra y ventana al jardín" loading="lazy"></div></div>
+      <div class="gallery__side"><div class="photoedroom"><img src="../assets/img/huayacan-03.jpg" alt="Recámara principal con cama matrimonial y luz natural" loading="lazy"></div></div>
       <div class="gallery__wide">
-        <div class="photo"><img src="img/huayacan-04.jpg" alt="Alberca de la casa club del residencial, rodeada de palmeras" loading="lazy"></div>
+        <div class="photo"><img src="../assets/img/huayacan-04.jpg" alt="Alberca de la casa club del residencial, rodeada de palmeras" loading="lazy"></div>
         <a class="btn btn--white gallery__all" href="#galeria"><svg class="icon" aria-hidden="true"><use href="#i-grid"/></svg>Ver las 20 fotos</a>
       </div>
     </div>
@@ -174,13 +175,11 @@
         <section aria-labelledby="zona-titulo">
           <h2 id="zona-titulo">Conoce la zona</h2>
           <p class="muted" style="margin-top:-0.75rem;margin-bottom:1.25rem">Huayacán, Cancún · Una zona para conectar con todo.</p>
-          <!-- Reemplazar por <iframe src="https://www.google.com/maps/embed?..." title="Mapa de Huayacán, Cancún" loading="lazy"></iframe> -->
-          <div class="map map--zone" role="img" aria-label="Mapa con la ubicación aproximada de la casa en Huayacán">
-            <span class="map__label">Huayacán · Cancún</span>
-            <div class="map__zoom" aria-hidden="true"><span><svg class="icon icon--sm"><use href="#i-plus"/></svg></span><span><svg class="icon icon--sm"><use href="#i-minus"/></svg></span></div>
-            <span class="pin-dot" style="left:50%;top:50%"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></span>
+          <!-- Mapa en vivo de Google Maps. Para la ubicación exacta, cambia el texto de q= por la dirección o por "latitud,longitud". -->
+          <div class="map map--zone">
+            <iframe src="https://maps.google.com/maps?q=Avenida%20Huayac%C3%A1n%2C%20Canc%C3%BAn%2C%20Quintana%20Roo&amp;z=14&amp;hl=es&amp;output=embed" title="Mapa de Google con la zona de Huayacán, Cancún" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
           </div>
-          <p class="map-note"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-info"/></svg>Ubicación aproximada para proteger la privacidad del inmueble.</p>
+          <p class="map-note"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-info"/></svg>Ubicación aproximada para proteger la privacidad del inmueble. <a href="https://www.google.com/maps/search/?api=1&amp;query=Avenida%20Huayac%C3%A1n%2C%20Canc%C3%BAn%2C%20Quintana%20Roo" target="_blank" rel="noopener">Abrir en Google Maps</a></p>
           <ul class="distances">
             <li><span>Escuelas</span><span>5 min</span></li>
             <li><span>Supermercado</span><span>7 min</span></li>
@@ -228,37 +227,126 @@
 
       <aside class="agent-card" id="contactar" aria-labelledby="agente-titulo">
         <h2 id="agente-titulo">¿Te imaginas viviendo aquí?</h2>
-        <p>Agenda una visita o resuelve tus dudas.</p>
+        <p>Agenda una visita a esta casa. Mariana te confirmará el día y la hora.</p>
         <div class="agent">
-          <div class="photo photo--portrait"><img src="img/asesora-mariana-solis.jpg" alt="Fotografía de Mariana Solís, asesora inmobiliaria" loading="lazy"></div>
+          <div class="photo photo--portrait"><img src="../assets/img/asesora-mariana-solis.jpg" alt="Fotografía de Mariana Solís, asesora inmobiliaria" loading="lazy"></div>
           <div>
             <strong>Mariana Solís</strong>
             <span>Asesora · Zugar Inmobiliaria</span>
             <span class="verified"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-check-c"/></svg>Asesora certificada</span>
           </div>
         </div>
-        <form action="#" method="post">
+        <form class="booking-form booking-form--card" data-exito="gracias" data-casa="casa-huayacan" action="#" method="post">
           <input type="hidden" name="propiedad" value="ZUG-HUA-024">
-          <div class="field">
-            <label class="field__label" for="a-nombre">Nombre completo</label>
-            <input class="input" id="a-nombre" name="nombre" type="text" autocomplete="name" placeholder="Tu nombre y apellidos" required>
+          <div class="alert alert-error alert--on-invalid" role="alert">
+            <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+            <div><strong>Revisa los campos señalados</strong>Tu solicitud aún no se ha enviado. Lo que escribiste se conserva.</div>
           </div>
-          <div class="field">
-            <label class="field__label" for="a-correo">Correo electrónico</label>
-            <input class="input" id="a-correo" name="correo" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" required>
-            <p class="field__error"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-alert"/></svg>Escribe un correo válido.</p>
+
+          <fieldset>
+            <legend>1. Tus datos</legend>
+            <div class="form-grid">
+              <div class="field">
+                <label class="field__label" for="b-nombre">Nombre completo *</label>
+                <input class="input" id="b-nombre" name="nombre" type="text" autocomplete="name" placeholder="Nombre y apellidos" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-correo">Correo electrónico *</label>
+                <input class="input" id="b-correo" name="correo" type="email" autocomplete="email" placeholder="tu@correo.com" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-tel">Teléfono <span class="opt">(opcional)</span></label>
+                <input class="input" id="b-tel" name="telefono" type="tel" autocomplete="tel" placeholder="998 000 0000">
+                <p class="field__help">Para confirmar tu visita por WhatsApp.</p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-nacionalidad">Nacionalidad *</label>
+                <input class="input" id="b-nacionalidad" name="nacionalidad" type="text" autocomplete="country-name" placeholder="Mexicana" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-trabajo">¿En qué trabajas? *</label>
+                <input class="input" id="b-trabajo" name="ocupacion" type="text" autocomplete="organization-title" placeholder="Por ejemplo: diseño de interiores" required>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>2. Esta casa</legend>
+            <div class="form-grid">
+              <div class="field">
+                <label class="field__label" for="b-casa-ref">Casa de interés</label>
+                <input class="input" id="b-casa-ref" type="text" value="Casa con jardín en Huayacán · ZUG-HUA-024" readonly>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-presupuesto">Presupuesto aproximado *</label>
+                <input class="input" id="b-presupuesto" name="presupuesto" type="text" inputmode="numeric" placeholder="$3,900,000 MXN" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-pago">¿Cómo planeas comprar? *</label>
+                <select class="select" id="b-pago" name="forma_pago" required>
+                  <option value="">Elige una opción</option>
+                  <option value="contado">De contado</option>
+                  <option value="credito-bancario">Crédito bancario</option>
+                  <option value="infonavit">Infonavit o Fovissste</option>
+                  <option value="no-se">Aún no lo sé</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-personas">Personas que vivirán en la casa *</label>
+                <select class="select" id="b-personas" name="personas" required>
+                  <option value="1">1</option>
+                  <option value="2" selected>2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5 o más</option>
+                </select>
+              </div>
+              <fieldset class="field">
+                <legend class="field__label">¿Tienes mascotas? *</legend>
+                <div class="choice-group">
+                  <label class="choice"><input type="radio" id="mascotas-si" name="mascotas" value="si" required><span>Sí</span></label>
+                  <label class="choice"><input type="radio" id="mascotas-no" name="mascotas" value="no"><span>No</span></label>
+                </div>
+              </fieldset>
+              <div class="field pets-detail">
+                <label class="field__label" for="b-cuales">¿Cuáles y cuántas mascotas?</label>
+                <input class="input" id="b-cuales" name="mascotas_detalle" type="text" placeholder="Por ejemplo: 1 perro pequeño">
+                <p class="field__help">Esta casa acepta mascotas.</p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>3. Elige un momento</legend>
+            <div class="form-grid">
+              <div class="field">
+                <label class="field__label" for="b-fecha">Fecha preferida *</label>
+                <input class="input" id="b-fecha" name="fecha" type="date" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-hora">Horario *</label>
+                <select class="select" id="b-hora" name="horario" required>
+                  <option value="">Elige un horario</option>
+                  <option value="10:00">10:00 h</option>
+                  <option value="11:30">11:30 h</option>
+                  <option value="13:00">13:00 h</option>
+                  <option value="16:00">16:00 h</option>
+                  <option value="17:30">17:30 h</option>
+                </select>
+                <p class="field__help">La visita es en la casa y dura unos 45 minutos.</p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-comentarios">Comentarios <span class="opt">(opcional)</span></label>
+                <textarea class="textarea" id="b-comentarios" name="comentarios" rows="3" placeholder="Por ejemplo: nos gustaría ver el jardín por la mañana."></textarea>
+              </div>
+            </div>
+          </fieldset>
+
+          <label class="check"><input type="checkbox" name="privacidad" required><span>Acepto el <a href="contacto.html#aviso-privacidad">aviso de privacidad</a> y que me contacten sobre esta propiedad.</span></label>
+          <div class="form-actions">
+            <button class="btn btn--lg btn--block" type="submit">Revisar solicitud<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <a class="btn btn--secondary btn--lg btn--block" href="https://wa.me/529985550142?text=Hola%20Mariana%2C%20me%20interesa%20la%20casa%20ZUG-HUA-024%20en%20Huayac%C3%A1n." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>Prefiero WhatsApp</a>
           </div>
-          <div class="field">
-            <label class="field__label" for="a-tel">Teléfono</label>
-            <input class="input" id="a-tel" name="telefono" type="tel" autocomplete="tel" placeholder="+52 · 10 dígitos" required>
-          </div>
-          <div class="field">
-            <label class="field__label" for="a-msg">Mensaje</label>
-            <textarea class="textarea" id="a-msg" name="mensaje" rows="4">Hola, me interesa esta casa en Huayacán. Me gustaría recibir más información y agendar una visita.</textarea>
-          </div>
-          <label class="check"><input type="checkbox" name="privacidad" required>Acepto el <a href="contacto.html#aviso-privacidad">aviso de privacidad</a> y que me contacten sobre esta propiedad.</label>
-          <button class="btn btn--lg" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg>Contactar</button>
-          <a class="btn btn--secondary btn--lg" href="https://wa.me/529985550142?text=Hola%20Mariana%2C%20me%20interesa%20la%20casa%20ZUG-HUA-024%20en%20Huayac%C3%A1n." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
           <p class="secure"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-shield"/></svg>Tus datos se comparten solo con tu asesora.</p>
         </form>
       </aside>
@@ -277,7 +365,7 @@
       <div class="carousel" tabindex="0" aria-label="Casas similares, desliza para ver más">
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-del-patio.jpg" alt="Terraza con pérgola de madera y jardín de Casa del Patio" loading="lazy"></div>
+            <div class="photo"><img src="../assets/img/casa-del-patio.jpg" alt="Terraza con pérgola de madera y jardín de Casa del Patio" loading="lazy"></div>
             <span class="badge badge--light">En venta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa del Patio en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
@@ -300,7 +388,7 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-kanan.jpg" alt="Casa Kanán, fachada blanca con detalles de madera" loading="lazy"></div>
+            <div class="photo"><img src="../assets/img/casa-kanan.jpg" alt="Casa Kanán, fachada blanca con detalles de madera" loading="lazy"></div>
             <span class="badge badge--light">En venta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa Kanán en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
@@ -323,7 +411,7 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-almendra.jpg" alt="Casa Almendra con cochera y jardín frontal" loading="lazy"></div>
+            <div class="photo"><img src="../assets/img/casa-almendra.jpg" alt="Casa Almendra con cochera y jardín frontal" loading="lazy"></div>
             <span class="badge badge--light">En venta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa Almendra en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
@@ -346,7 +434,7 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-de-la-luz.jpg" alt="Casa de la Luz, residencia de dos niveles con grandes ventanales" loading="lazy"></div>
+            <div class="photo"><img src="../assets/img/casa-de-la-luz.jpg" alt="Casa de la Luz, residencia de dos niveles con grandes ventanales" loading="lazy"></div>
             <span class="badge badge--light">En venta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa de la Luz en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
@@ -381,26 +469,26 @@
         <a class="lightbox__close" href="#contenido" aria-label="Cerrar galería"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-x"/></svg></a>
       </div>
       <div class="lightbox__grid">
-        <figure><div class="photo"><img src="img/huayacan-01.jpg" alt="Sala y comedor a doble altura" loading="lazy"></div><figcaption>01 · Sala y comedor: espacios que se abren al jardín</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-02.jpg" alt="Cocina integral" loading="lazy"></div><figcaption>02 · Cocina integral con barra</figcaption></figure>
-        <figure><div class="photoedroom"><img src="img/huayacan-03.jpg" alt="Recámara principal" loading="lazy"></div><figcaption>03 · Recámara principal con vestidor</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-04.jpg" alt="Alberca de la casa club" loading="lazy"></div><figcaption>04 · Alberca de la casa club</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-05.jpg" alt="Fachada principal" loading="lazy"></div><figcaption>05 · Fachada principal</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-06.jpg" alt="Comedor junto al ventanal" loading="lazy"></div><figcaption>06 · Comedor junto al ventanal</figcaption></figure>
-        <figure><div class="photoedroom"><img src="img/huayacan-07.jpg" alt="Segunda recámara" loading="lazy"></div><figcaption>07 · Segunda recámara</figcaption></figure>
-        <figure><div class="photoedroom"><img src="img/huayacan-08.jpg" alt="Tercera recámara" loading="lazy"></div><figcaption>08 · Tercera recámara</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-09.jpg" alt="Jardín privado" loading="lazy"></div><figcaption>09 · Jardín privado</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-10.jpg" alt="Escalera de madera y doble altura" loading="lazy"></div><figcaption>10 · Escalera de madera y doble altura</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-11.jpg" alt="Barra de desayuno" loading="lazy"></div><figcaption>11 · Barra de desayuno</figcaption></figure>
-        <figure><div class="photoedroom"><img src="img/huayacan-12.jpg" alt="Baño de la recámara principal" loading="lazy"></div><figcaption>12 · Baño de la recámara principal</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-13.jpg" alt="Estancia familiar en planta alta" loading="lazy"></div><figcaption>13 · Estancia familiar en planta alta</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-14.jpg" alt="Terraza techada con vista al jardín" loading="lazy"></div><figcaption>14 · Terraza techada</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-15.jpg" alt="Cochera para dos autos" loading="lazy"></div><figcaption>15 · Cochera para dos autos</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-16.jpg" alt="Casa club del residencial" loading="lazy"></div><figcaption>16 · Casa club del residencial</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-17.jpg" alt="Camastros junto a la alberca" loading="lazy"></div><figcaption>17 · Camastros junto a la alberca</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-18.jpg" alt="Áreas verdes del residencial" loading="lazy"></div><figcaption>18 · Áreas verdes del residencial</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-19.jpg" alt="Acceso controlado al residencial" loading="lazy"></div><figcaption>19 · Acceso controlado</figcaption></figure>
-        <figure><div class="photo"><img src="img/huayacan-20.jpg" alt="Calle interior del residencial al atardecer" loading="lazy"></div><figcaption>20 · Calle interior al atardecer</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-01.jpg" alt="Sala y comedor a doble altura" loading="lazy"></div><figcaption>01 · Sala y comedor: espacios que se abren al jardín</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-02.jpg" alt="Cocina integral" loading="lazy"></div><figcaption>02 · Cocina integral con barra</figcaption></figure>
+        <figure><div class="photoedroom"><img src="../assets/img/huayacan-03.jpg" alt="Recámara principal" loading="lazy"></div><figcaption>03 · Recámara principal con vestidor</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-04.jpg" alt="Alberca de la casa club" loading="lazy"></div><figcaption>04 · Alberca de la casa club</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-05.jpg" alt="Fachada principal" loading="lazy"></div><figcaption>05 · Fachada principal</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-06.jpg" alt="Comedor junto al ventanal" loading="lazy"></div><figcaption>06 · Comedor junto al ventanal</figcaption></figure>
+        <figure><div class="photoedroom"><img src="../assets/img/huayacan-07.jpg" alt="Segunda recámara" loading="lazy"></div><figcaption>07 · Segunda recámara</figcaption></figure>
+        <figure><div class="photoedroom"><img src="../assets/img/huayacan-08.jpg" alt="Tercera recámara" loading="lazy"></div><figcaption>08 · Tercera recámara</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-09.jpg" alt="Jardín privado" loading="lazy"></div><figcaption>09 · Jardín privado</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-10.jpg" alt="Escalera de madera y doble altura" loading="lazy"></div><figcaption>10 · Escalera de madera y doble altura</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-11.jpg" alt="Barra de desayuno" loading="lazy"></div><figcaption>11 · Barra de desayuno</figcaption></figure>
+        <figure><div class="photoedroom"><img src="../assets/img/huayacan-12.jpg" alt="Baño de la recámara principal" loading="lazy"></div><figcaption>12 · Baño de la recámara principal</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-13.jpg" alt="Estancia familiar en planta alta" loading="lazy"></div><figcaption>13 · Estancia familiar en planta alta</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-14.jpg" alt="Terraza techada con vista al jardín" loading="lazy"></div><figcaption>14 · Terraza techada</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-15.jpg" alt="Cochera para dos autos" loading="lazy"></div><figcaption>15 · Cochera para dos autos</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-16.jpg" alt="Casa club del residencial" loading="lazy"></div><figcaption>16 · Casa club del residencial</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-17.jpg" alt="Camastros junto a la alberca" loading="lazy"></div><figcaption>17 · Camastros junto a la alberca</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-18.jpg" alt="Áreas verdes del residencial" loading="lazy"></div><figcaption>18 · Áreas verdes del residencial</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-19.jpg" alt="Acceso controlado al residencial" loading="lazy"></div><figcaption>19 · Acceso controlado</figcaption></figure>
+        <figure><div class="photo"><img src="../assets/img/huayacan-20.jpg" alt="Calle interior del residencial al atardecer" loading="lazy"></div><figcaption>20 · Calle interior al atardecer</figcaption></figure>
       </div>
     </div>
   </div>
@@ -429,7 +517,6 @@
           <li><a href="propiedades.html?operacion=venta">Casas en venta</a></li>
           <li><a href="como-trabajamos.html">Cómo trabajamos</a></li>
           <li><a href="contacto.html">Contáctanos</a></li>
-          <li><a href="agendar-cita.html">Agendar cita</a></li>
         </ul>
       </nav>
       <div>
@@ -438,7 +525,7 @@
           <li><a href="tel:+529985550142"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-phone"/></svg>+52 998 555 0142</a></li>
           <li><a href="mailto:hola@zugar.mx"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-mail"/></svg>hola@zugar.mx</a></li>
           <li><span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-clock"/></svg>Lun–vie 9:00–18:00 · Sáb 10:00–14:00</span></li>
-          <li><span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-pin"/></svg>Av. Huayacán 125, Cancún, Q. Roo</span></li>
+          <li><span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-pin"/></svg>Cancún, Quintana Roo · Atención en línea y en cada casa</span></li>
         </ul>
       </div>
     </div>
@@ -451,5 +538,6 @@
     </div>
   </div>
 </footer>
+<script src="../assets/js/main.js" defer></script>
 </body>
 </html>

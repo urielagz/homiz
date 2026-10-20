@@ -610,12 +610,7 @@ form:has(:user-invalid) .alert--on-invalid { display: flex; }
 .map {
   position: relative; overflow: hidden;
   border-radius: var(--radio-card);
-  background:
-    radial-gradient(ellipse 60% 120% at 112% 50%, #BFE0EC 0 70%, transparent 70.5%),
-    repeating-linear-gradient(72deg, transparent 0 58px, #FFFFFF 58px 66px),
-    repeating-linear-gradient(-18deg, transparent 0 70px, #FFFFFF 70px 77px),
-    linear-gradient(28deg, transparent 0 46%, #F6E7B9 46% 49%, transparent 49%),
-    #E6ECE4;
+  background: var(--superficie);
 }
 .map iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .map--listing { aspect-ratio: 4 / 5.2; }
@@ -788,7 +783,8 @@ form:has(:user-invalid) .alert--on-invalid { display: flex; }
 .lightbox__grid figure:first-child { grid-column: 1 / -1; }
 .lightbox__grid .photo { border-radius: var(--radio-control); }
 .lightbox__grid figcaption { margin-top: 0.5rem; font-size: var(--fs-sm); color: rgba(255, 255, 255, 0.75); }
-body:has(.lightbox:target) { overflow: hidden; }
+body:has(.lightbox:target:not(.is-closed)) { overflow: hidden; }
+.lightbox.is-closed { display: none; }
 
 /* ---------- 16. Confirmación ---------- */
 .thanks { padding-block: clamp(2.5rem, 2rem + 3vw, 5rem); background: var(--superficie); }
@@ -1003,6 +999,98 @@ body:has(.lightbox:target) { overflow: hidden; }
   .filters__grid { grid-template-columns: 1fr; }
 }
 
+/* ---------- 21. Comportamiento con JavaScript (js/main.js) ---------- */
+[hidden] { display: none !important; }
+.alert.is-visible { display: flex; }
+.btn:disabled, .btn[aria-busy="true"] { opacity: 0.6; cursor: progress; }
+.btn-icon:disabled { opacity: 0.4; cursor: default; }
+.btn-icon:disabled:hover { background: var(--blanco); border-color: var(--borde); }
+
+/* Avisos flotantes */
+.site-toasts { position: fixed; left: 50%; bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); z-index: 90; display: grid; gap: 0.5rem; width: min(92vw, 420px); transform: translateX(-50%); }
+.site-toast { padding: 0.875rem 1.125rem; border-radius: var(--radio-control); background: var(--marino); color: var(--blanco); font-size: var(--fs-sm); box-shadow: var(--sombra-lg); animation: toast-in 200ms ease; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* Diálogo de revisión */
+.site-dialog { width: min(92vw, 520px); max-height: 90vh; padding: 0; border: 0; border-radius: var(--radio-card); box-shadow: var(--sombra-lg); color: var(--texto); }
+.site-dialog::backdrop { background: rgba(11, 42, 91, 0.5); }
+.site-dialog__body { padding: clamp(1.25rem, 1rem + 2vw, 2rem); }
+.site-dialog h2 { font-size: var(--fs-xl); }
+.dlg-lead { margin-top: 0.5rem; color: var(--texto-suave); font-size: var(--fs-sm); }
+.review { display: grid; gap: 0; margin-top: 1.25rem; border-top: 1px solid var(--borde); }
+.review div { display: grid; grid-template-columns: 9.5rem 1fr; gap: 1rem; padding-block: 0.625rem; border-bottom: 1px solid var(--borde); font-size: var(--fs-sm); }
+.review dt { color: var(--texto-suave); }
+.review dd { font-weight: 600; color: var(--marino); }
+.dlg-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+
+/* Listado: vista de lista, vista de mapa y estado vacío */
+.cards--list { grid-template-columns: 1fr; }
+@media (min-width: 761px) {
+  .cards--list .card { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); grid-template-rows: auto 1fr; }
+  .cards--list .card__media { grid-row: 1 / 3; }
+  .cards--list .card__media .photo { height: 100%; aspect-ratio: auto; min-height: 220px; }
+}
+.listing-layout.is-map-view { grid-template-columns: 1fr; }
+.listing-layout.is-map-view .listing-aside { order: -1; position: static; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.listing-layout.is-map-view .map--listing { aspect-ratio: 16 / 8; }
+.listing-empty { grid-column: 1 / -1; padding: clamp(2rem, 1.5rem + 3vw, 3.5rem); border: 1px dashed var(--borde-fuerte); border-radius: var(--radio-card); text-align: center; }
+.listing-empty h3 { font-size: var(--fs-xl); }
+.listing-empty p { margin-top: 0.75rem; color: var(--texto-suave); }
+.listing-empty__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-top: 1.5rem !important; }
+
+@media (max-width: 760px) {
+  .review div { grid-template-columns: 1fr; gap: 0.125rem; }
+  .dlg-actions .btn { width: 100%; }
+  .listing-layout.is-map-view .listing-aside { grid-template-columns: 1fr; }
+}
+
+/* ---------- 22. Solicitud de visita (inicio, contacto y ficha) ---------- */
+.booking__aside { position: sticky; top: 1.5rem; display: grid; gap: 1.25rem; align-self: start; }
+.booking__aside .summary { position: static; }
+.summary h3 { margin-top: 1.25rem; font-size: var(--fs-xl); }
+.side-card { padding: 1.5rem; border: 1px solid var(--borde); border-radius: var(--radio-card); background: var(--blanco); box-shadow: var(--sombra-sm); }
+.side-card h2, .side-card h3 { font-size: var(--fs-lg); margin-bottom: 1rem; }
+.side-card__list { display: grid; gap: 0.5rem; }
+.side-card__list a, .side-card__list span { display: flex; align-items: center; gap: 0.625rem; min-height: 40px; color: var(--marino); font-size: var(--fs-sm); text-decoration: none; }
+.side-card__list a:hover { color: var(--accion); text-decoration: underline; }
+.side-card__list .icon { color: var(--accion); }
+.side-card__note { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--borde); font-size: var(--fs-xs); color: var(--texto-suave); }
+.form-title { margin-bottom: 1.25rem; font-size: var(--fs-xl); }
+.choice-group--wrap .choice span { min-height: 48px; }
+.booking-form .alert { margin-bottom: 1.25rem; }
+.booking-form .form-actions + .btn { margin-top: 1rem; }
+/* Solicitud de visita dentro de «¿Te imaginas viviendo aquí?» (ficha) */
+.agent-card { position: static; }
+.booking-form--card { display: grid; gap: 1.25rem; }
+.booking-form--card > fieldset { padding: 0; border: 0; border-radius: 0; background: none; }
+.booking-form--card > fieldset + fieldset { margin-top: 0; padding-top: 1.25rem; border-top: 1px solid var(--borde); }
+.booking-form--card > fieldset > legend { margin-bottom: 0.875rem; font-size: var(--fs-md); }
+.booking-form--card .form-grid { grid-template-columns: 1fr; gap: 0.875rem; }
+.booking-form--card .form-actions { display: grid; gap: 0.625rem; margin-top: 0; }
+.booking-form--card .alert { margin-bottom: 0; }
+.booking-form--card input[readonly] { background: var(--superficie); color: var(--marino); font-weight: 600; }
+.agent-form__step { margin-top: 0.25rem; font-family: var(--font-serif); font-size: var(--fs-md); color: var(--marino); }
+.agent-form__group { display: grid; gap: 0.75rem; }
+.agent-form .form-grid { gap: 0.75rem; }
+
+/* Lista de ubicaciones junto al mapa del listado */
+.map-places { padding: 1.25rem; border: 1px solid var(--borde); border-radius: var(--radio-card); background: var(--blanco); }
+.map-places__title { margin-bottom: 0.75rem; font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-suave); }
+.map-places ul { display: grid; gap: 0.375rem; margin-bottom: 1rem; }
+.map-places a, .map-places button {
+  display: flex; width: 100%; min-height: 40px; align-items: center; gap: 0.5rem; padding: 0.375rem 0.75rem;
+  border: 1px solid transparent; border-radius: var(--radio-control); background: var(--superficie);
+  color: var(--marino); font-size: var(--fs-sm); text-align: left; text-decoration: none; cursor: pointer;
+}
+.map-places a:hover, .map-places button:hover { border-color: var(--accion-100); background: var(--accion-50); }
+.map-places button[aria-pressed="true"] { border-color: var(--accion); background: var(--accion-50); color: var(--accion); font-weight: 600; }
+.map-places .link-arrow { display: inline-flex; width: auto; padding: 0; background: none; min-height: 0; }
+.map-places .link-arrow:hover { background: none; border-color: transparent; }
+
+@media (max-width: 980px) {
+  .booking__aside { position: static; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }

@@ -8,7 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="js/auth.js"></script>
+  <script>ZAuth.require();</script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -55,12 +57,13 @@
     <a href="../index.html" target="_blank" rel="noopener">Ver sitio público <svg class="icon icon--sm" aria-hidden="true"><use href="#i-arrow-ur"/></svg></a>
     <a href="#" data-action="open-help">Ayuda</a>
     <div class="user">
-      <button class="user__btn" type="button" aria-expanded="false" aria-controls="user-menu" data-action="toggle-user">Lucía Méndez · Administradora</button>
+      <button class="user__btn" type="button" aria-expanded="false" aria-controls="user-menu" data-action="toggle-user" id="user-btn">Lucía Méndez · Administradora</button>
       <div class="user__menu" id="user-menu" hidden>
-        <strong>Lucía Méndez</strong>
-        <p>Administradora · lucia@zugar.example</p>
+        <strong id="user-name">Lucía Méndez</strong>
+        <p id="user-meta">Administradora · lucia@zugar.example</p>
         <hr>
-        <p>Sesión iniciada hoy a las 08:30 h desde Cancún.</p>
+        <p id="user-exp">Sesión activa.</p>
+        <button class="btn btn--secondary btn--sm" type="button" data-action="logout">Cerrar sesión</button>
       </div>
     </div>
   </nav>

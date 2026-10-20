@@ -224,7 +224,7 @@
     root.innerHTML =
       Z.crumbs([['Administración', '#/resumen'], ['Propiedades', '#/propiedades'], [p.id]]) +
       Z.pageHead(p.name, Z.esc(p.zone) + ', Cancún · ' + Z.esc(p.street) + ' · ' + p.id,
-        '<a class="btn btn--secondary" href="../propiedad.html" target="_blank" rel="noopener">Ver publicación ' + Z.icon('arrow-ur', 'icon--sm') + '</a><a class="btn" href="#/propiedades/' + p.id + '/editar">Editar propiedad</a>') +
+        '<a class="btn btn--secondary" href="../paginas/propiedad.html" target="_blank" rel="noopener">Ver publicación ' + Z.icon('arrow-ur', 'icon--sm') + '</a><a class="btn" href="#/propiedades/' + p.id + '/editar">Editar propiedad</a>') +
       '<div class="status-line"><span class="badge badge--marino">Casa en ' + Z.opLabel(p).toLowerCase() + '</span>' + Z.statusBadge(p.status) +
         '<span>' + (p.published ? 'Publicada el ' + Z.dateShort(p.published) + ' 2026 · ' : 'Sin publicar · ') + 'Actualizada ' + Z.esc(p.updated.charAt(0).toLowerCase() + p.updated.slice(1)) + '</span></div>' +
       gallery +

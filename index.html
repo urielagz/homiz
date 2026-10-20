@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -76,13 +76,12 @@
     </label>
     <nav class="site-nav" aria-label="Principal">
       <ul class="site-nav__links">
-        <li><a href="propiedades.html">Propiedades</a></li>
-        <li><a href="como-trabajamos.html">Cómo trabajamos</a></li>
-        <li><a href="contacto.html">Contáctanos</a></li>
+        <li><a href="paginas/propiedades.html">Propiedades</a></li>
+        <li><a href="paginas/como-trabajamos.html">Cómo trabajamos</a></li>
+        <li><a href="paginas/contacto.html">Contáctanos</a></li>
       </ul>
       <div class="site-nav__actions">
         <a class="btn btn--on-dark" href="https://wa.me/529985550142?text=Hola%2C%20busco%20una%20casa%20en%20Canc%C3%BAn." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>Escríbenos por WhatsApp</a>
-        <a class="btn btn--gold" href="agendar-cita.html"><svg class="icon" aria-hidden="true"><use href="#i-cal"/></svg>Agendar cita</a>
       </div>
     </nav>
   </div>
@@ -98,7 +97,7 @@
           <span class="eyebrow">Casas en Cancún · Renta y venta</span>
           <h1 id="hero-titulo">Tu próxima casa. Tu ritmo de vida.</h1>
           <p>Somos una inmobiliaria pequeña de Cancún. Te atendemos de forma directa, sin intermediarios ni prisas, para encontrar una casa que se sienta tuya, en renta o en venta.</p>
-          <form class="hero-search" action="propiedades.html" method="get" role="search" aria-label="Buscar casas">
+          <form class="hero-search" action="paginas/propiedades.html" method="get" role="search" aria-label="Buscar casas">
             <div class="field">
               <label class="field__label" for="h-zona">Ubicación</label>
               <select class="select" id="h-zona" name="zona">
@@ -131,14 +130,14 @@
             </div>
             <div class="hero-search__actions">
               <button class="btn btn--gold btn--lg" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Buscar propiedades</button>
-              <a class="btn btn--white btn--lg" href="contacto.html?motivo=publicar">Publicar inmueble</a>
+              <a class="btn btn--white btn--lg" href="paginas/contacto.html?motivo=publicar">Publicar inmueble</a>
             </div>
           </form>
         </div>
         <p class="hero__note"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>Con calma, con claridad y con alguien de aquí.</p>
       </div>
       <figure class="hero__figure">
-        <div class="photo"><img src="img/hero-casa-cancun.jpg" alt="Casa moderna de muros claros con palmeras y celosía de madera en Cancún" fetchpriority="high"></div>
+        <div class="photo"><img src="assets/img/hero-casa-cancun.jpg" alt="Casa moderna de muros claros con palmeras y celosía de madera en Cancún" fetchpriority="high"></div>
         <figcaption><span>Luz, sombra y espacio para vivir.</span><span>Cancún, Q. Roo</span></figcaption>
       </figure>
     </div>
@@ -164,8 +163,8 @@
         <div>
           <nav class="tabs" aria-label="Filtrar por operación">
             <a class="tab" href="index.html#propiedades" aria-current="page">Todas</a>
-            <a class="tab" href="propiedades.html?operacion=renta">En renta</a>
-            <a class="tab" href="propiedades.html?operacion=venta">En venta</a>
+            <a class="tab" href="paginas/propiedades.html?operacion=renta">En renta</a>
+            <a class="tab" href="paginas/propiedades.html?operacion=venta">En venta</a>
           </nav>
           <p class="tabs-meta">6 casas destacadas · 3 en renta y 3 en venta</p>
         </div>
@@ -174,13 +173,13 @@
       <div class="cards">
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-ceiba.jpg" alt="Fachada de Casa Ceiba con jardín tropical al frente" loading="lazy"></div>
+            <div class="photo"><img src="assets/img/casa-ceiba.jpg" alt="Fachada de Casa Ceiba con jardín tropical al frente" loading="lazy"></div>
             <span class="badge badge--light">En renta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa Ceiba en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
           <div class="card__price"><strong>$28,000</strong><span>MXN / mes</span></div>
           <div class="card__body">
-            <h3 class="card__title"><a class="card__link" href="propiedad.html">Casa Ceiba</a></h3>
+            <h3 class="card__title"><a class="card__link" href="paginas/propiedad.html">Casa Ceiba</a></h3>
             <p class="card__loc">Arbolada, Cancún</p>
             <ul class="card__specs">
               <li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg>3 rec.</li>
@@ -189,7 +188,7 @@
             </ul>
             <p class="card__pets"><svg class="icon" aria-hidden="true"><use href="#i-paw"/></svg>Acepta mascotas</p>
             <div class="card__actions">
-              <a class="btn" href="propiedad.html#contactar">Contactar</a>
+              <a class="btn" href="paginas/propiedad.html#contactar">Contactar</a>
               <a class="btn btn--secondary" href="https://wa.me/529985550142?text=Hola%2C%20me%20interesa%20Casa%20Ceiba%20en%20Arbolada." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
             </div>
           </div>
@@ -197,13 +196,13 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-del-patio.jpg" alt="Terraza con pérgola de madera y jardín de Casa del Patio" loading="lazy"></div>
+            <div class="photo"><img src="assets/img/casa-del-patio.jpg" alt="Terraza con pérgola de madera y jardín de Casa del Patio" loading="lazy"></div>
             <span class="badge badge--light">En venta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa del Patio en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
           <div class="card__price"><strong>$4,850,000</strong><span>MXN</span></div>
           <div class="card__body">
-            <h3 class="card__title"><a class="card__link" href="propiedad.html">Casa del Patio</a></h3>
+            <h3 class="card__title"><a class="card__link" href="paginas/propiedad.html">Casa del Patio</a></h3>
             <p class="card__loc">Residencial Cumbres, Cancún</p>
             <ul class="card__specs">
               <li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg>3 rec.</li>
@@ -212,7 +211,7 @@
             </ul>
             <p class="card__pets"><svg class="icon" aria-hidden="true"><use href="#i-paw"/></svg>Acepta mascotas</p>
             <div class="card__actions">
-              <a class="btn" href="propiedad.html#contactar">Contactar</a>
+              <a class="btn" href="paginas/propiedad.html#contactar">Contactar</a>
               <a class="btn btn--secondary" href="https://wa.me/529985550142?text=Hola%2C%20me%20interesa%20Casa%20del%20Patio%20en%20Residencial%20Cumbres." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
             </div>
           </div>
@@ -220,13 +219,13 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-olivo.jpg" alt="Casa Olivo, de estilo colonial caribeño con balcón y plantas" loading="lazy"></div>
+            <div class="photo"><img src="assets/img/casa-olivo.jpg" alt="Casa Olivo, de estilo colonial caribeño con balcón y plantas" loading="lazy"></div>
             <span class="badge badge--light">En renta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa Olivo en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
           <div class="card__price"><strong>$22,500</strong><span>MXN / mes</span></div>
           <div class="card__body">
-            <h3 class="card__title"><a class="card__link" href="propiedad.html">Casa Olivo</a></h3>
+            <h3 class="card__title"><a class="card__link" href="paginas/propiedad.html">Casa Olivo</a></h3>
             <p class="card__loc">Santa Fe, Cancún</p>
             <ul class="card__specs">
               <li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg>2 rec.</li>
@@ -235,7 +234,7 @@
             </ul>
             <p class="card__pets"><svg class="icon" aria-hidden="true"><use href="#i-paw"/></svg>No acepta mascotas</p>
             <div class="card__actions">
-              <a class="btn" href="propiedad.html#contactar">Contactar</a>
+              <a class="btn" href="paginas/propiedad.html#contactar">Contactar</a>
               <a class="btn btn--secondary" href="https://wa.me/529985550142?text=Hola%2C%20me%20interesa%20Casa%20Olivo%20en%20Santa%20Fe." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
             </div>
           </div>
@@ -243,13 +242,13 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-de-la-luz.jpg" alt="Casa de la Luz, residencia de dos niveles con grandes ventanales" loading="lazy"></div>
+            <div class="photo"><img src="assets/img/casa-de-la-luz.jpg" alt="Casa de la Luz, residencia de dos niveles con grandes ventanales" loading="lazy"></div>
             <span class="badge badge--light">En venta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa de la Luz en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
           <div class="card__price"><strong>$6,200,000</strong><span>MXN</span></div>
           <div class="card__body">
-            <h3 class="card__title"><a class="card__link" href="propiedad.html">Casa de la Luz</a></h3>
+            <h3 class="card__title"><a class="card__link" href="paginas/propiedad.html">Casa de la Luz</a></h3>
             <p class="card__loc">Lagos del Sol, Cancún</p>
             <ul class="card__specs">
               <li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg>4 rec.</li>
@@ -258,7 +257,7 @@
             </ul>
             <p class="card__pets"><svg class="icon" aria-hidden="true"><use href="#i-paw"/></svg>Acepta mascotas</p>
             <div class="card__actions">
-              <a class="btn" href="propiedad.html#contactar">Contactar</a>
+              <a class="btn" href="paginas/propiedad.html#contactar">Contactar</a>
               <a class="btn btn--secondary" href="https://wa.me/529985550142?text=Hola%2C%20me%20interesa%20Casa%20de%20la%20Luz%20en%20Lagos%20del%20Sol." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
             </div>
           </div>
@@ -266,13 +265,13 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-nativa.jpg" alt="Casa Nativa con alberca y fachada de madera y piedra" loading="lazy"></div>
+            <div class="photo"><img src="assets/img/casa-nativa.jpg" alt="Casa Nativa con alberca y fachada de madera y piedra" loading="lazy"></div>
             <span class="badge badge--light">En renta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa Nativa en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
           <div class="card__price"><strong>$35,000</strong><span>MXN / mes</span></div>
           <div class="card__body">
-            <h3 class="card__title"><a class="card__link" href="propiedad.html">Casa Nativa</a></h3>
+            <h3 class="card__title"><a class="card__link" href="paginas/propiedad.html">Casa Nativa</a></h3>
             <p class="card__loc">Aqua Residencial, Cancún</p>
             <ul class="card__specs">
               <li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg>3 rec.</li>
@@ -281,7 +280,7 @@
             </ul>
             <p class="card__pets"><svg class="icon" aria-hidden="true"><use href="#i-paw"/></svg>Acepta mascotas</p>
             <div class="card__actions">
-              <a class="btn" href="propiedad.html#contactar">Contactar</a>
+              <a class="btn" href="paginas/propiedad.html#contactar">Contactar</a>
               <a class="btn btn--secondary" href="https://wa.me/529985550142?text=Hola%2C%20me%20interesa%20Casa%20Nativa%20en%20Aqua%20Residencial." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
             </div>
           </div>
@@ -289,13 +288,13 @@
 
         <article class="card">
           <div class="card__media">
-            <div class="photo"><img src="img/casa-almendra.jpg" alt="Casa Almendra con cochera y jardín frontal" loading="lazy"></div>
+            <div class="photo"><img src="assets/img/casa-almendra.jpg" alt="Casa Almendra con cochera y jardín frontal" loading="lazy"></div>
             <span class="badge badge--light">En venta</span>
             <label class="fav"><input type="checkbox" aria-label="Guardar Casa Almendra en favoritos"><svg class="icon" aria-hidden="true"><use href="#i-heart"/></svg></label>
           </div>
           <div class="card__price"><strong>$3,450,000</strong><span>MXN</span></div>
           <div class="card__body">
-            <h3 class="card__title"><a class="card__link" href="propiedad.html">Casa Almendra</a></h3>
+            <h3 class="card__title"><a class="card__link" href="paginas/propiedad.html">Casa Almendra</a></h3>
             <p class="card__loc">Jardines del Sur, Cancún</p>
             <ul class="card__specs">
               <li><svg class="icon" aria-hidden="true"><use href="#i-bed"/></svg>3 rec.</li>
@@ -304,7 +303,7 @@
             </ul>
             <p class="card__pets"><svg class="icon" aria-hidden="true"><use href="#i-paw"/></svg>No acepta mascotas</p>
             <div class="card__actions">
-              <a class="btn" href="propiedad.html#contactar">Contactar</a>
+              <a class="btn" href="paginas/propiedad.html#contactar">Contactar</a>
               <a class="btn btn--secondary" href="https://wa.me/529985550142?text=Hola%2C%20me%20interesa%20Casa%20Almendra%20en%20Jardines%20del%20Sur." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp</a>
             </div>
           </div>
@@ -312,7 +311,7 @@
       </div>
 
       <div class="section-foot">
-        <a class="btn btn--secondary btn--lg" href="propiedades.html">Ver todas las casas<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn btn--secondary btn--lg" href="paginas/propiedades.html">Ver todas las casas<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
     </div>
   </section>
@@ -326,7 +325,7 @@
           <h2 id="pasos-titulo">Menos vueltas. Más cercanía.</h2>
           <p>Un proceso sencillo, de la primera plática a tu próxima casa.</p>
         </div>
-        <a class="link-arrow" href="como-trabajamos.html">Conoce el proceso completo<svg class="icon icon--sm" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="link-arrow" href="paginas/como-trabajamos.html">Conoce el proceso completo<svg class="icon icon--sm" aria-hidden="true"><use href="#i-arrow"/></svg></a>
       </div>
       <ol class="steps">
         <li class="step">
@@ -348,57 +347,188 @@
     </div>
   </section>
 
-  <!-- Contacto -->
-  <section class="section" aria-labelledby="contacto-titulo">
-    <div class="container contact-block">
-      <div>
-        <span class="eyebrow">03 / Contáctanos</span>
-        <h2 id="contacto-titulo">Una buena casa empieza con una buena plática.</h2>
-        <p class="lead">¿Tienes una duda antes de agendar? Cuéntanos qué necesitas y empezamos por ahí.</p>
-        <dl class="info-list">
-          <div class="info-item">
-            <span class="info-item__icon"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg></span>
-            <div><dt>Dirección</dt><dd>Av. Huayacán 125, local 4, SM 313<br>Cancún, Quintana Roo, C.P. 77533</dd></div>
-          </div>
-          <div class="info-item">
-            <span class="info-item__icon"><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg></span>
-            <div><dt>Teléfono</dt><dd><a href="tel:+529985550142">+52 998 555 0142</a></dd></div>
-          </div>
-          <div class="info-item">
-            <span class="info-item__icon"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg></span>
-            <div><dt>Correo</dt><dd><a href="mailto:hola@zugar.mx">hola@zugar.mx</a></dd></div>
-          </div>
-          <div class="info-item">
-            <span class="info-item__icon"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span>
-            <div><dt>Horario</dt><dd>Lunes a viernes · 9:00 a 18:00<br>Sábados · 10:00 a 14:00</dd></div>
-          </div>
-        </dl>
+  <!-- Contacto: misma solicitud de visita que en Contáctanos -->
+  <section class="section" id="contacto" aria-labelledby="contacto-titulo">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">03 / Contáctanos</span>
+          <h2 id="contacto-titulo">Una buena casa empieza con una buena plática.</h2>
+          <p>Cuéntanos un poco de ti y de lo que necesitas. Con estos datos preparamos tu visita a la casa, sin prisas y con todo claro.</p>
+        </div>
       </div>
 
-      <div class="form-card">
-        <h3>Déjanos un mensaje</h3>
-        <p class="form-card__intro">Los campos con * son obligatorios.</p>
-        <form action="#" method="post" class="form-grid">
-          <div class="field">
-            <label class="field__label" for="c-nombre">Nombre *</label>
-            <input class="input" id="c-nombre" name="nombre" type="text" autocomplete="name" placeholder="Tu nombre completo" required>
+      <div class="booking__layout">
+        <aside class="booking__aside" aria-label="Resumen de tu solicitud">
+          <section class="summary" id="resumen" aria-labelledby="resumen-titulo" aria-live="polite">
+            <span class="eyebrow">Tu solicitud</span>
+            <div class="photo" hidden><img src="assets/img/casa-ceiba.jpg" alt="" loading="lazy"></div>
+            <h3 id="resumen-titulo">Elige una casa</h3>
+            <p class="summary__loc">Aquí verás los datos de la casa que elijas.</p>
+            <p class="summary__price" hidden></p>
+            <p class="summary__specs"></p>
+            <dl>
+              <div><dt>Operación</dt><dd data-r="op">Por definir</dd></div>
+              <div><dt>Tu visita</dt><dd data-r="fecha">Elige fecha y horario</dd></div>
+              <div><dt>Duración de la visita</dt><dd>45 minutos aproximadamente</dd></div>
+              <div><dt>Te acompaña</dt><dd data-r="asesor">Tu asesora o asesor de Zugar</dd></div>
+              <div><dt>Punto de encuentro</dt><dd data-r="lugar">En la casa que elijas</dd></div>
+              <div><dt>Confirmación</dt><dd>Por WhatsApp en menos de 24 horas</dd></div>
+            </dl>
+            <p class="summary__foot">Tu visita queda confirmada cuando te escribamos con el día y la hora acordados.</p>
+          </section>
+          <section class="side-card" aria-labelledby="hablar-titulo">
+            <h3 id="hablar-titulo">¿Prefieres hablar?</h3>
+            <ul class="side-card__list">
+              <li><a href="https://wa.me/529985550142?text=Hola%2C%20quiero%20conocer%20una%20casa." target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-wa"/></svg>WhatsApp · +52 998 555 0142</a></li>
+              <li><a href="tel:+529985550142"><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg>+52 998 555 0142</a></li>
+              <li><a href="mailto:hola@zugar.mx"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg>hola@zugar.mx</a></li>
+              <li><span><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Lun–vie 9:00–18:00 · Sáb 10:00–14:00</span></li>
+            </ul>
+            <p class="side-card__note">No tenemos oficina física: te atendemos por teléfono, WhatsApp y directamente en cada casa.</p>
+          </section>
+        </aside>
+
+        <form class="booking-form" data-summary="#resumen" action="#" method="post">
+          <div class="alert alert-error alert--on-invalid" role="alert">
+            <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+            <div><strong>Revisa los campos señalados</strong>Tu solicitud aún no se ha enviado. Lo que escribiste se conserva.</div>
           </div>
-          <div class="field">
-            <label class="field__label" for="c-correo">Correo electrónico *</label>
-            <input class="input" id="c-correo" name="correo" type="email" autocomplete="email" placeholder="tu@correo.com" required>
-            <p class="field__error"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-alert"/></svg>Escribe un correo válido.</p>
-          </div>
-          <div class="field span-2">
-            <label class="field__label" for="c-tel">Teléfono <span class="opt">(opcional)</span></label>
-            <input class="input" id="c-tel" name="telefono" type="tel" autocomplete="tel" placeholder="+52 998 000 0000">
-          </div>
-          <div class="field span-2">
-            <label class="field__label" for="c-mensaje">Mensaje *</label>
-            <textarea class="textarea" id="c-mensaje" name="mensaje" placeholder="Cuéntanos qué buscas y cuándo te gustaría mudarte." required></textarea>
-          </div>
-          <div class="span-2 form-actions">
-            <button class="btn btn--lg" type="submit">Enviar mensaje<svg class="icon" aria-hidden="true"><use href="#i-arrow-ur"/></svg></button>
-            <p class="form-note">Usaremos tus datos solo para responderte. <a href="contacto.html#aviso-privacidad">Aviso de privacidad</a>.</p>
+
+          <fieldset>
+            <legend>1. Tus datos</legend>
+            <div class="form-grid">
+              <div class="field">
+                <label class="field__label" for="b-nombre">Nombre completo *</label>
+                <input class="input" id="b-nombre" name="nombre" type="text" autocomplete="name" placeholder="Nombre y apellidos" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-correo">Correo electrónico *</label>
+                <input class="input" id="b-correo" name="correo" type="email" autocomplete="email" placeholder="tu@correo.com" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-tel">Teléfono <span class="opt">(opcional)</span></label>
+                <input class="input" id="b-tel" name="telefono" type="tel" autocomplete="tel" placeholder="998 000 0000">
+                <p class="field__help">Para confirmar tu visita por WhatsApp.</p>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-nacionalidad">Nacionalidad *</label>
+                <input class="input" id="b-nacionalidad" name="nacionalidad" type="text" autocomplete="country-name" placeholder="Mexicana" required>
+              </div>
+              <div class="field span-2">
+                <label class="field__label" for="b-trabajo">¿En qué trabajas? *</label>
+                <input class="input" id="b-trabajo" name="ocupacion" type="text" autocomplete="organization-title" placeholder="Por ejemplo: diseño de interiores" required>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>2. La casa que buscas</legend>
+            <div class="form-grid">
+              <div class="field">
+                <label class="field__label" for="b-operacion">Operación *</label>
+                <select class="select" id="b-operacion" name="operacion" required>
+                  <option value="renta" selected>Renta</option>
+                  <option value="compra">Compra</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-casa">Casa de interés *</label>
+                <select class="select" id="b-casa" name="casa" required>
+                  <option value="">Elige una casa</option>
+                  <optgroup label="En renta">
+                    <option value="casa-olivo">Casa Olivo · Santa Fe</option>
+                    <option value="casa-zapote">Casa Zapote · Supermanzana 50</option>
+                    <option value="casa-ceiba">Casa Ceiba · Arbolada</option>
+                    <option value="casa-chaka">Casa Chaká · Residencial Palmaris</option>
+                    <option value="casa-nativa">Casa Nativa · Aqua Residencial</option>
+                    <option value="casa-ramon">Casa Ramón · Residencial Cumbres</option>
+                    <option value="casa-huano">Casa Huano · Lagos del Sol</option>
+                  </optgroup>
+                  <optgroup label="En venta">
+                    <option value="casa-almendra">Casa Almendra · Jardines del Sur</option>
+                    <option value="casa-huayacan">Casa con jardín · Huayacán</option>
+                    <option value="casa-kanan">Casa Kanán · Residencial Arbolada</option>
+                    <option value="casa-del-patio">Casa del Patio · Residencial Cumbres</option>
+                    <option value="casa-de-la-luz">Casa de la Luz · Lagos del Sol</option>
+                  </optgroup>
+                  <option value="sin-definir">Aún no lo sé, quiero recomendaciones</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-presupuesto">Presupuesto aproximado *</label>
+                <input class="input" id="b-presupuesto" name="presupuesto" type="text" inputmode="numeric" placeholder="$30,000 MXN / mes" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-rec">Número de recámaras *</label>
+                <select class="select" id="b-rec" name="recamaras" required>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3" selected>3</option>
+                  <option value="4">4 o más</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-banos">Número de baños *</label>
+                <select class="select" id="b-banos" name="banos" required>
+                  <option value="1">1</option>
+                  <option value="2" selected>2</option>
+                  <option value="3">3 o más</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-personas">Personas que vivirán en la casa *</label>
+                <select class="select" id="b-personas" name="personas" required>
+                  <option value="1">1</option>
+                  <option value="2" selected>2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5 o más</option>
+                </select>
+              </div>
+              <fieldset class="field span-2">
+                <legend class="field__label">¿Tienes mascotas? *</legend>
+                <div class="choice-group">
+                  <label class="choice"><input type="radio" id="mascotas-si" name="mascotas" value="si" required><span>Sí</span></label>
+                  <label class="choice"><input type="radio" id="mascotas-no" name="mascotas" value="no"><span>No</span></label>
+                </div>
+              </fieldset>
+              <div class="field span-2 pets-detail">
+                <label class="field__label" for="b-cuales">¿Cuáles y cuántas mascotas?</label>
+                <input class="input" id="b-cuales" name="mascotas_detalle" type="text" placeholder="Por ejemplo: 1 perro pequeño">
+                <p class="field__help">Así te mostramos solo casas donde sean bienvenidas.</p>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>3. Elige un momento</legend>
+            <div class="form-grid">
+              <div class="field">
+                <label class="field__label" for="b-fecha">Fecha preferida *</label>
+                <input class="input" id="b-fecha" name="fecha" type="date" required>
+              </div>
+              <div class="field">
+                <label class="field__label" for="b-hora">Horario *</label>
+                <select class="select" id="b-hora" name="horario" required>
+                  <option value="">Elige un horario</option>
+                  <option value="10:00">10:00 h</option>
+                  <option value="11:30">11:30 h</option>
+                  <option value="13:00">13:00 h</option>
+                  <option value="16:00">16:00 h</option>
+                  <option value="17:30">17:30 h</option>
+                </select>
+              </div>
+              <div class="field span-2">
+                <label class="field__label" for="b-comentarios">Comentarios <span class="opt">(opcional)</span></label>
+                <textarea class="textarea" id="b-comentarios" name="comentarios" placeholder="Por ejemplo: nos gustaría conocer el patio y la iluminación de la casa por la mañana."></textarea>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button class="btn btn--lg" type="submit">Revisar solicitud<svg class="icon" aria-hidden="true"><use href="#i-arrow-ur"/></svg></button>
+            <p class="form-note">Te mostraremos un resumen antes de enviar. Al continuar aceptas nuestro <a href="paginas/contacto.html#aviso-privacidad">Aviso de privacidad</a>.</p>
           </div>
         </form>
       </div>
@@ -426,11 +556,10 @@
       <nav aria-label="Enlaces del pie de página">
         <p class="footer-title">Encuentra tu lugar</p>
         <ul>
-          <li><a href="propiedades.html?operacion=renta">Casas en renta</a></li>
-          <li><a href="propiedades.html?operacion=venta">Casas en venta</a></li>
-          <li><a href="como-trabajamos.html">Cómo trabajamos</a></li>
-          <li><a href="contacto.html">Contáctanos</a></li>
-          <li><a href="agendar-cita.html">Agendar cita</a></li>
+          <li><a href="paginas/propiedades.html?operacion=renta">Casas en renta</a></li>
+          <li><a href="paginas/propiedades.html?operacion=venta">Casas en venta</a></li>
+          <li><a href="paginas/como-trabajamos.html">Cómo trabajamos</a></li>
+          <li><a href="paginas/contacto.html">Contáctanos</a></li>
         </ul>
       </nav>
       <div>
@@ -439,18 +568,19 @@
           <li><a href="tel:+529985550142"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-phone"/></svg>+52 998 555 0142</a></li>
           <li><a href="mailto:hola@zugar.mx"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-mail"/></svg>hola@zugar.mx</a></li>
           <li><span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-clock"/></svg>Lun–vie 9:00–18:00 · Sáb 10:00–14:00</span></li>
-          <li><span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-pin"/></svg>Av. Huayacán 125, Cancún, Q. Roo</span></li>
+          <li><span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-pin"/></svg>Cancún, Quintana Roo · Atención en línea y en cada casa</span></li>
         </ul>
       </div>
     </div>
     <div class="site-footer__bottom">
       <p>© 2026 Zugar Inmobiliaria. Todos los derechos reservados.</p>
       <ul>
-        <li><a href="contacto.html#aviso-privacidad">Aviso de privacidad</a></li>
-        <li><a href="contacto.html#aviso-privacidad">Términos de uso</a></li>
+        <li><a href="paginas/contacto.html#aviso-privacidad">Aviso de privacidad</a></li>
+        <li><a href="paginas/contacto.html#aviso-privacidad">Términos de uso</a></li>
       </ul>
     </div>
   </div>
 </footer>
+<script src="assets/js/main.js" defer></script>
 </body>
 </html>
