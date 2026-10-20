@@ -1,0 +1,54 @@
+FOTOS DEL SITIO · ZUGAR INMOBILIARIA
+=====================================
+
+Sube aquí tus fotos en formato .jpg con EXACTAMENTE estos nombres.
+El sitio las toma solas; no hay que tocar el HTML.
+Mientras falte una foto se ve un recuadro gris con un ícono de imagen.
+
+Las fotos se recortan solas para llenar su espacio (object-fit: cover).
+Tamaño recomendado entre paréntesis (ancho x alto, en píxeles).
+
+PORTADA
+  hero-casa-cancun.jpg ............ foto principal del inicio (1500 x 1200)
+
+TARJETAS DE CASAS (1200 x 750)
+  casa-ceiba.jpg
+  casa-del-patio.jpg
+  casa-olivo.jpg
+  casa-de-la-luz.jpg
+  casa-nativa.jpg
+  casa-almendra.jpg
+  casa-zapote.jpg
+  casa-chaka.jpg
+  casa-ramon.jpg
+  casa-huano.jpg
+  casa-kanan.jpg
+
+DETALLE DE PROPIEDAD · CASA EN HUAYACÁN (1600 x 1000)
+  huayacan-01.jpg ... sala y comedor (foto grande de la galería)
+  huayacan-02.jpg ... cocina
+  huayacan-03.jpg ... recámara principal
+  huayacan-04.jpg ... alberca de la casa club
+  huayacan-05.jpg ... fachada principal
+  huayacan-06.jpg ... comedor junto al ventanal
+  huayacan-07.jpg ... segunda recámara
+  huayacan-08.jpg ... tercera recámara
+  huayacan-09.jpg ... jardín privado
+  huayacan-10.jpg ... escalera y doble altura
+  huayacan-11.jpg ... barra de desayuno
+  huayacan-12.jpg ... baño de la recámara principal
+  huayacan-13.jpg ... estancia en planta alta
+  huayacan-14.jpg ... terraza techada
+  huayacan-15.jpg ... cochera
+  huayacan-16.jpg ... casa club
+  huayacan-17.jpg ... camastros junto a la alberca
+  huayacan-18.jpg ... áreas verdes
+  huayacan-19.jpg ... acceso controlado
+  huayacan-20.jpg ... calle interior
+
+OTRAS
+  asesora-mariana-solis.jpg ....... retrato cuadrado de la asesora (400 x 400)
+  como-trabajamos-terraza.jpg ..... foto de "Cómo trabajamos" (1200 x 900)
+  oficina-zugar.jpg ............... foto de la página de contacto (1200 x 720)
+
+Si cambias el texto que describe una foto, edita también su atributo alt en el HTML.
