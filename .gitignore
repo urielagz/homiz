@@ -1,0 +1,29 @@
+# Dependencias y compilados
+node_modules/
+dist/
+coverage/
+
+# Variables de entorno (solo se sube .env.example)
+.env
+.env.*
+!.env.example
+
+# Archivos subidos en desarrollo
+backend/uploads/
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/android/local.properties
+mobile/ios/Flutter/Generated.xcconfig
+mobile/**/*.g.dart.bak
+*.iml
+.idea/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+*.log

@@ -30,3 +30,44 @@ admin/
 - **Formularios:** conecta tu backend en `enviarFormulario()` de `assets/js/main.js`.
 - **Login del panel:** la validación actual es de demostración (`admin/js/auth.js`); reemplázala por tu API antes de publicar.
 - **Mapas:** son de Google Maps en vivo. Para una ubicación exacta, cambia el texto de `q=` del iframe por la dirección o por `latitud,longitud`.
+
+---
+
+## Monorepo Homiz (Rentia)
+
+> Desde la Fase 0 el sitio de arriba vive en **`web/`** (se movió con `git mv`, sin cambios). Las rutas de las secciones
+> anteriores son relativas a esa carpeta: `web/index.html`, `web/paginas/…`, `web/assets/…`, `web/admin/…`.
+
+```
+backend/      API Node.js + Express + TypeScript + PostgreSQL (/api/v1)
+  src/        config, controllers, middlewares, routes, app.ts, server.ts
+  db/         001_schema.sql (esquema) y 002_seed.sql (datos de ejemplo)
+mobile/       App Flutter del cliente/inquilino y del personal (desde la Fase 3)
+web/          Sitio público + panel administrativo (estático, funciona con doble clic)
+docs/         sitio-existente.md, decisiones.md (y más documentación por fase)
+docker-compose.yml   PostgreSQL para desarrollo
+```
+
+### Cómo correr el backend
+
+1. Base de datos: `docker compose up -d` **o** un PostgreSQL local (13 o superior). En local, como usuario `postgres`
+   (psql o pgAdmin), crea el usuario y la base:
+   ```sql
+   CREATE ROLE homiz WITH LOGIN PASSWORD 'elige-una-clave';
+   CREATE DATABASE homiz OWNER homiz;
+   ```
+   Y en `.env`: `DATABASE_URL=postgres://homiz:elige-una-clave@localhost:5432/homiz`
+2. En `backend/`: copia `.env.example` a `.env` y llena `DATABASE_URL` y los secretos JWT.
+3. `npm install`
+4. `npm run db:setup` — crea el esquema y carga los datos de ejemplo (⚠️ borra lo que haya en la base `homiz`).
+5. `npm run dev` — API en `http://localhost:3000/api/v1` (prueba: `GET /api/v1/health`).
+
+### Usuarios de ejemplo (contraseña de todos: `Zugar2026!`)
+
+| Perfil | Correo |
+|---|---|
+| Administradora | `lucia@zugar.example` |
+| Broker | `mariana@zugar.example`, `diego@zugar.example`, `valeria@zugar.example` |
+| Cliente (inquilina de Casa Las Palmas) | `lau.mendez@correo.com` |
+
+Las diferencias entre el prompt del monorepo y el sitio existente están en `docs/decisiones.md`.
