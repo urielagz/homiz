@@ -18,6 +18,25 @@ export function query<T extends pg.QueryResultRow = pg.QueryResultRow>(text: str
   return pool.query<T>(text, params);
 }
 
+/** Ejecuta varias consultas en una transacción; si algo falla, se revierte todo. */
+export async function withTransaction<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/** Cliente o pool: los modelos aceptan ambos para poder usarse dentro de transacciones. */
+export type Db = pg.Pool | pg.PoolClient;
+
 /** Verifica que la base responde (para /health). */
 export async function checkDatabase(): Promise<boolean> {
   try {

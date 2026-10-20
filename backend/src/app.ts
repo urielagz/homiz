@@ -1,12 +1,12 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { requestId } from './middlewares/request-id.js';
 import { errorHandler, notFound } from './middlewares/error-handler.js';
+import { globalLimiter } from './middlewares/rate-limit.js';
 import { apiRouter } from './routes/index.js';
 
 export function createApp() {
@@ -30,15 +30,7 @@ export function createApp() {
       credentials: false,
     }),
   );
-  app.use(
-    rateLimit({
-      windowMs: 15 * 60 * 1000,
-      limit: 300,
-      standardHeaders: 'draft-8',
-      legacyHeaders: false,
-      message: { error: { code: 'RATE_LIMITED', message: 'Demasiadas solicitudes. Intenta de nuevo en unos minutos.', details: null } },
-    }),
-  );
+  app.use(globalLimiter);
   app.use(express.json({ limit: '1mb' }));
 
   app.use('/api/v1', apiRouter);

@@ -19,3 +19,9 @@ Registro de ambigüedades del prompt y de contradicciones con el sitio existente
 | 13 | Entorno | Node 20, Docker | La máquina tiene Node 24 y PostgreSQL 18 instalado como servicio, sin Docker. Se deja `docker-compose.yml` y el backend funciona igual con la base local. `engines` pide Node ≥ 20. |
 | 14 | Versiones de librerías | — | Se instalaron las vigentes: Express 5, Zod 4, TypeScript 7. El backend es módulo ES (`"type": "module"`). |
 | 15 | Contraseña del seed | «documentada en el README» | Todos los usuarios de ejemplo usan `Zugar2026!` (cumple la política: mayúscula, minúscula y número). |
+| 16 | Refresh token | «JWT refresh … guardar hash» | Es un token **opaco** aleatorio (no JWT); en la base se guarda su HMAC-SHA256 con `JWT_REFRESH_SECRET`. Así se puede revocar y detectar reutilización. |
+| 17 | Permisos en el token | — | El access token solo lleva `sub` y `type`. Roles, permisos y estado activo se leen de la base en cada petición, para que una baja o un cambio de permisos apliquen de inmediato. |
+| 18 | Cuenta bloqueada | Sin mensaje definido | Responde 423 `ACCOUNT_LOCKED`: «Por seguridad tu cuenta está bloqueada. Intenta de nuevo en N minutos.» El correo inexistente y la contraseña incorrecta comparten el mensaje genérico. |
+| 19 | Correo de recuperación | — | No hay proveedor de correo aún: en desarrollo cada correo se guarda en `backend/outbox/`; en pruebas, en memoria; en producción se registra un aviso hasta configurar el proveedor en `mail.service.ts`. |
+| 20 | Registro con correo existente en clientes | — | Si la inmobiliaria ya tenía a la persona como cliente (mismo correo, sin cuenta), el registro vincula ese expediente en lugar de duplicarlo. |
+| 21 | Ubicación de las pruebas | `backend/` solo con `src/` y `db/` | Las pruebas viven en `backend/src/__tests__/` (subcarpeta permitida) y usan una base dedicada `TEST_DATABASE_URL` que se borra en cada corrida; se niegan a correr si coincide con `DATABASE_URL`. |

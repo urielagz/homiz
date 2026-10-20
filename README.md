@@ -57,10 +57,16 @@ docker-compose.yml   PostgreSQL para desarrollo
    CREATE DATABASE homiz OWNER homiz;
    ```
    Y en `.env`: `DATABASE_URL=postgres://homiz:elige-una-clave@localhost:5432/homiz`
-2. En `backend/`: copia `.env.example` a `.env` y llena `DATABASE_URL` y los secretos JWT.
+2. En `backend/`: copia `.env.example` a `.env` y llena `DATABASE_URL`. Para los secretos JWT ejecuta
+   `npm run secrets` (después de `npm install`) y pega las dos líneas en `.env`.
 3. `npm install`
 4. `npm run db:setup` — crea el esquema y carga los datos de ejemplo (⚠️ borra lo que haya en la base `homiz`).
 5. `npm run dev` — API en `http://localhost:3000/api/v1` (prueba: `GET /api/v1/health`).
+6. Pruebas: crea una base **aparte** (p. ej. `CREATE DATABASE homiz_test OWNER homiz;`), ponla en `TEST_DATABASE_URL`
+   del `.env` y ejecuta `npm test`. ⚠️ Esa base se borra y se recarga en cada corrida.
+
+Endpoints documentados en `docs/api.md`. En desarrollo, los correos de «olvidé mi contraseña» no se envían:
+se guardan como archivos en `backend/outbox/`.
 
 ### Usuarios de ejemplo (contraseña de todos: `Zugar2026!`)
 

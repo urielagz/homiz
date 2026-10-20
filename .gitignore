@@ -8,8 +8,9 @@ coverage/
 .env.*
 !.env.example
 
-# Archivos subidos en desarrollo
+# Archivos subidos y correos de desarrollo
 backend/uploads/
+backend/outbox/
 
 # Flutter / Dart
 mobile/.dart_tool/
