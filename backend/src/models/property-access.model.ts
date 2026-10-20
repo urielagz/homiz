@@ -22,6 +22,17 @@ export async function clientLinkedToProperty(clientId: string, propertyId: strin
   return rows.length > 0;
 }
 
+/** Propiedades del cliente: las de sus contratos vigentes y la registrada si es inquilino. */
+export async function clientPropertyIds(clientId: string, db: Db = pool): Promise<string[]> {
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT property_id AS id FROM contracts WHERE client_id = $1 AND status = 'active'
+     UNION
+     SELECT property_id FROM clients WHERE id = $1 AND kind = 'inquilino' AND property_id IS NOT NULL AND active`,
+    [clientId],
+  );
+  return rows.map((r) => r.id);
+}
+
 export async function brokerPropertyIds(brokerId: string, db: Db = pool): Promise<string[]> {
   const { rows } = await db.query<{ id: string }>('SELECT id FROM properties WHERE broker_id = $1', [brokerId]);
   return rows.map((r) => r.id);

@@ -25,3 +25,11 @@ Registro de ambigüedades del prompt y de contradicciones con el sitio existente
 | 19 | Correo de recuperación | — | No hay proveedor de correo aún: en desarrollo cada correo se guarda en `backend/outbox/`; en pruebas, en memoria; en producción se registra un aviso hasta configurar el proveedor en `mail.service.ts`. |
 | 20 | Registro con correo existente en clientes | — | Si la inmobiliaria ya tenía a la persona como cliente (mismo correo, sin cuenta), el registro vincula ese expediente en lugar de duplicarlo. |
 | 21 | Ubicación de las pruebas | `backend/` solo con `src/` y `db/` | Las pruebas viven en `backend/src/__tests__/` (subcarpeta permitida) y usan una base dedicada `TEST_DATABASE_URL` que se borra en cada corrida; se niegan a correr si coincide con `DATABASE_URL`. |
+| 22 | Broker en el catálogo público | «sin datos del broker» | El sitio muestra «Te acompaña: Mariana Solís» en la solicitud de visita, así que el catálogo público devuelve **solo el nombre** (`asesor`), nunca teléfono, correo ni id. Gana el sitio. |
+| 23 | Solicitud de visita del sitio | — | Una solicitud `visita` con fecha y hora crea el expediente del cliente (o usa el que ya existe con ese correo) y una cita «por confirmar». Si el broker ya tiene una cita a esa hora, se guarda la solicitud sin cita y él propone otro horario. |
+| 24 | Pago parcial | — | Un pagaré solo admite un pago vigente que debe cubrir el monto completo (400 `AMOUNT_MISMATCH`). Para otro monto, primero se edita el pagaré. |
+| 25 | Pagarés al finalizar un contrato | — | No se borran: los futuros sin pagar quedan en el nuevo estado `cancelled` (migración 003). |
+| 26 | Fotos del sitio vs. subidas | — | Las fotos del seed (`casa-ceiba.jpg`) son archivos de `web/assets/img`; la API las devuelve tal cual. Las subidas viven en el almacenamiento (`properties/ZUG-###/…`) y se devuelven con URL firmada. |
+| 27 | Pagos del cliente | — | El cliente ve folio, fecha y monto de sus pagos, pero no quién los registró. |
+| 28 | Push | FCM | Interfaz única: `mock` en desarrollo y pruebas; `fcm` usa la API HTTP v1 con la cuenta de servicio (sin dependencias extra). El envío real con FCM y con Cloudflare R2 no se probó: requiere credenciales. |
+| 29 | Script de base de datos | — | `npm run db:setup` ejecuta todos los `.sql` de `db/` en orden y solo necesita `DATABASE_URL` (no los secretos JWT). |

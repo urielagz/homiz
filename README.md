@@ -65,8 +65,13 @@ docker-compose.yml   PostgreSQL para desarrollo
 6. Pruebas: crea una base **aparte** (p. ej. `CREATE DATABASE homiz_test OWNER homiz;`), ponla en `TEST_DATABASE_URL`
    del `.env` y ejecuta `npm test`. ⚠️ Esa base se borra y se recarga en cada corrida.
 
-Endpoints documentados en `docs/api.md`. En desarrollo, los correos de «olvidé mi contraseña» no se envían:
-se guardan como archivos en `backend/outbox/`.
+Endpoints documentados en `docs/api.md`. En desarrollo:
+- Los correos de «olvidé mi contraseña» no se envían: se guardan como archivos en `backend/outbox/`.
+- Los archivos subidos (documentos y fotos) se guardan en `backend/uploads/` con URL firmadas de 15 minutos.
+  Para producción: `STORAGE_DRIVER=r2` y las credenciales `R2_*` de Cloudflare.
+- Las notificaciones push se simulan (`PUSH_DRIVER=mock`). Para producción: `PUSH_DRIVER=fcm` y las credenciales `FCM_*`.
+- Las tareas diarias (vencimientos y recordatorios) corren a las 07:00 hora de Cancún mientras el servidor esté
+  encendido (`JOBS_ENABLED`, `JOBS_CRON`).
 
 ### Usuarios de ejemplo (contraseña de todos: `Zugar2026!`)
 

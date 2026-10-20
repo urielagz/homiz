@@ -48,3 +48,15 @@ export const pagination = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
+export const idParam = z.object({ id: z.uuid({ error: 'El identificador no es válido.' }) });
+export const money = z.coerce.number({ error: 'Escribe un monto válido.' }).nonnegative('El monto no puede ser negativo.').max(999_999_999.99);
+export const positiveMoney = z.coerce.number({ error: 'Escribe un monto válido.' }).positive('El monto debe ser mayor a cero.').max(999_999_999.99);
+export const dateField = z.iso.date({ error: 'Usa el formato AAAA-MM-DD.' });
+export const dateTimeField = z.iso.datetime({ offset: true, error: 'Usa fecha y hora ISO, p. ej. 2026-10-24T10:00:00-05:00.' });
+/** Arreglo en query: ?amenity=a&amenity=b o ?amenity=a */
+export const queryArray = z.preprocess((v) => (v === undefined ? undefined : Array.isArray(v) ? v : [v]), z.array(z.string().max(60)).max(20).optional());
+
+/** Respuesta paginada estándar. */
+export function paged<T>(data: T[], total: number, q: { page: number; limit: number }) {
+  return { data, pagination: { page: q.page, limit: q.limit, total, pages: Math.ceil(total / q.limit) } };
+}

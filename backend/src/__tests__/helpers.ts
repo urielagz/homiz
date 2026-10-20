@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import request from 'supertest';
 import { pool } from '../config/database.js';
@@ -16,9 +16,10 @@ export const EMAILS = {
   laura: 'lau.mendez@correo.com',
 };
 
-/** Borra la base de pruebas y vuelve a cargar esquema y datos de ejemplo. */
+/** Borra la base de pruebas y vuelve a cargar esquema, datos de ejemplo y migraciones. */
 export async function resetDatabase(): Promise<void> {
-  for (const file of ['001_schema.sql', '002_seed.sql']) {
+  const files = (await readdir('db')).filter((f) => /^\d{3}_.+\.sql$/.test(f)).sort();
+  for (const file of files) {
     await pool.query(await readFile(path.resolve('db', file), 'utf8'));
   }
 }

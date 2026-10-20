@@ -21,10 +21,28 @@ const schema = z.object({
   CORS_ORIGINS: z.string().default(''),
   APP_RESET_URL: z.string().default('http://localhost:5500/web/admin/login.html'),
   MAIL_OUTBOX_DIR: z.string().default('outbox'),
+  API_PUBLIC_URL: z.string().default('http://localhost:3000'),
   STORAGE_DRIVER: z.enum(['local', 'r2']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('uploads'),
+  STORAGE_URL_MINUTES: z.coerce.number().int().positive().default(15),
+  R2_ACCOUNT_ID: z.string().default(''),
+  R2_ACCESS_KEY_ID: z.string().default(''),
+  R2_SECRET_ACCESS_KEY: z.string().default(''),
+  R2_BUCKET: z.string().default(''),
   PUSH_DRIVER: z.enum(['mock', 'fcm']).default('mock'),
-});
+  FCM_PROJECT_ID: z.string().default(''),
+  FCM_CLIENT_EMAIL: z.string().default(''),
+  FCM_PRIVATE_KEY: z.string().default(''),
+  JOBS_ENABLED: z.enum(['true', 'false']).default('true'),
+  JOBS_CRON: z.string().default('0 7 * * *'),
+  TZ_APP: z.string().default('America/Cancun'),
+})
+  .refine((e) => e.STORAGE_DRIVER !== 'r2' || (e.R2_ACCOUNT_ID && e.R2_ACCESS_KEY_ID && e.R2_SECRET_ACCESS_KEY && e.R2_BUCKET), {
+    message: 'Con STORAGE_DRIVER=r2 se requieren R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY y R2_BUCKET',
+  })
+  .refine((e) => e.PUSH_DRIVER !== 'fcm' || (e.FCM_PROJECT_ID && e.FCM_CLIENT_EMAIL && e.FCM_PRIVATE_KEY), {
+    message: 'Con PUSH_DRIVER=fcm se requieren FCM_PROJECT_ID, FCM_CLIENT_EMAIL y FCM_PRIVATE_KEY',
+  });
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {

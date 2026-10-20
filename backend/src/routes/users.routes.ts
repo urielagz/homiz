@@ -1,9 +1,20 @@
 import { Router } from 'express';
 import * as C from '../controllers/users.controller.js';
+import * as Staff from '../controllers/staff.controller.js';
 import { authenticate } from '../middlewares/authenticate.js';
-import { validate } from '../middlewares/validate.js';
+import { requirePermission } from '../middlewares/authorize.js';
+import { idParam, validate } from '../middlewares/validate.js';
 
 export const usersRouter = Router();
+usersRouter.use(authenticate);
 
-usersRouter.get('/me', authenticate, C.getMe);
-usersRouter.patch('/me', authenticate, validate({ body: C.updateMeDto }), C.updateMe);
+/* Perfil propio (cualquier usuario). */
+usersRouter.get('/me', C.getMe);
+usersRouter.patch('/me', validate({ body: C.updateMeDto }), C.updateMe);
+
+/* Personal, roles y permisos (administración). */
+usersRouter.get('/', requirePermission('users.manage'), validate({ query: Staff.listQueryDto }), Staff.list);
+usersRouter.post('/', requirePermission('users.manage'), validate({ body: Staff.createDto }), Staff.create);
+usersRouter.get('/roles', requirePermission('users.manage'), Staff.listRoles);
+usersRouter.put('/roles/:code/permissions', requirePermission('users.manage'), validate({ params: Staff.roleParam, body: Staff.rolePermissionsDto }), Staff.setRolePermissions);
+usersRouter.patch('/:id', requirePermission('users.manage'), validate({ params: idParam, body: Staff.updateDto }), Staff.update);
