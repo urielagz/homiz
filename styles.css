@@ -301,7 +301,7 @@ form:has(:user-invalid) .alert--on-invalid { display: flex; }
 /* ---------- 8. Fotos ----------
    Cada foto es <div class="photo"><img src="img/archivo.jpg" alt="..." loading="lazy"></div>.
    El contenedor fija la proporción (aspect-ratio) para que el diseño no se mueva.
-   Mientras el archivo no exista, se muestra un recuadro neutro con un ícono de imagen. */
+   Mientras el archivo no exista, se muestra un recuadro gris liso del mismo tamaño. */
 .photo {
   position: relative;
   overflow: hidden;
@@ -319,12 +319,9 @@ form:has(:user-invalid) .alert--on-invalid { display: flex; }
 .photo > img::after {
   content: "";
   position: absolute; inset: 0;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237B89A0' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21'/%3E%3C/svg%3E") center / 40px no-repeat,
-    linear-gradient(135deg, #EAF0F7, #D7E1EE);
+  background: linear-gradient(135deg, #EAF0F7, #D7E1EE);
 }
 .photo--portrait { aspect-ratio: 1; }
-.photo--portrait > img::after { background-size: 24px, auto; }
 
 /* ---------- 9. Encabezado ---------- */
 .site-header { position: relative; z-index: 20; background: var(--marino); color: var(--blanco); }
