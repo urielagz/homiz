@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/contact_actions.dart';
+import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/states.dart';
 import '../../data/models/property_models.dart';
 import '../providers/property_provider.dart';
@@ -65,7 +67,59 @@ class SummaryView extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(p.address!, style: AppTextStyles.secondary),
         ],
+        // Inquilino y asesor: la API solo los envía al personal.
+        if (dossier.tenant case final t?) ...[
+          const SizedBox(height: AppSpacing.xl),
+          Text('Inquilino', style: AppTextStyles.sectionTitle),
+          const SizedBox(height: AppSpacing.sm),
+          _ContactCard(name: t.name, detail: [t.phone, t.email].whereType<String>().join(' · '), phone: t.phone, email: t.email),
+        ],
+        if (p.broker case final b? when b.name != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Text('Asesor responsable', style: AppTextStyles.sectionTitle),
+          const SizedBox(height: AppSpacing.sm),
+          _ContactCard(name: b.name!, detail: b.phone, phone: b.phone),
+        ],
       ],
+    );
+  }
+}
+
+class _ContactCard extends StatelessWidget {
+  const _ContactCard({required this.name, this.detail, this.phone, this.email});
+
+  final String name;
+  final String? detail;
+  final String? phone;
+  final String? email;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: AppRadius.cardAll, border: Border.all(color: AppColors.divider)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              InitialsAvatar(name: name, size: 36),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: AppTextStyles.cardTitle),
+                    if (detail != null && detail!.isNotEmpty) Text(detail!, style: AppTextStyles.secondary),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ContactActions(phone: phone, email: email),
+        ],
+      ),
     );
   }
 }

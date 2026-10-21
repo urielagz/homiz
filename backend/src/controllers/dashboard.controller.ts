@@ -67,13 +67,13 @@ async function staffDashboard(user: AuthUser) {
     p,
   )).rows;
   const overdue = (await pool.query(
-    `SELECT n.id, n.number, n.amount, to_char(n.due_date, 'YYYY-MM-DD') AS "dueDate", c.name AS "clientName", pr.name AS "propertyName"
+    `SELECT n.id, n.number, n.amount, to_char(n.due_date, 'YYYY-MM-DD') AS "dueDate", c.name AS "clientName", pr.name AS "propertyName", pr.id AS "propertyId"
        FROM promissory_notes n JOIN contracts ct ON ct.id = n.contract_id JOIN clients c ON c.id = ct.client_id JOIN properties pr ON pr.id = ct.property_id
       WHERE n.status = 'overdue' AND ${inScope('ct.property_id')} ORDER BY n.due_date LIMIT 5`,
     p,
   )).rows;
   const reports = (await pool.query(
-    `SELECT r.id, r.title, r.priority, r.status, p.name AS "propertyName", r.created_at AS "createdAt"
+    `SELECT r.id, r.title, r.priority, r.status, p.name AS "propertyName", p.id AS "propertyId", r.created_at AS "createdAt"
        FROM maintenance_reports r JOIN properties p ON p.id = r.property_id
       WHERE r.status = 'reported' AND ${inScope('r.property_id')} ORDER BY r.created_at DESC LIMIT 5`,
     p,

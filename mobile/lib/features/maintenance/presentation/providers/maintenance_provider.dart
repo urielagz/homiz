@@ -6,12 +6,15 @@ import '../../../home/presentation/providers/dashboard_provider.dart';
 import '../../data/models/maintenance_report.dart';
 import '../../data/repositories/maintenance_repository.dart';
 
-/// Reportes de la casa del cliente (abiertos primero, como los ordena la API).
+/// Reportes de una casa (abiertos primero, como los ordena la API).
 final maintenanceReportsProvider = FutureProvider.family<List<MaintenanceReport>, String>(
   (ref, propertyId) => ref.watch(maintenanceRepositoryProvider).list(propertyId: propertyId),
 );
 
 final maintenanceReportProvider = FutureProvider.family<MaintenanceReport, String>((ref, id) => ref.watch(maintenanceRepositoryProvider).get(id));
+
+/// Reportes recién creados en las casas del personal (estado «reported»).
+final newReportsProvider = FutureProvider<List<MaintenanceReport>>((ref) => ref.watch(maintenanceRepositoryProvider).list(status: const ['reported']));
 
 final newReportProvider = Provider<NewReportAction>(NewReportAction.new);
 
@@ -44,6 +47,25 @@ class NewReportAction {
         );
     _ref.invalidate(maintenanceReportsProvider(propertyId));
     _ref.invalidate(clientDashboardProvider);
+    _ref.invalidate(staffDashboardProvider);
+    return report;
+  }
+}
+
+final maintenanceActionsProvider = Provider<MaintenanceActions>(MaintenanceActions.new);
+
+/// Cambios de estado del personal (UpdateStatusSheet).
+class MaintenanceActions {
+  MaintenanceActions(this._ref);
+
+  final Ref _ref;
+
+  Future<MaintenanceReport> updateStatus(String reportId, {required String status, String? comment, String? providerId}) async {
+    final report = await _ref.read(maintenanceRepositoryProvider).addUpdate(reportId, status: status, comment: comment, providerId: providerId);
+    _ref.invalidate(maintenanceReportProvider(reportId));
+    _ref.invalidate(maintenanceReportsProvider);
+    _ref.invalidate(newReportsProvider);
+    _ref.invalidate(staffDashboardProvider);
     return report;
   }
 }

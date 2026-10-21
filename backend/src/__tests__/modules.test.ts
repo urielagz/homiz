@@ -432,6 +432,8 @@ describe('Proveedores, gastos, usuarios, notificaciones y dashboard', () => {
     const s = await api().get('/api/v1/dashboard').set(bearer(mariana));
     expect(s.body.profile).toBe('staff');
     expect(s.body.counts).toHaveProperty('appointmentsToConfirm');
+    // La app navega a la casa desde las listas cortas.
+    for (const r of [...s.body.overdueNotes, ...s.body.newReports]) expect(r.propertyId).toEqual(expect.any(String));
   });
 });
 

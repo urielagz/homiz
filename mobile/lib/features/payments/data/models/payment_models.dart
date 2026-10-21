@@ -17,9 +17,23 @@ abstract class PromissoryNote with _$PromissoryNote {
     required String status,
     NotePayment? payment,
     String? proofDocumentId,
+    NoteRef? property,
+    // Solo para el personal:
+    NoteRef? client,
   }) = _PromissoryNote;
 
+  const PromissoryNote._();
+
+  bool get isPayable => status == 'pending' || status == 'overdue';
+
   factory PromissoryNote.fromJson(Map<String, dynamic> json) => _$PromissoryNoteFromJson(json);
+}
+
+@freezed
+abstract class NoteRef with _$NoteRef {
+  const factory NoteRef({required String id, required String name}) = _NoteRef;
+
+  factory NoteRef.fromJson(Map<String, dynamic> json) => _$NoteRefFromJson(json);
 }
 
 @freezed

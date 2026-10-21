@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MaintenanceReport {
 
- String get id; String get title; String get description; String get category; String get priority; String get subtitle; String get status; String get statusLabel; ReportProvider? get provider;@LocalDateOrNull() DateTime? get closedAt;@LocalDate() DateTime get createdAt; List<TimelineEntry> get timeline; ReportPhotos get photos;
+ String get id; ReportProperty? get property; String get title; String get description; String get category; String get priority; String get subtitle; String get status; String get statusLabel; ReportProvider? get provider;@LocalDateOrNull() DateTime? get closedAt;@LocalDate() DateTime get createdAt; List<TimelineEntry> get timeline; ReportPhotos get photos;
 /// Create a copy of MaintenanceReport
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $MaintenanceReportCopyWith<MaintenanceReport> get copyWith => _$MaintenanceRepor
 @override
 bool operator ==(Object other) {
   final _this = this as MaintenanceReport;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MaintenanceReport&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.category, _this.category) || other.category == _this.category)&&(identical(other.priority, _this.priority) || other.priority == _this.priority)&&(identical(other.subtitle, _this.subtitle) || other.subtitle == _this.subtitle)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.statusLabel, _this.statusLabel) || other.statusLabel == _this.statusLabel)&&(identical(other.provider, _this.provider) || other.provider == _this.provider)&&(identical(other.closedAt, _this.closedAt) || other.closedAt == _this.closedAt)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&const DeepCollectionEquality().equals(other.timeline, _this.timeline)&&(identical(other.photos, _this.photos) || other.photos == _this.photos));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MaintenanceReport&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.property, _this.property) || other.property == _this.property)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.category, _this.category) || other.category == _this.category)&&(identical(other.priority, _this.priority) || other.priority == _this.priority)&&(identical(other.subtitle, _this.subtitle) || other.subtitle == _this.subtitle)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.statusLabel, _this.statusLabel) || other.statusLabel == _this.statusLabel)&&(identical(other.provider, _this.provider) || other.provider == _this.provider)&&(identical(other.closedAt, _this.closedAt) || other.closedAt == _this.closedAt)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&const DeepCollectionEquality().equals(other.timeline, _this.timeline)&&(identical(other.photos, _this.photos) || other.photos == _this.photos));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MaintenanceReport;
-  return Object.hash(runtimeType,_this.id,_this.title,_this.description,_this.category,_this.priority,_this.subtitle,_this.status,_this.statusLabel,_this.provider,_this.closedAt,_this.createdAt,const DeepCollectionEquality().hash(_this.timeline),_this.photos);
+  return Object.hash(runtimeType,_this.id,_this.property,_this.title,_this.description,_this.category,_this.priority,_this.subtitle,_this.status,_this.statusLabel,_this.provider,_this.closedAt,_this.createdAt,const DeepCollectionEquality().hash(_this.timeline),_this.photos);
 }
 
 @override
 String toString() {
   final _this = this as MaintenanceReport;
-  return 'MaintenanceReport(id: ${_this.id}, title: ${_this.title}, description: ${_this.description}, category: ${_this.category}, priority: ${_this.priority}, subtitle: ${_this.subtitle}, status: ${_this.status}, statusLabel: ${_this.statusLabel}, provider: ${_this.provider}, closedAt: ${_this.closedAt}, createdAt: ${_this.createdAt}, timeline: ${_this.timeline}, photos: ${_this.photos})';
+  return 'MaintenanceReport(id: ${_this.id}, property: ${_this.property}, title: ${_this.title}, description: ${_this.description}, category: ${_this.category}, priority: ${_this.priority}, subtitle: ${_this.subtitle}, status: ${_this.status}, statusLabel: ${_this.statusLabel}, provider: ${_this.provider}, closedAt: ${_this.closedAt}, createdAt: ${_this.createdAt}, timeline: ${_this.timeline}, photos: ${_this.photos})';
 }
 
 
@@ -54,11 +54,11 @@ abstract mixin class $MaintenanceReportCopyWith<$Res>  {
   factory $MaintenanceReportCopyWith(MaintenanceReport value, $Res Function(MaintenanceReport) _then) = _$MaintenanceReportCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String description, String category, String priority, String subtitle, String status, String statusLabel, ReportProvider? provider,@LocalDateOrNull() DateTime? closedAt,@LocalDate() DateTime createdAt, List<TimelineEntry> timeline, ReportPhotos photos
+ String id, ReportProperty? property, String title, String description, String category, String priority, String subtitle, String status, String statusLabel, ReportProvider? provider,@LocalDateOrNull() DateTime? closedAt,@LocalDate() DateTime createdAt, List<TimelineEntry> timeline, ReportPhotos photos
 });
 
 
-$ReportProviderCopyWith<$Res>? get provider;$ReportPhotosCopyWith<$Res> get photos;
+$ReportPropertyCopyWith<$Res>? get property;$ReportProviderCopyWith<$Res>? get provider;$ReportPhotosCopyWith<$Res> get photos;
 
 }
 /// @nodoc
@@ -71,10 +71,11 @@ class _$MaintenanceReportCopyWithImpl<$Res>
 
 /// Create a copy of MaintenanceReport
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? description = null,Object? category = null,Object? priority = null,Object? subtitle = null,Object? status = null,Object? statusLabel = null,Object? provider = freezed,Object? closedAt = freezed,Object? createdAt = null,Object? timeline = null,Object? photos = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? property = freezed,Object? title = null,Object? description = null,Object? category = null,Object? priority = null,Object? subtitle = null,Object? status = null,Object? statusLabel = null,Object? provider = freezed,Object? closedAt = freezed,Object? createdAt = null,Object? timeline = null,Object? photos = null,}) {
   return _then(MaintenanceReport(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,property: freezed == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
+as ReportProperty?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String,priority: null == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
@@ -90,6 +91,18 @@ as ReportPhotos,
   ));
 }
 /// Create a copy of MaintenanceReport
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ReportPropertyCopyWith<$Res>? get property {
+    if (_self.property == null) {
+    return null;
+  }
+
+  return $ReportPropertyCopyWith<$Res>(_self.property!, (value) {
+    return _then(_self.copyWith(property: value));
+  });
+}/// Create a copy of MaintenanceReport
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
@@ -192,10 +205,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String description,  String category,  String priority,  String subtitle,  String status,  String statusLabel,  ReportProvider? provider, @LocalDateOrNull()  DateTime? closedAt, @LocalDate()  DateTime createdAt,  List<TimelineEntry> timeline,  ReportPhotos photos)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  ReportProperty? property,  String title,  String description,  String category,  String priority,  String subtitle,  String status,  String statusLabel,  ReportProvider? provider, @LocalDateOrNull()  DateTime? closedAt, @LocalDate()  DateTime createdAt,  List<TimelineEntry> timeline,  ReportPhotos photos)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MaintenanceReport() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.category,_that.priority,_that.subtitle,_that.status,_that.statusLabel,_that.provider,_that.closedAt,_that.createdAt,_that.timeline,_that.photos);case _:
+return $default(_that.id,_that.property,_that.title,_that.description,_that.category,_that.priority,_that.subtitle,_that.status,_that.statusLabel,_that.provider,_that.closedAt,_that.createdAt,_that.timeline,_that.photos);case _:
   return orElse();
 
 }
@@ -213,10 +226,10 @@ return $default(_that.id,_that.title,_that.description,_that.category,_that.prio
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String description,  String category,  String priority,  String subtitle,  String status,  String statusLabel,  ReportProvider? provider, @LocalDateOrNull()  DateTime? closedAt, @LocalDate()  DateTime createdAt,  List<TimelineEntry> timeline,  ReportPhotos photos)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  ReportProperty? property,  String title,  String description,  String category,  String priority,  String subtitle,  String status,  String statusLabel,  ReportProvider? provider, @LocalDateOrNull()  DateTime? closedAt, @LocalDate()  DateTime createdAt,  List<TimelineEntry> timeline,  ReportPhotos photos)  $default,) {final _that = this;
 switch (_that) {
 case _MaintenanceReport():
-return $default(_that.id,_that.title,_that.description,_that.category,_that.priority,_that.subtitle,_that.status,_that.statusLabel,_that.provider,_that.closedAt,_that.createdAt,_that.timeline,_that.photos);case _:
+return $default(_that.id,_that.property,_that.title,_that.description,_that.category,_that.priority,_that.subtitle,_that.status,_that.statusLabel,_that.provider,_that.closedAt,_that.createdAt,_that.timeline,_that.photos);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -233,10 +246,10 @@ return $default(_that.id,_that.title,_that.description,_that.category,_that.prio
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String description,  String category,  String priority,  String subtitle,  String status,  String statusLabel,  ReportProvider? provider, @LocalDateOrNull()  DateTime? closedAt, @LocalDate()  DateTime createdAt,  List<TimelineEntry> timeline,  ReportPhotos photos)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  ReportProperty? property,  String title,  String description,  String category,  String priority,  String subtitle,  String status,  String statusLabel,  ReportProvider? provider, @LocalDateOrNull()  DateTime? closedAt, @LocalDate()  DateTime createdAt,  List<TimelineEntry> timeline,  ReportPhotos photos)?  $default,) {final _that = this;
 switch (_that) {
 case _MaintenanceReport() when $default != null:
-return $default(_that.id,_that.title,_that.description,_that.category,_that.priority,_that.subtitle,_that.status,_that.statusLabel,_that.provider,_that.closedAt,_that.createdAt,_that.timeline,_that.photos);case _:
+return $default(_that.id,_that.property,_that.title,_that.description,_that.category,_that.priority,_that.subtitle,_that.status,_that.statusLabel,_that.provider,_that.closedAt,_that.createdAt,_that.timeline,_that.photos);case _:
   return null;
 
 }
@@ -248,10 +261,11 @@ return $default(_that.id,_that.title,_that.description,_that.category,_that.prio
 @JsonSerializable()
 
 class _MaintenanceReport extends MaintenanceReport {
-  const _MaintenanceReport({required this.id, required this.title, required this.description, required this.category, required this.priority, required this.subtitle, required this.status, required this.statusLabel, this.provider, @LocalDateOrNull() this.closedAt, @LocalDate() required this.createdAt,  List<TimelineEntry> timeline = const <TimelineEntry>[], this.photos = const ReportPhotos()}): _timeline = timeline,super._();
+  const _MaintenanceReport({required this.id, this.property, required this.title, required this.description, required this.category, required this.priority, required this.subtitle, required this.status, required this.statusLabel, this.provider, @LocalDateOrNull() this.closedAt, @LocalDate() required this.createdAt,  List<TimelineEntry> timeline = const <TimelineEntry>[], this.photos = const ReportPhotos()}): _timeline = timeline,super._();
   factory _MaintenanceReport.fromJson(Map<String, dynamic> json) => _$MaintenanceReportFromJson(json);
 
 @override final  String id;
+@override final  ReportProperty? property;
 @override final  String title;
 @override final  String description;
 @override final  String category;
@@ -284,18 +298,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MaintenanceReport&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.status, status) || other.status == status)&&(identical(other.statusLabel, statusLabel) || other.statusLabel == statusLabel)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.closedAt, closedAt) || other.closedAt == closedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other.timeline, _timeline)&&(identical(other.photos, photos) || other.photos == photos));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MaintenanceReport&&(identical(other.id, id) || other.id == id)&&(identical(other.property, property) || other.property == property)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.priority, priority) || other.priority == priority)&&(identical(other.subtitle, subtitle) || other.subtitle == subtitle)&&(identical(other.status, status) || other.status == status)&&(identical(other.statusLabel, statusLabel) || other.statusLabel == statusLabel)&&(identical(other.provider, provider) || other.provider == provider)&&(identical(other.closedAt, closedAt) || other.closedAt == closedAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&const DeepCollectionEquality().equals(other.timeline, _timeline)&&(identical(other.photos, photos) || other.photos == photos));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,title,description,category,priority,subtitle,status,statusLabel,provider,closedAt,createdAt,const DeepCollectionEquality().hash(_timeline),photos);
+    return Object.hash(runtimeType,id,property,title,description,category,priority,subtitle,status,statusLabel,provider,closedAt,createdAt,const DeepCollectionEquality().hash(_timeline),photos);
 }
 
 @override
 String toString() {
-    return 'MaintenanceReport(id: $id, title: $title, description: $description, category: $category, priority: $priority, subtitle: $subtitle, status: $status, statusLabel: $statusLabel, provider: $provider, closedAt: $closedAt, createdAt: $createdAt, timeline: $timeline, photos: $photos)';
+    return 'MaintenanceReport(id: $id, property: $property, title: $title, description: $description, category: $category, priority: $priority, subtitle: $subtitle, status: $status, statusLabel: $statusLabel, provider: $provider, closedAt: $closedAt, createdAt: $createdAt, timeline: $timeline, photos: $photos)';
 }
 
 
@@ -306,11 +320,11 @@ abstract mixin class _$MaintenanceReportCopyWith<$Res> implements $MaintenanceRe
   factory _$MaintenanceReportCopyWith(_MaintenanceReport value, $Res Function(_MaintenanceReport) _then) = __$MaintenanceReportCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String description, String category, String priority, String subtitle, String status, String statusLabel, ReportProvider? provider,@LocalDateOrNull() DateTime? closedAt,@LocalDate() DateTime createdAt, List<TimelineEntry> timeline, ReportPhotos photos
+ String id, ReportProperty? property, String title, String description, String category, String priority, String subtitle, String status, String statusLabel, ReportProvider? provider,@LocalDateOrNull() DateTime? closedAt,@LocalDate() DateTime createdAt, List<TimelineEntry> timeline, ReportPhotos photos
 });
 
 
-@override $ReportProviderCopyWith<$Res>? get provider;@override $ReportPhotosCopyWith<$Res> get photos;
+@override $ReportPropertyCopyWith<$Res>? get property;@override $ReportProviderCopyWith<$Res>? get provider;@override $ReportPhotosCopyWith<$Res> get photos;
 
 }
 /// @nodoc
@@ -323,10 +337,11 @@ class __$MaintenanceReportCopyWithImpl<$Res>
 
 /// Create a copy of MaintenanceReport
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? description = null,Object? category = null,Object? priority = null,Object? subtitle = null,Object? status = null,Object? statusLabel = null,Object? provider = freezed,Object? closedAt = freezed,Object? createdAt = null,Object? timeline = null,Object? photos = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? property = freezed,Object? title = null,Object? description = null,Object? category = null,Object? priority = null,Object? subtitle = null,Object? status = null,Object? statusLabel = null,Object? provider = freezed,Object? closedAt = freezed,Object? createdAt = null,Object? timeline = null,Object? photos = null,}) {
   return _then(_MaintenanceReport(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,property: freezed == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
+as ReportProperty?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String,priority: null == priority ? _self.priority : priority // ignore: cast_nullable_to_non_nullable
@@ -343,6 +358,18 @@ as ReportPhotos,
 }
 
 /// Create a copy of MaintenanceReport
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ReportPropertyCopyWith<$Res>? get property {
+    if (_self.property == null) {
+    return null;
+  }
+
+  return $ReportPropertyCopyWith<$Res>(_self.property!, (value) {
+    return _then(_self.copyWith(property: value));
+  });
+}/// Create a copy of MaintenanceReport
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
@@ -368,9 +395,285 @@ $ReportPhotosCopyWith<$Res> get photos {
 
 
 /// @nodoc
+mixin _$ReportProperty {
+
+ String get id; String? get code; String get name;
+/// Create a copy of ReportProperty
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ReportPropertyCopyWith<ReportProperty> get copyWith => _$ReportPropertyCopyWithImpl<ReportProperty>(this as ReportProperty, _$identity);
+
+  /// Serializes this ReportProperty to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as ReportProperty;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReportProperty&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as ReportProperty;
+  return Object.hash(runtimeType,_this.id,_this.code,_this.name);
+}
+
+@override
+String toString() {
+  final _this = this as ReportProperty;
+  return 'ReportProperty(id: ${_this.id}, code: ${_this.code}, name: ${_this.name})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ReportPropertyCopyWith<$Res>  {
+  factory $ReportPropertyCopyWith(ReportProperty value, $Res Function(ReportProperty) _then) = _$ReportPropertyCopyWithImpl;
+@useResult
+$Res call({
+ String id, String? code, String name
+});
+
+
+
+
+}
+/// @nodoc
+class _$ReportPropertyCopyWithImpl<$Res>
+    implements $ReportPropertyCopyWith<$Res> {
+  _$ReportPropertyCopyWithImpl(this._self, this._then);
+
+  final ReportProperty _self;
+  final $Res Function(ReportProperty) _then;
+
+/// Create a copy of ReportProperty
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = freezed,Object? name = null,}) {
+  return _then(ReportProperty(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ReportProperty].
+extension ReportPropertyPatterns on ReportProperty {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ReportProperty value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ReportProperty() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ReportProperty value)  $default,){
+final _that = this;
+switch (_that) {
+case _ReportProperty():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ReportProperty value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ReportProperty() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? code,  String name)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ReportProperty() when $default != null:
+return $default(_that.id,_that.code,_that.name);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? code,  String name)  $default,) {final _that = this;
+switch (_that) {
+case _ReportProperty():
+return $default(_that.id,_that.code,_that.name);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? code,  String name)?  $default,) {final _that = this;
+switch (_that) {
+case _ReportProperty() when $default != null:
+return $default(_that.id,_that.code,_that.name);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ReportProperty implements ReportProperty {
+  const _ReportProperty({required this.id, this.code, required this.name});
+  factory _ReportProperty.fromJson(Map<String, dynamic> json) => _$ReportPropertyFromJson(json);
+
+@override final  String id;
+@override final  String? code;
+@override final  String name;
+
+/// Create a copy of ReportProperty
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ReportPropertyCopyWith<_ReportProperty> get copyWith => __$ReportPropertyCopyWithImpl<_ReportProperty>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ReportPropertyToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReportProperty&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,code,name);
+}
+
+@override
+String toString() {
+    return 'ReportProperty(id: $id, code: $code, name: $name)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ReportPropertyCopyWith<$Res> implements $ReportPropertyCopyWith<$Res> {
+  factory _$ReportPropertyCopyWith(_ReportProperty value, $Res Function(_ReportProperty) _then) = __$ReportPropertyCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String? code, String name
+});
+
+
+
+
+}
+/// @nodoc
+class __$ReportPropertyCopyWithImpl<$Res>
+    implements _$ReportPropertyCopyWith<$Res> {
+  __$ReportPropertyCopyWithImpl(this._self, this._then);
+
+  final _ReportProperty _self;
+  final $Res Function(_ReportProperty) _then;
+
+/// Create a copy of ReportProperty
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = freezed,Object? name = null,}) {
+  return _then(_ReportProperty(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$ReportProvider {
 
- String get id; String get name; String? get specialty;
+ String get id; String get name; String? get specialty; String? get phone;
 /// Create a copy of ReportProvider
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -384,20 +687,20 @@ $ReportProviderCopyWith<ReportProvider> get copyWith => _$ReportProviderCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as ReportProvider;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReportProvider&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.specialty, _this.specialty) || other.specialty == _this.specialty));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReportProvider&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.specialty, _this.specialty) || other.specialty == _this.specialty)&&(identical(other.phone, _this.phone) || other.phone == _this.phone));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ReportProvider;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.specialty);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.specialty,_this.phone);
 }
 
 @override
 String toString() {
   final _this = this as ReportProvider;
-  return 'ReportProvider(id: ${_this.id}, name: ${_this.name}, specialty: ${_this.specialty})';
+  return 'ReportProvider(id: ${_this.id}, name: ${_this.name}, specialty: ${_this.specialty}, phone: ${_this.phone})';
 }
 
 
@@ -408,7 +711,7 @@ abstract mixin class $ReportProviderCopyWith<$Res>  {
   factory $ReportProviderCopyWith(ReportProvider value, $Res Function(ReportProvider) _then) = _$ReportProviderCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? specialty
+ String id, String name, String? specialty, String? phone
 });
 
 
@@ -425,11 +728,12 @@ class _$ReportProviderCopyWithImpl<$Res>
 
 /// Create a copy of ReportProvider
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? specialty = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? specialty = freezed,Object? phone = freezed,}) {
   return _then(ReportProvider(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,specialty: freezed == specialty ? _self.specialty : specialty // ignore: cast_nullable_to_non_nullable
+as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -515,10 +819,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? specialty)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? specialty,  String? phone)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReportProvider() when $default != null:
-return $default(_that.id,_that.name,_that.specialty);case _:
+return $default(_that.id,_that.name,_that.specialty,_that.phone);case _:
   return orElse();
 
 }
@@ -536,10 +840,10 @@ return $default(_that.id,_that.name,_that.specialty);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? specialty)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? specialty,  String? phone)  $default,) {final _that = this;
 switch (_that) {
 case _ReportProvider():
-return $default(_that.id,_that.name,_that.specialty);case _:
+return $default(_that.id,_that.name,_that.specialty,_that.phone);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -556,10 +860,10 @@ return $default(_that.id,_that.name,_that.specialty);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? specialty)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? specialty,  String? phone)?  $default,) {final _that = this;
 switch (_that) {
 case _ReportProvider() when $default != null:
-return $default(_that.id,_that.name,_that.specialty);case _:
+return $default(_that.id,_that.name,_that.specialty,_that.phone);case _:
   return null;
 
 }
@@ -571,12 +875,13 @@ return $default(_that.id,_that.name,_that.specialty);case _:
 @JsonSerializable()
 
 class _ReportProvider implements ReportProvider {
-  const _ReportProvider({required this.id, required this.name, this.specialty});
+  const _ReportProvider({required this.id, required this.name, this.specialty, this.phone});
   factory _ReportProvider.fromJson(Map<String, dynamic> json) => _$ReportProviderFromJson(json);
 
 @override final  String id;
 @override final  String name;
 @override final  String? specialty;
+@override final  String? phone;
 
 /// Create a copy of ReportProvider
 /// with the given fields replaced by the non-null parameter values.
@@ -591,18 +896,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReportProvider&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.specialty, specialty) || other.specialty == specialty));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReportProvider&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.specialty, specialty) || other.specialty == specialty)&&(identical(other.phone, phone) || other.phone == phone));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,specialty);
+    return Object.hash(runtimeType,id,name,specialty,phone);
 }
 
 @override
 String toString() {
-    return 'ReportProvider(id: $id, name: $name, specialty: $specialty)';
+    return 'ReportProvider(id: $id, name: $name, specialty: $specialty, phone: $phone)';
 }
 
 
@@ -613,7 +918,7 @@ abstract mixin class _$ReportProviderCopyWith<$Res> implements $ReportProviderCo
   factory _$ReportProviderCopyWith(_ReportProvider value, $Res Function(_ReportProvider) _then) = __$ReportProviderCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? specialty
+ String id, String name, String? specialty, String? phone
 });
 
 
@@ -630,11 +935,12 @@ class __$ReportProviderCopyWithImpl<$Res>
 
 /// Create a copy of ReportProvider
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? specialty = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? specialty = freezed,Object? phone = freezed,}) {
   return _then(_ReportProvider(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,specialty: freezed == specialty ? _self.specialty : specialty // ignore: cast_nullable_to_non_nullable
+as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

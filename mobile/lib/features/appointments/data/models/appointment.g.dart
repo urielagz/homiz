@@ -17,6 +17,13 @@ _Appointment _$AppointmentFromJson(Map<String, dynamic> json) => _Appointment(
   status: json['status'] as String,
   note: json['note'] as String?,
   reason: json['reason'] as String?,
+  client: json['client'] == null
+      ? null
+      : PersonRef.fromJson(json['client'] as Map<String, dynamic>),
+  broker: json['broker'] == null
+      ? null
+      : PersonRef.fromJson(json['broker'] as Map<String, dynamic>),
+  confirmedBy: json['confirmedBy'] as String?,
 );
 
 Map<String, dynamic> _$AppointmentToJson(_Appointment instance) =>
@@ -29,6 +36,9 @@ Map<String, dynamic> _$AppointmentToJson(_Appointment instance) =>
       'status': instance.status,
       'note': instance.note,
       'reason': instance.reason,
+      'client': instance.client,
+      'broker': instance.broker,
+      'confirmedBy': instance.confirmedBy,
     };
 
 _AppointmentProperty _$AppointmentPropertyFromJson(Map<String, dynamic> json) =>
@@ -51,6 +61,21 @@ Map<String, dynamic> _$AppointmentPropertyToJson(
   'address': instance.address,
   'photo': instance.photo,
 };
+
+_PersonRef _$PersonRefFromJson(Map<String, dynamic> json) => _PersonRef(
+  id: json['id'] as String,
+  name: json['name'] as String,
+  phone: json['phone'] as String?,
+  email: json['email'] as String?,
+);
+
+Map<String, dynamic> _$PersonRefToJson(_PersonRef instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'phone': instance.phone,
+      'email': instance.email,
+    };
 
 _AppointmentMessage _$AppointmentMessageFromJson(Map<String, dynamic> json) =>
     _AppointmentMessage(

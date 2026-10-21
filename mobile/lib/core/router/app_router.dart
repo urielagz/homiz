@@ -12,13 +12,19 @@ import '../../features/auth/presentation/screens/register_page.dart';
 import '../../features/auth/presentation/screens/splash_page.dart';
 import '../../features/home/presentation/screens/home_page.dart';
 import '../../features/maintenance/presentation/screens/new_report_page.dart';
+import '../../features/maintenance/presentation/screens/new_reports_page.dart';
 import '../../features/maintenance/presentation/screens/report_detail_page.dart';
 import '../../features/notifications/presentation/screens/notifications_page.dart';
+import '../../features/payments/presentation/screens/overdue_notes_page.dart';
 import '../../features/profile/presentation/screens/profile_page.dart';
 import '../../features/property/presentation/screens/property_page.dart';
+import '../../features/property/presentation/screens/staff_property_page.dart';
+import '../../features/providers/presentation/screens/providers_page.dart';
 import '../widgets/homiz_bottom_nav.dart';
 
 const _authRoutes = {'/login', '/register'};
+
+int? _intParam(GoRouterState state, String name) => int.tryParse(state.uri.queryParameters[name] ?? '');
 
 /// Decide a dónde ir según la sesión. Pura para poder probarla sin widgets.
 @visibleForTesting
@@ -55,21 +61,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => _TabsShell(shell: shell),
         branches: [
-          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomePage())]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/home',
+              builder: (_, _) => const HomePage(),
+              routes: [
+                // Personal: listas de pendientes y directorio.
+                GoRoute(path: 'overdue', builder: (_, _) => const OverdueNotesPage()),
+                GoRoute(path: 'reports', builder: (_, _) => const NewReportsPage()),
+                GoRoute(path: 'providers', builder: (_, _) => const ProvidersPage()),
+              ],
+            ),
+          ]),
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/property',
-              builder: (_, state) => PropertyPage(initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '')),
+              builder: (_, state) => PropertyPage(initialTab: _intParam(state, 'tab')),
               routes: [
                 GoRoute(path: 'maintenance/new', builder: (_, state) => NewReportPage(propertyId: state.uri.queryParameters['propertyId'] ?? '')),
                 GoRoute(path: 'maintenance/:id', builder: (_, state) => ReportDetailPage(reportId: state.pathParameters['id']!)),
+                // Personal: ficha de una casa del inventario.
+                GoRoute(path: ':id', builder: (_, state) => StaffPropertyPage(propertyId: state.pathParameters['id']!, initialTab: _intParam(state, 'tab'))),
               ],
             ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/appointments',
-              builder: (_, _) => const AppointmentsPage(),
+              builder: (_, state) => AppointmentsPage(initialFilter: _intParam(state, 'filter')),
               routes: [
                 // «catalog» va antes que «:id» para que no se tome como id de cita.
                 GoRoute(path: 'catalog', builder: (_, _) => const CatalogPage()),

@@ -12,9 +12,31 @@ class AppointmentsRepository {
 
   final Dio _dio;
 
-  Future<List<Appointment>> list() => apiCall(() async {
-        final res = await _dio.get<Map<String, dynamic>>('/appointments', queryParameters: {'limit': 100});
+  /// Cliente: las suyas. Broker: las que atiende. Administración: todas.
+  Future<List<Appointment>> list({List<String>? status}) => apiCall(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/appointments', queryParameters: {
+          'limit': 100,
+          if (status != null && status.isNotEmpty) 'status': status,
+        });
         return dataList(res.data, Appointment.fromJson);
+      });
+
+  Future<Appointment> _act(String id, String action, [Map<String, Object?>? body]) => apiCall(() async {
+        final res = await _dio.post<Map<String, dynamic>>('/appointments/$id/$action', data: body ?? const {});
+        return Appointment.fromJson(res.data!);
+      });
+
+  /// Personal (appointments.manage): confirmar, rechazar con motivo y marcar como realizada.
+  Future<Appointment> confirm(String id) => _act(id, 'confirm');
+
+  Future<Appointment> reject(String id, String reason) => _act(id, 'reject', {'reason': reason.trim()});
+
+  Future<Appointment> complete(String id) => _act(id, 'complete');
+
+  /// Vuelve a «por confirmar» con la nueva fecha.
+  Future<Appointment> reschedule(String id, DateTime scheduledAt, {String? reason}) => _act(id, 'reschedule', {
+        'scheduledAt': scheduledAt.toUtc().toIso8601String(),
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
       });
 
   Future<Appointment> get(String id) => apiCall(() async {

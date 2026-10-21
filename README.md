@@ -82,6 +82,10 @@ Requiere Flutter 3.47 o superior y el backend encendido. En `mobile/`:
 3. `flutter run` — en el emulador de Android la API se toma de `http://10.0.2.2:3000/api/v1`; en un teléfono físico:
    `flutter run --dart-define=API_URL=http://<IP-de-tu-PC>:3000/api/v1`
 4. Pruebas: `flutter analyze` y `flutter test` (no necesitan servidor).
+5. Sin emulador: se puede abrir en Chrome (ver `mobile/README.md`, «Verla en Chrome»).
+
+En la app, `lau.mendez@correo.com` ve las pantallas del cliente; `mariana@zugar.example` (broker) y
+`lucia@zugar.example` (administradora) ven las del personal.
 
 Más detalle en `mobile/README.md`.
 

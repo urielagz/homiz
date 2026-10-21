@@ -5,11 +5,16 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/contact_actions.dart';
+import '../../../../core/widgets/permission_gate.dart';
 import '../../../../core/widgets/photo_pair.dart';
+import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/states.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
 import '../../data/models/maintenance_report.dart';
 import '../providers/maintenance_provider.dart';
+import '../widgets/update_status_sheet.dart';
 
 /// Detalle del reporte: estado, línea de tiempo y fotos antes/después.
 class ReportDetailPage extends ConsumerWidget {
@@ -20,10 +25,14 @@ class ReportDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final report = ref.watch(maintenanceReportProvider(reportId));
+    final staff = ref.watch(sessionProvider.select((s) => s.value?.isStaff ?? false));
     return Scaffold(
       appBar: AppBar(title: const Text('Reporte')),
       body: switch (report) {
-        AsyncData(:final value) => RefreshIndicator(onRefresh: () => ref.refresh(maintenanceReportProvider(reportId).future), child: ReportDetailView(report: value)),
+        AsyncData(:final value) => RefreshIndicator(
+            onRefresh: () => ref.refresh(maintenanceReportProvider(reportId).future),
+            child: ReportDetailView(report: value, staff: staff),
+          ),
         AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(maintenanceReportProvider(reportId))),
         _ => const LoadingState(items: 4),
       },
@@ -32,9 +41,10 @@ class ReportDetailPage extends ConsumerWidget {
 }
 
 class ReportDetailView extends StatelessWidget {
-  const ReportDetailView({super.key, required this.report});
+  const ReportDetailView({super.key, required this.report, this.staff = false});
 
   final MaintenanceReport report;
+  final bool staff;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +60,10 @@ class ReportDetailView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text(report.subtitle, style: AppTextStyles.secondary.copyWith(fontSize: 13)),
+        Text(
+          [report.subtitle, if (staff && report.property != null) report.property!.name].join(' · '),
+          style: AppTextStyles.secondary.copyWith(fontSize: 13),
+        ),
         const SizedBox(height: AppSpacing.md),
         Text(report.description, style: AppTextStyles.body),
         if (report.provider != null) ...[
@@ -61,6 +74,15 @@ class ReportDetailView extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(child: Text('Lo atiende ${report.provider!.name}${report.provider!.specialty == null ? '' : ' (${report.provider!.specialty})'}', style: AppTextStyles.label)),
             ],
+          ),
+          if (staff) ...[const SizedBox(height: AppSpacing.sm), ContactActions(phone: report.provider!.phone)],
+        ],
+        // Personal con maintenance.manage: UpdateStatusSheet mientras el reporte siga abierto.
+        if (staff && report.isOpen) ...[
+          const SizedBox(height: AppSpacing.lg),
+          PermissionGate(
+            permission: 'maintenance.manage',
+            child: PrimaryButton(label: 'Actualizar estado', icon: Icons.sync_alt_rounded, onPressed: () => showUpdateStatusSheet(context, report)),
           ),
         ],
         const SizedBox(height: AppSpacing.xl),

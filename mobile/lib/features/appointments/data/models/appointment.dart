@@ -17,6 +17,10 @@ abstract class Appointment with _$Appointment {
     required String status,
     String? note,
     String? reason,
+    // Solo para el personal:
+    PersonRef? client,
+    PersonRef? broker,
+    String? confirmedBy,
   }) = _Appointment;
 
   const Appointment._();
@@ -41,6 +45,14 @@ abstract class AppointmentProperty with _$AppointmentProperty {
   }) = _AppointmentProperty;
 
   factory AppointmentProperty.fromJson(Map<String, dynamic> json) => _$AppointmentPropertyFromJson(json);
+}
+
+/// Persona ligada a un registro (cliente o broker) con sus datos de contacto. Solo llega al personal.
+@freezed
+abstract class PersonRef with _$PersonRef {
+  const factory PersonRef({required String id, required String name, String? phone, String? email}) = _PersonRef;
+
+  factory PersonRef.fromJson(Map<String, dynamic> json) => _$PersonRefFromJson(json);
 }
 
 /// Mensaje del chat de la cita. Al cliente el personal aparece como «Zugar».

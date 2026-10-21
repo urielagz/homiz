@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../../core/utils/json_converters.dart';
+import '../../../appointments/data/models/appointment.dart';
 
 part 'property_models.freezed.dart';
 part 'property_models.g.dart';
@@ -25,8 +26,10 @@ abstract class PropertyDetail with _$PropertyDetail {
     String? city,
     String? zone,
     String? status,
+    String? visibility,
     @Default(<String>[]) List<String> amenities,
     @Default(<PropertyPhoto>[]) List<PropertyPhoto> photos,
+    PersonRef? broker,
   }) = _PropertyDetail;
 
   const PropertyDetail._();
@@ -52,6 +55,8 @@ abstract class Dossier with _$Dossier {
     DossierContract? contract,
     @Default(<DossierSection>[]) List<DossierSection> sections,
     @Default(<DossierDocument>[]) List<DossierDocument> documents,
+    // Solo para el personal:
+    PersonRef? tenant,
   }) = _Dossier;
 
   factory Dossier.fromJson(Map<String, dynamic> json) => _$DossierFromJson(json);
@@ -69,9 +74,19 @@ abstract class DossierProperty with _$DossierProperty {
     double? banos,
     double? m2,
     @Default(<String>[]) List<String> amenities,
+    String? status,
+    DossierBroker? broker,
   }) = _DossierProperty;
 
   factory DossierProperty.fromJson(Map<String, dynamic> json) => _$DossierPropertyFromJson(json);
+}
+
+/// Broker responsable (solo en el expediente del personal).
+@freezed
+abstract class DossierBroker with _$DossierBroker {
+  const factory DossierBroker({String? name, String? phone}) = _DossierBroker;
+
+  factory DossierBroker.fromJson(Map<String, dynamic> json) => _$DossierBrokerFromJson(json);
 }
 
 @freezed

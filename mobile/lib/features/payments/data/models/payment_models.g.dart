@@ -18,6 +18,12 @@ _PromissoryNote _$PromissoryNoteFromJson(Map<String, dynamic> json) =>
           ? null
           : NotePayment.fromJson(json['payment'] as Map<String, dynamic>),
       proofDocumentId: json['proofDocumentId'] as String?,
+      property: json['property'] == null
+          ? null
+          : NoteRef.fromJson(json['property'] as Map<String, dynamic>),
+      client: json['client'] == null
+          ? null
+          : NoteRef.fromJson(json['client'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$PromissoryNoteToJson(_PromissoryNote instance) =>
@@ -30,7 +36,17 @@ Map<String, dynamic> _$PromissoryNoteToJson(_PromissoryNote instance) =>
       'status': instance.status,
       'payment': instance.payment,
       'proofDocumentId': instance.proofDocumentId,
+      'property': instance.property,
+      'client': instance.client,
     };
+
+_NoteRef _$NoteRefFromJson(Map<String, dynamic> json) =>
+    _NoteRef(id: json['id'] as String, name: json['name'] as String);
+
+Map<String, dynamic> _$NoteRefToJson(_NoteRef instance) => <String, dynamic>{
+  'id': instance.id,
+  'name': instance.name,
+};
 
 _NotePayment _$NotePaymentFromJson(Map<String, dynamic> json) => _NotePayment(
   id: json['id'] as String,

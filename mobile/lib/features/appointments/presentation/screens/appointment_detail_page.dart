@@ -13,6 +13,7 @@ import '../providers/appointments_provider.dart';
 import '../widgets/appointment_card.dart';
 import '../widgets/appointment_chat.dart';
 import '../widgets/my_data_card.dart';
+import '../widgets/staff_appointment_actions.dart';
 
 /// Pantalla 6 · Detalle de cita («Cita - Casa Las Palmas»).
 class AppointmentDetailPage extends ConsumerWidget {
@@ -72,6 +73,7 @@ class _DetailState extends ConsumerState<_Detail> {
   @override
   Widget build(BuildContext context) {
     final a = widget.appointment;
+    final staff = a.client != null;
     final messages = ref.watch(appointmentMessagesProvider(a.id));
     return RefreshIndicator(
       onRefresh: () async {
@@ -96,9 +98,10 @@ class _DetailState extends ConsumerState<_Detail> {
             Text('Motivo: ${a.reason}', style: AppTextStyles.secondary.copyWith(fontSize: 13)),
           ],
           const SizedBox(height: AppSpacing.xl),
-          Text('Mis Datos', style: AppTextStyles.sectionTitle),
+          // La API solo envía el cliente al personal: así se distingue la vista.
+          Text(staff ? 'Cliente' : 'Mis Datos', style: AppTextStyles.sectionTitle),
           const SizedBox(height: AppSpacing.sm),
-          const MyDataCard(),
+          if (staff) AppointmentClientCard(appointment: a) else const MyDataCard(),
           const SizedBox(height: AppSpacing.xl),
           Row(
             children: [
@@ -125,7 +128,10 @@ class _DetailState extends ConsumerState<_Detail> {
               AsyncError(:final error) => SizedBox(height: 220, child: ErrorState(error: error, onRetry: () => ref.invalidate(appointmentMessagesProvider(a.id)))),
               _ => const SizedBox(height: 160, child: LoadingState(items: 2, itemHeight: 48)),
             },
-          if (a.isActive) ...[
+          if (staff) ...[
+            const SizedBox(height: AppSpacing.xl),
+            StaffAppointmentActions(appointment: a),
+          ] else if (a.isActive) ...[
             const SizedBox(height: AppSpacing.xl),
             PrimaryButton(label: 'Cancelar cita', variant: ButtonVariant.danger, loading: _cancelling, onPressed: _cancel),
           ],

@@ -210,7 +210,7 @@ Flujo de subida: 1) `upload-url` → 2) `PUT` del archivo a `upload.url` con `Co
 | POST | `/notifications/read-all` | Marcar todas |
 | POST | `/devices` | `{ fcmToken, platform (android · ios · web) }` |
 | DELETE | `/devices/:token` | |
-| GET | `/dashboard` | Cliente: `property, nextPayment, nextAppointment, openReports { count, latest }, unreadNotifications`. Personal: `counts` (citas por confirmar, pagarés vencidos, reportes nuevos, …) + listas cortas |
+| GET | `/dashboard` | Cliente: `property, nextPayment, nextAppointment, openReports { count, latest }, unreadNotifications`. Personal: `counts` (citas por confirmar, pagarés vencidos, reportes nuevos, …) + listas cortas `pendingAppointments`, `overdueNotes` y `newReports` (con `propertyId`) |
 
 ## Tareas programadas
 

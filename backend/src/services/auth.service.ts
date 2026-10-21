@@ -65,7 +65,9 @@ async function issueSession(u: Users.UserRow): Promise<Session> {
 }
 
 function lockedError(until: Date): AppError {
-  const minutes = Math.max(1, Math.ceil((until.getTime() - Date.now()) / 60000));
+  // El fin del bloqueo lo calcula la base (now()); si su reloj va unos milisegundos adelante del de Node,
+  // el redondeo daría un minuto de más. Nunca se informa más que la duración configurada.
+  const minutes = Math.min(env.LOGIN_LOCK_MINUTES, Math.max(1, Math.ceil((until.getTime() - Date.now()) / 60000)));
   return new AppError(423, 'ACCOUNT_LOCKED', `Por seguridad tu cuenta está bloqueada. Intenta de nuevo en ${minutes} minuto${minutes === 1 ? '' : 's'}.`, {
     retryAfterMinutes: minutes,
   });

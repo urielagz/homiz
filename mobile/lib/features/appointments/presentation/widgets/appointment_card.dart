@@ -33,6 +33,8 @@ class AppointmentCard extends StatelessWidget {
                     Text(Fmt.appointment(appointment.scheduledAt), style: AppTextStyles.cardTitle.copyWith(fontSize: 15, fontWeight: FontWeight.w700)),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(appointment.property.name, style: AppTextStyles.secondary.copyWith(fontSize: 13)),
+                    // Solo el personal recibe el cliente.
+                    if (appointment.client != null) Text(appointment.client!.name, style: AppTextStyles.label),
                   ],
                 ),
               ),

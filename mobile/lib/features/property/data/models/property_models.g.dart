@@ -24,6 +24,7 @@ _PropertyDetail _$PropertyDetailFromJson(Map<String, dynamic> json) =>
       city: json['city'] as String?,
       zone: json['zone'] as String?,
       status: json['status'] as String?,
+      visibility: json['visibility'] as String?,
       amenities:
           (json['amenities'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -34,6 +35,9 @@ _PropertyDetail _$PropertyDetailFromJson(Map<String, dynamic> json) =>
               ?.map((e) => PropertyPhoto.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <PropertyPhoto>[],
+      broker: json['broker'] == null
+          ? null
+          : PersonRef.fromJson(json['broker'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$PropertyDetailToJson(_PropertyDetail instance) =>
@@ -54,8 +58,10 @@ Map<String, dynamic> _$PropertyDetailToJson(_PropertyDetail instance) =>
       'city': instance.city,
       'zone': instance.zone,
       'status': instance.status,
+      'visibility': instance.visibility,
       'amenities': instance.amenities,
       'photos': instance.photos,
+      'broker': instance.broker,
     };
 
 _PropertyPhoto _$PropertyPhotoFromJson(Map<String, dynamic> json) =>
@@ -87,6 +93,9 @@ _Dossier _$DossierFromJson(Map<String, dynamic> json) => _Dossier(
           ?.map((e) => DossierDocument.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const <DossierDocument>[],
+  tenant: json['tenant'] == null
+      ? null
+      : PersonRef.fromJson(json['tenant'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$DossierToJson(_Dossier instance) => <String, dynamic>{
@@ -94,6 +103,7 @@ Map<String, dynamic> _$DossierToJson(_Dossier instance) => <String, dynamic>{
   'contract': instance.contract,
   'sections': instance.sections,
   'documents': instance.documents,
+  'tenant': instance.tenant,
 };
 
 _DossierProperty _$DossierPropertyFromJson(Map<String, dynamic> json) =>
@@ -111,6 +121,10 @@ _DossierProperty _$DossierPropertyFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
+      status: json['status'] as String?,
+      broker: json['broker'] == null
+          ? null
+          : DossierBroker.fromJson(json['broker'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$DossierPropertyToJson(_DossierProperty instance) =>
@@ -124,7 +138,18 @@ Map<String, dynamic> _$DossierPropertyToJson(_DossierProperty instance) =>
       'banos': instance.banos,
       'm2': instance.m2,
       'amenities': instance.amenities,
+      'status': instance.status,
+      'broker': instance.broker,
     };
+
+_DossierBroker _$DossierBrokerFromJson(Map<String, dynamic> json) =>
+    _DossierBroker(
+      name: json['name'] as String?,
+      phone: json['phone'] as String?,
+    );
+
+Map<String, dynamic> _$DossierBrokerToJson(_DossierBroker instance) =>
+    <String, dynamic>{'name': instance.name, 'phone': instance.phone};
 
 _DossierContract _$DossierContractFromJson(Map<String, dynamic> json) =>
     _DossierContract(

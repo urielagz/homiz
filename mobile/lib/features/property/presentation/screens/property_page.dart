@@ -9,6 +9,7 @@ import '../../../home/presentation/providers/dashboard_provider.dart';
 import '../../../maintenance/presentation/widgets/maintenance_tab.dart';
 import '../../../payments/presentation/widgets/payments_tab.dart';
 import '../widgets/dossier_tab.dart';
+import '../widgets/staff_properties_list.dart';
 import '../widgets/summary_tab.dart';
 
 /// Pantallas 7–10 · Mi propiedad: Resumen · Expediente · Pagos · Mantenimiento.
@@ -42,16 +43,7 @@ class _PropertyPageState extends ConsumerState<PropertyPage> {
       return const SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            HomizHeader(section: 'Propiedades'),
-            Expanded(
-              child: EmptyState(
-                icon: Icons.apartment_outlined,
-                title: 'Propiedades a tu cargo',
-                message: 'Aquí verás las casas que atiendes, con su expediente, pagos y mantenimiento.',
-              ),
-            ),
-          ],
+          children: [HomizHeader(section: 'Propiedades'), Expanded(child: StaffPropertiesList())],
         ),
       );
     }

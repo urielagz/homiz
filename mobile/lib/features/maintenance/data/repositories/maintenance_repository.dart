@@ -12,9 +12,23 @@ class MaintenanceRepository {
 
   final Dio _dio;
 
-  Future<List<MaintenanceReport>> list({required String propertyId}) => apiCall(() async {
-        final res = await _dio.get<Map<String, dynamic>>('/maintenance-reports', queryParameters: {'propertyId': propertyId, 'limit': 100});
+  Future<List<MaintenanceReport>> list({String? propertyId, List<String>? status}) => apiCall(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/maintenance-reports', queryParameters: {
+          'limit': 100,
+          'propertyId': ?propertyId,
+          if (status != null && status.isNotEmpty) 'status': status,
+        });
         return dataList(res.data, MaintenanceReport.fromJson);
+      });
+
+  /// Cambio de estado (permiso maintenance.manage). Avisa al cliente que lo reportó.
+  Future<MaintenanceReport> addUpdate(String id, {required String status, String? comment, String? providerId}) => apiCall(() async {
+        final res = await _dio.post<Map<String, dynamic>>('/maintenance-reports/$id/updates', data: {
+          'status': status,
+          if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+          'providerId': ?providerId,
+        });
+        return MaintenanceReport.fromJson(res.data!);
       });
 
   /// Detalle con línea de tiempo y fotos antes/después.

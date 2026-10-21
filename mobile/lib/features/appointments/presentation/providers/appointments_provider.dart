@@ -47,15 +47,38 @@ class AppointmentActions {
     _ref.invalidate(appointmentsProvider);
     _ref.invalidate(appointmentProvider(id));
     _ref.invalidate(clientDashboardProvider);
+    _ref.invalidate(staffDashboardProvider);
   }
 
+  AppointmentsRepository get _repo => _ref.read(appointmentsRepositoryProvider);
+
   Future<void> cancel(String id, {String? reason}) async {
-    await _ref.read(appointmentsRepositoryProvider).cancel(id, reason: reason);
+    await _repo.cancel(id, reason: reason);
+    _refresh(id);
+  }
+
+  Future<void> confirm(String id) async {
+    await _repo.confirm(id);
+    _refresh(id);
+  }
+
+  Future<void> reject(String id, String reason) async {
+    await _repo.reject(id, reason);
+    _refresh(id);
+  }
+
+  Future<void> complete(String id) async {
+    await _repo.complete(id);
+    _refresh(id);
+  }
+
+  Future<void> reschedule(String id, DateTime scheduledAt, {String? reason}) async {
+    await _repo.reschedule(id, scheduledAt, reason: reason);
     _refresh(id);
   }
 
   Future<Appointment> request({required String propertyId, required DateTime scheduledAt, String? note}) async {
-    final a = await _ref.read(appointmentsRepositoryProvider).request(propertyId: propertyId, scheduledAt: scheduledAt, note: note);
+    final a = await _repo.request(propertyId: propertyId, scheduledAt: scheduledAt, note: note);
     _refresh(a.id);
     return a;
   }

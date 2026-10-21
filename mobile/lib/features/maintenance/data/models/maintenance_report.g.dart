@@ -9,6 +9,9 @@ part of 'maintenance_report.dart';
 _MaintenanceReport _$MaintenanceReportFromJson(Map<String, dynamic> json) =>
     _MaintenanceReport(
       id: json['id'] as String,
+      property: json['property'] == null
+          ? null
+          : ReportProperty.fromJson(json['property'] as Map<String, dynamic>),
       title: json['title'] as String,
       description: json['description'] as String,
       category: json['category'] as String,
@@ -34,6 +37,7 @@ _MaintenanceReport _$MaintenanceReportFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$MaintenanceReportToJson(_MaintenanceReport instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'property': instance.property,
       'title': instance.title,
       'description': instance.description,
       'category': instance.category,
@@ -48,11 +52,26 @@ Map<String, dynamic> _$MaintenanceReportToJson(_MaintenanceReport instance) =>
       'photos': instance.photos,
     };
 
+_ReportProperty _$ReportPropertyFromJson(Map<String, dynamic> json) =>
+    _ReportProperty(
+      id: json['id'] as String,
+      code: json['code'] as String?,
+      name: json['name'] as String,
+    );
+
+Map<String, dynamic> _$ReportPropertyToJson(_ReportProperty instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'code': instance.code,
+      'name': instance.name,
+    };
+
 _ReportProvider _$ReportProviderFromJson(Map<String, dynamic> json) =>
     _ReportProvider(
       id: json['id'] as String,
       name: json['name'] as String,
       specialty: json['specialty'] as String?,
+      phone: json['phone'] as String?,
     );
 
 Map<String, dynamic> _$ReportProviderToJson(_ReportProvider instance) =>
@@ -60,6 +79,7 @@ Map<String, dynamic> _$ReportProviderToJson(_ReportProvider instance) =>
       'id': instance.id,
       'name': instance.name,
       'specialty': instance.specialty,
+      'phone': instance.phone,
     };
 
 _TimelineEntry _$TimelineEntryFromJson(Map<String, dynamic> json) =>

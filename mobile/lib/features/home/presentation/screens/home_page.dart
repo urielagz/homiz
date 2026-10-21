@@ -11,6 +11,7 @@ import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../notifications/presentation/providers/notifications_provider.dart';
 import '../../data/models/client_dashboard.dart';
 import '../providers/dashboard_provider.dart';
+import '../widgets/staff_home.dart';
 
 /// Pantalla 4 · Inicio: próximo pago, próxima cita y reportes abiertos.
 class HomePage extends ConsumerWidget {
@@ -23,16 +24,8 @@ class HomePage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const HomizHeader(section: 'Información'),
-          Expanded(
-            child: isStaff
-                ? const EmptyState(
-                    icon: Icons.dashboard_outlined,
-                    title: 'Tu panel de trabajo',
-                    message: 'Aquí verás las citas por confirmar, los pagarés vencidos y los reportes nuevos.',
-                  )
-                : const _ClientHome(),
-          ),
+          HomizHeader(section: isStaff ? 'Pendientes' : 'Información'),
+          Expanded(child: isStaff ? const StaffHome() : const _ClientHome()),
         ],
       ),
     );

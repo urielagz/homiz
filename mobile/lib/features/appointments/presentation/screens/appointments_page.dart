@@ -11,10 +11,14 @@ import '../../../auth/presentation/providers/session_provider.dart';
 import '../../data/models/appointment.dart';
 import '../providers/appointments_provider.dart';
 import '../widgets/appointment_card.dart';
+import '../widgets/staff_appointments.dart';
 
 /// Pantalla 5 · Mis citas.
 class AppointmentsPage extends ConsumerWidget {
-  const AppointmentsPage({super.key});
+  const AppointmentsPage({super.key, this.initialFilter});
+
+  /// Filtro del personal pedido por la ruta (`/appointments?filter=0`).
+  final int? initialFilter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,13 +29,7 @@ class AppointmentsPage extends ConsumerWidget {
         children: [
           HomizHeader(section: isStaff ? 'Citas' : 'Mis citas'),
           Expanded(
-            child: isStaff
-                ? const EmptyState(
-                    icon: Icons.calendar_today_outlined,
-                    title: 'Agenda de visitas',
-                    message: 'Aquí verás las citas que atiendes para confirmarlas o reprogramarlas.',
-                  )
-                : const _ClientAppointments(),
+            child: isStaff ? StaffAppointments(initialFilter: initialFilter) : const _ClientAppointments(),
           ),
         ],
       ),

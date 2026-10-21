@@ -7,7 +7,19 @@ App del cliente/inquilino y del personal de Inmobiliaria Zugar (Flutter 3, River
 - **Fase 4 (lista):** pantallas del cliente conectadas a la API: Inicio (próximo pago, cita y reportes), Mis citas,
   detalle de cita con «Mis Datos» y chat, solicitar visita, Mi propiedad (Resumen, Expediente, Pagos y
   Mantenimiento), nuevo reporte con fotos, seguimiento del reporte, perfil y notificaciones con navegación.
-- **Fase 5:** vistas del personal (broker y administración).
+- **Fase 5 (lista):** vistas del personal (broker y administración) con el mismo diseño: Pendientes (citas por
+  confirmar, pagarés vencidos, reportes nuevos), Propiedades con su ficha y pestañas, Agenda con confirmar /
+  rechazar / reprogramar / realizada / cancelar, «Registrar pago», `UpdateStatusSheet` y directorio de proveedores
+  con Llamar / Correo. Las acciones se ocultan si falta el permiso (`PermissionGate`); la API vuelve a validar.
+
+### Verla en Chrome (sin emulador)
+
+```bash
+flutter build web --release --dart-define=API_URL=http://localhost:3000/api/v1
+python -m http.server 5600 --directory build/web   # y abrir http://localhost:5600
+```
+
+El backend necesita `CORS_ORIGINS=http://localhost:5600` en su `.env`.
 
 > **Documentos y fotos en el emulador:** las URL firmadas usan `API_PUBLIC_URL` del backend. Para abrirlas desde
 > el emulador de Android pon `API_PUBLIC_URL=http://10.0.2.2:3000` en `backend/.env` (o la IP de tu PC si usas un
@@ -55,6 +67,7 @@ lib/
     payments/                   Pagarés, recibos y fichas de cobro
     maintenance/                Reportes, nuevo reporte con fotos y seguimiento
     documents/                  URL firmadas: ver documentos y subir fotos
+    providers/                  Directorio de proveedores (personal)
     notifications/              Bandeja de avisos
     profile/                    Perfil, editar información y cambiar contraseña
 assets/

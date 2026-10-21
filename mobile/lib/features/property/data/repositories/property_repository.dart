@@ -23,6 +23,17 @@ class PropertyRepository {
         return dataList(res.data, PropertyDetail.fromJson);
       });
 
+  /// Inventario para el personal. Con [brokerId] solo las casas de ese broker.
+  Future<List<PropertyDetail>> inventory({String? brokerId, String? q}) => apiCall(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/properties', queryParameters: {
+          'limit': 100,
+          'sort': 'updated',
+          'brokerId': ?brokerId,
+          if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+        });
+        return dataList(res.data, PropertyDetail.fromJson);
+      });
+
   Future<Dossier> dossier(String propertyId) => apiCall(() async {
         final res = await _dio.get<Map<String, dynamic>>('/properties/$propertyId/dossier');
         return Dossier.fromJson(res.data!);

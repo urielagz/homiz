@@ -13,6 +13,7 @@ const maintenanceCategories = ['Plomería', 'Electricidad', 'Climatización', 'C
 abstract class MaintenanceReport with _$MaintenanceReport {
   const factory MaintenanceReport({
     required String id,
+    ReportProperty? property,
     required String title,
     required String description,
     required String category,
@@ -34,9 +35,24 @@ abstract class MaintenanceReport with _$MaintenanceReport {
   bool get isOpen => status != 'resolved' && status != 'cancelled';
 }
 
+/// Estados a los que el personal puede mover un reporte, con su etiqueta.
+const maintenanceStatusLabels = {
+  'in_review': 'En revisión',
+  'in_repair': 'En reparación',
+  'resolved': 'Resuelto',
+  'cancelled': 'Cancelado',
+};
+
+@freezed
+abstract class ReportProperty with _$ReportProperty {
+  const factory ReportProperty({required String id, String? code, required String name}) = _ReportProperty;
+
+  factory ReportProperty.fromJson(Map<String, dynamic> json) => _$ReportPropertyFromJson(json);
+}
+
 @freezed
 abstract class ReportProvider with _$ReportProvider {
-  const factory ReportProvider({required String id, required String name, String? specialty}) = _ReportProvider;
+  const factory ReportProvider({required String id, required String name, String? specialty, String? phone}) = _ReportProvider;
 
   factory ReportProvider.fromJson(Map<String, dynamic> json) => _$ReportProviderFromJson(json);
 }
