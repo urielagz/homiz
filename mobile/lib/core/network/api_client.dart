@@ -6,7 +6,7 @@ import 'auth_interceptor.dart';
 import 'token_storage.dart';
 
 /// Almacenamiento de tokens (se reemplaza por MemoryTokenStorage en pruebas).
-final tokenStorageProvider = Provider<TokenStorage>((ref) => SecureTokenStorage());
+final tokenStorageProvider = Provider<TokenStorage>((ref) => FallbackTokenStorage(SecureTokenStorage()));
 
 /// URL base de la API (se puede reemplazar en pruebas).
 final apiBaseUrlProvider = Provider<String>((ref) => Env.apiUrl);
