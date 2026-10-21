@@ -33,3 +33,9 @@ Registro de ambigüedades del prompt y de contradicciones con el sitio existente
 | 27 | Pagos del cliente | — | El cliente ve folio, fecha y monto de sus pagos, pero no quién los registró. |
 | 28 | Push | FCM | Interfaz única: `mock` en desarrollo y pruebas; `fcm` usa la API HTTP v1 con la cuenta de servicio (sin dependencias extra). El envío real con FCM y con Cloudflare R2 no se probó: requiere credenciales. |
 | 29 | Script de base de datos | — | `npm run db:setup` ejecuta todos los `.sql` de `db/` en orden y solo necesita `DATABASE_URL` (no los secretos JWT). |
+| 30 | Acentos en la app | Textos del prompt sin acentos («Iniciar sesion», «Contrasena») | La interfaz usa la ortografía correcta del español de México: «Iniciar sesión», «Contraseña», «Regístrate aquí». |
+| 31 | Logo e ilustraciones | Arte del diseño | Mientras llegan los archivos finales, `assets/images/logo_zugar.png` y `assets/illustrations/*.svg` son marcadores con los mismos nombres; basta reemplazarlos. Si el logo falta, se muestra el texto «Zugar.». |
+| 32 | Pestañas en la Fase 3 | — | Inicio, Mi propiedad y Citas muestran el encabezado y un estado vacío; su contenido llega en las Fases 4 (cliente) y 5 (personal). Para el personal, «Mi propiedad» se titula «Propiedades». |
+| 33 | Recuperar contraseña en la app | — | El login incluye «¿Olvidaste tu contraseña?», que llama a `POST /auth/forgot-password`; el cambio con el enlace del correo se hace fuera de la app. |
+| 34 | Reintento tras renovar el token | — | La petición original se repite con el cliente sin interceptores: repetirla con el principal podía bloquear la cola si el reintento volvía a responder 401. |
+| 35 | Compresión de fotos | «comprimir antes de subir» | Las fotos de cámara y galería se reducen al tomarlas (lado mayor 1600 px, calidad 80) con image_picker; no se agrega otra dependencia. Máximo 5 archivos por envío. |

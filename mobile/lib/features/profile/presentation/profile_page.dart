@@ -1,0 +1,229 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/formatters.dart';
+import '../../../core/utils/validators.dart';
+import '../../../core/widgets/cards.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/initials_avatar.dart';
+import '../../../core/widgets/primary_button.dart';
+import '../../auth/data/repositories/auth_repository.dart';
+import '../../auth/presentation/providers/session_provider.dart';
+
+/// Perfil: datos de la cuenta, editar, cambiar contraseña y cerrar sesión.
+class ProfilePage extends ConsumerWidget {
+  const ProfilePage({super.key});
+
+  String _role(List<String> roles, bool isClient) {
+    if (isClient) return 'Cliente';
+    if (roles.contains('admin')) return 'Administrador';
+    if (roles.contains('broker')) return 'Asesor';
+    return 'Personal';
+  }
+
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Cerrar sesión',
+      message: '¿Quieres cerrar tu sesión en este dispositivo?',
+      confirmLabel: 'Cerrar sesión',
+      destructive: true,
+    );
+    if (ok) await ref.read(sessionProvider.notifier).logout();
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(sessionProvider).value;
+    if (user == null) return const Scaffold(body: SizedBox.shrink());
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mi perfil')),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.screen),
+        children: [
+          Center(child: InitialsAvatar(name: user.name, initials: user.initials, size: 80)),
+          const SizedBox(height: AppSpacing.md),
+          Text(user.name, textAlign: TextAlign.center, style: AppTextStyles.pageTitle),
+          Text(_role(user.roles, user.isClient), textAlign: TextAlign.center, style: AppTextStyles.secondary),
+          const SizedBox(height: AppSpacing.xl),
+          Text('Información', style: AppTextStyles.sectionTitle),
+          KeyValueRow(label: 'Correo', value: user.email),
+          KeyValueRow(label: 'Teléfono', value: user.phone ?? 'Sin registrar'),
+          KeyValueRow(label: 'Fecha de nacimiento', value: user.birthDate == null ? 'Sin registrar' : Fmt.longDate(Fmt.parse(user.birthDate!)), showDivider: false),
+          const SizedBox(height: AppSpacing.xl),
+          PrimaryButton(label: 'Editar mis datos', icon: Icons.edit_outlined, variant: ButtonVariant.outline, onPressed: () => _openSheet(context, const _EditProfileSheet())),
+          const SizedBox(height: AppSpacing.md),
+          PrimaryButton(label: 'Cambiar contraseña', icon: Icons.lock_outline_rounded, variant: ButtonVariant.outline, onPressed: () => _openSheet(context, const _ChangePasswordSheet())),
+          const SizedBox(height: AppSpacing.md),
+          PrimaryButton(label: 'Cerrar sesión', icon: Icons.logout_rounded, variant: ButtonVariant.danger, onPressed: () => _logout(context, ref)),
+        ],
+      ),
+    );
+  }
+
+  void _openSheet(BuildContext context, Widget sheet) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.xl),
+        child: sheet,
+      ),
+    );
+  }
+}
+
+/// Mensaje de error de la API dentro de las hojas.
+class _ErrorText extends StatelessWidget {
+  const _ErrorText(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.md),
+        child: Semantics(liveRegion: true, child: Text(message, style: AppTextStyles.secondary.copyWith(color: AppColors.danger, fontSize: 13))),
+      );
+}
+
+class _EditProfileSheet extends ConsumerStatefulWidget {
+  const _EditProfileSheet();
+
+  @override
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
+  final _form = GlobalKey<FormState>();
+  late final _user = ref.read(sessionProvider).value!;
+  late final _name = TextEditingController(text: _user.name);
+  late final _phone = TextEditingController(text: _user.phone ?? '');
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final updated = await ref.read(authRepositoryProvider).updateProfile(name: _name.text, phone: _phone.text);
+      ref.read(sessionProvider.notifier).updateUser(updated);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) setState(() => _error = ApiException.from(e).message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _form,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Editar mis datos', style: AppTextStyles.pageTitle),
+          const SizedBox(height: AppSpacing.lg),
+          TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Nombre completo'), validator: Validators.name),
+          const SizedBox(height: AppSpacing.md),
+          TextFormField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Teléfono'), validator: Validators.phone),
+          const SizedBox(height: AppSpacing.lg),
+          if (_error != null) _ErrorText(_error!),
+          PrimaryButton(label: 'Guardar', loading: _loading, onPressed: _save),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChangePasswordSheet extends ConsumerStatefulWidget {
+  const _ChangePasswordSheet();
+
+  @override
+  ConsumerState<_ChangePasswordSheet> createState() => _ChangePasswordSheetState();
+}
+
+class _ChangePasswordSheetState extends ConsumerState<_ChangePasswordSheet> {
+  final _form = GlobalKey<FormState>();
+  final _current = TextEditingController();
+  final _next = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _current.dispose();
+    _next.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final message = await ref.read(authRepositoryProvider).changePassword(current: _current.text, next: _next.text);
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      if (mounted) setState(() => _error = ApiException.from(e).message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _form,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Cambiar contraseña', style: AppTextStyles.pageTitle),
+          const SizedBox(height: AppSpacing.lg),
+          TextFormField(
+            controller: _current,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Contraseña actual'),
+            validator: (v) => Validators.required(v, 'Escribe tu contraseña actual.'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextFormField(controller: _next, obscureText: true, decoration: const InputDecoration(labelText: 'Nueva contraseña'), validator: Validators.password),
+          const SizedBox(height: AppSpacing.md),
+          TextFormField(
+            controller: _confirm,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Confirma la nueva contraseña'),
+            validator: (v) => v == _next.text ? null : 'Las contraseñas no coinciden.',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (_error != null) _ErrorText(_error!),
+          PrimaryButton(label: 'Actualizar contraseña', loading: _loading, onPressed: _save),
+        ],
+      ),
+    );
+  }
+}

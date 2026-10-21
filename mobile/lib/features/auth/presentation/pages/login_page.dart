@@ -1,0 +1,172 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/auth_background.dart';
+import '../../../../core/widgets/auth_text_field.dart';
+import '../../../../core/widgets/primary_button.dart';
+import '../../data/repositories/auth_repository.dart';
+import '../providers/session_provider.dart';
+
+/// Pantalla 2 · Iniciar sesión. Al entrar, el router lleva a /home.
+class LoginPage extends ConsumerStatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends ConsumerState<LoginPage> {
+  final _form = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _loading = false;
+  String? _error;
+  Map<String, String> _fieldErrors = const {};
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() {
+      _error = null;
+      _fieldErrors = const {};
+    });
+    if (!_form.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _loading = true);
+    try {
+      await ref.read(sessionProvider.notifier).login(_email.text, _password.text);
+    } catch (e) {
+      final api = ApiException.from(e);
+      if (mounted) {
+        setState(() {
+          _error = api.message;
+          _fieldErrors = api.fieldErrors;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final controller = TextEditingController(text: _email.text);
+    final email = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Recuperar contraseña'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.emailAddress,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Correo electrónico'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Enviar')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (email == null || Validators.email(email) != null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final message = await ref.read(authRepositoryProvider).forgotPassword(email);
+      messenger.showSnackBar(SnackBar(content: Text(message.isEmpty ? 'Si el correo está registrado, te enviamos las instrucciones.' : message)));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(ApiException.from(e).message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: AuthBackground(
+        child: AutofillGroup(
+          child: Form(
+            key: _form,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: AppSpacing.xxxl),
+                Text('Homiz', textAlign: TextAlign.center, style: AppTextStyles.brand),
+                Text('by', textAlign: TextAlign.center, style: AppTextStyles.body.copyWith(color: Colors.white70)),
+                const SizedBox(height: AppSpacing.xs),
+                const Center(child: ZugarLogo(height: 40)),
+                const SizedBox(height: AppSpacing.xxl),
+                Semantics(header: true, child: Text('Iniciar sesión', style: AppTextStyles.authTitle)),
+                const SizedBox(height: AppSpacing.xl),
+                AuthTextField(
+                  label: 'Correo electrónico',
+                  controller: _email,
+                  hint: 'nombre@correo.com',
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  validator: Validators.email,
+                  errorText: _fieldErrors['email'],
+                  enabled: !_loading,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AuthTextField(
+                  label: 'Contraseña',
+                  controller: _password,
+                  obscure: true,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  validator: (v) => Validators.required(v, 'Escribe tu contraseña.'),
+                  errorText: _fieldErrors['password'],
+                  onSubmitted: (_) => _submit(),
+                  enabled: !_loading,
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _loading ? null : _forgotPassword,
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    child: const Text('¿Olvidaste tu contraseña?'),
+                  ),
+                ),
+                if (_error != null) ...[
+                  Semantics(
+                    liveRegion: true,
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(color: AppColors.dangerBg, borderRadius: AppRadius.inputAll),
+                      child: Text(_error!, style: AppTextStyles.secondary.copyWith(color: AppColors.danger, fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                const SizedBox(height: AppSpacing.sm),
+                PrimaryButton(label: 'Ingresar', variant: ButtonVariant.white, loading: _loading, onPressed: _submit),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: [
+                    const Expanded(child: Divider(color: Colors.white38)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: Text('o', style: AppTextStyles.body.copyWith(color: Colors.white70)),
+                    ),
+                    const Expanded(child: Divider(color: Colors.white38)),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                PrimaryButton(label: 'Regístrate aquí', onPressed: _loading ? null : () => context.go('/register')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
