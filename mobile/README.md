@@ -4,7 +4,14 @@ App del cliente/inquilino y del personal de Inmobiliaria Zugar (Flutter 3, River
 
 - **Fase 3 (lista):** tema, navegación con barra inferior, widgets compartidos, cliente HTTP con renovación de
   sesión, bienvenida, inicio de sesión, «Crea tu cuenta», perfil y notificaciones.
-- **Fases 4 y 5:** contenido de las pestañas para el cliente y para el personal.
+- **Fase 4 (lista):** pantallas del cliente conectadas a la API: Inicio (próximo pago, cita y reportes), Mis citas,
+  detalle de cita con «Mis Datos» y chat, solicitar visita, Mi propiedad (Resumen, Expediente, Pagos y
+  Mantenimiento), nuevo reporte con fotos, seguimiento del reporte, perfil y notificaciones con navegación.
+- **Fase 5:** vistas del personal (broker y administración).
+
+> **Documentos y fotos en el emulador:** las URL firmadas usan `API_PUBLIC_URL` del backend. Para abrirlas desde
+> el emulador de Android pon `API_PUBLIC_URL=http://10.0.2.2:3000` en `backend/.env` (o la IP de tu PC si usas un
+> teléfono físico).
 
 ## Cómo correrla
 
@@ -25,8 +32,8 @@ flutter analyze
 flutter test
 ```
 
-Las pruebas no necesitan servidor: usan un adaptador HTTP simulado (`test/helpers.dart`), tokens en memoria y
-desactivan la descarga de fuentes.
+Las pruebas no necesitan servidor: usan un adaptador HTTP simulado (`test/helpers.dart`) con respuestas que copian
+la forma de la API y los datos del seed (`test/fixtures.dart`), tokens en memoria y sin descargar fuentes.
 
 ## Estructura
 
@@ -39,11 +46,17 @@ lib/
     network/                    Dio, interceptor de sesión, tokens cifrados y errores de la API
     utils/                      Variables de entorno, formatos (moneda, fechas) y validadores
     widgets/                    Encabezado, barra inferior, botones, tarjetas, badges, estados, cargador de archivos…
-  features/
-    auth/                       Modelo de usuario, repositorio, sesión y pantallas de acceso
-    home/ · property/ · appointments/   Pestañas
+  features/                     Cada una con data/models (freezed), data/repositories (Dio),
+                                presentation/providers (Riverpod), presentation/screens y presentation/widgets
+    auth/                       Usuario, sesión y pantallas de acceso
+    home/                       Inicio (panel del cliente)
+    appointments/               Mis citas, detalle con chat, catálogo y solicitar visita
+    property/                   Mi propiedad: Resumen y Expediente
+    payments/                   Pagarés, recibos y fichas de cobro
+    maintenance/                Reportes, nuevo reporte con fotos y seguimiento
+    documents/                  URL firmadas: ver documentos y subir fotos
     notifications/              Bandeja de avisos
-    profile/                    Perfil, editar datos y cambiar contraseña
+    profile/                    Perfil, editar información y cambiar contraseña
 assets/
   images/logo_zugar.png         Marcador del logo (reemplazar por el definitivo)
   illustrations/*.svg           Marcadores de las ilustraciones del panel

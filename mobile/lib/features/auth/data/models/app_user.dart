@@ -39,6 +39,7 @@ abstract class ClientProfile with _$ClientProfile {
     required String id,
     required String kind,
     String? budget,
+    double? budgetAmount,
     @Default(false) bool hasPets,
     @Default(0) int petsCount,
     int? occupants,

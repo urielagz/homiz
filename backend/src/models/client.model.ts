@@ -8,15 +8,38 @@ export interface ClientProfile {
   email: string | null;
   phone: string | null;
   budget: string | null;
+  budget_amount: number | null;
   has_pets: boolean;
   pets_count: number;
   occupants: number | null;
   property_id: string | null;
 }
 
+/** Datos que el propio cliente puede actualizar desde la app («Mis datos» de la cita). */
+export interface OwnClientUpdate {
+  budgetAmount?: number | null;
+  hasPets?: boolean;
+  petsCount?: number;
+  occupants?: number | null;
+}
+
+export async function updateOwn(userId: string, d: OwnClientUpdate, db: Db = pool): Promise<void> {
+  const budgetText = d.budgetAmount === undefined ? undefined : d.budgetAmount === null ? null : `$${d.budgetAmount.toLocaleString('en-US')} MXN / mes`;
+  await db.query(
+    `UPDATE clients
+        SET budget_amount = CASE WHEN $2::boolean THEN $3::numeric ELSE budget_amount END,
+            budget        = CASE WHEN $2::boolean THEN $4::text ELSE budget END,
+            has_pets      = COALESCE($5::boolean, has_pets),
+            pets_count    = CASE WHEN $5::boolean = FALSE THEN 0 ELSE COALESCE($6::int, pets_count) END,
+            occupants     = CASE WHEN $7::boolean THEN $8::int ELSE occupants END
+      WHERE user_id = $1 AND active`,
+    [userId, d.budgetAmount !== undefined, d.budgetAmount ?? null, budgetText ?? null, d.hasPets ?? null, d.petsCount ?? null, d.occupants !== undefined, d.occupants ?? null],
+  );
+}
+
 export async function findByUserId(userId: string, db: Db = pool): Promise<ClientProfile | null> {
   const { rows } = await db.query<ClientProfile>(
-    `SELECT id, kind, name, email, phone, budget, has_pets, pets_count, occupants, property_id
+    `SELECT id, kind, name, email, phone, budget, budget_amount, has_pets, pets_count, occupants, property_id
        FROM clients WHERE user_id = $1 AND active`,
     [userId],
   );

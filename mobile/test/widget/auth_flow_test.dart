@@ -5,6 +5,7 @@ import 'package:homiz/core/network/token_storage.dart';
 import 'package:homiz/core/theme/app_text_styles.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import '../fixtures.dart';
 import '../helpers.dart';
 
 void main() {
@@ -18,9 +19,7 @@ void main() {
             ? (200, {'accessToken': 'a1', 'refreshToken': 'r1', 'user': lauraJson})
             : (401, apiError('INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.')),
         '/auth/register' => (409, apiError('VALIDATION_ERROR', 'Revisa los datos.', {'email': ['Ese correo ya está registrado.']})),
-        '/users/me' => (200, lauraJson),
-        '/notifications' => (200, {'data': <Object>[], 'total': 0, 'page': 1, 'limit': 50, 'unreadCount': 2}),
-        _ => (404, apiError('NOT_FOUND', 'No encontrado')),
+        _ => lauraBackend(o),
       };
 
   Future<void> settle(WidgetTester tester) async {
@@ -80,7 +79,8 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Citas'));
     await settle(tester);
-    expect(find.text('No tienes citas próximas'), findsOneWidget);
+    expect(find.text('Mis citas'), findsOneWidget);
+    expect(find.text('Casa Las Palmas'), findsOneWidget);
   });
 
   testWidgets('con sesión guardada entra directo y cerrar sesión regresa al login', (tester) async {
@@ -95,7 +95,8 @@ void main() {
     await settle(tester);
     expect(find.text('lau.mendez@correo.com'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Cerrar sesión'), 100);
+    await tester.ensureVisible(find.text('Cerrar sesión'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Cerrar sesión'));
     await settle(tester);
     await tester.tap(find.widgetWithText(TextButton, 'Cerrar sesión'));

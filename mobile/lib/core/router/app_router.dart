@@ -2,15 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/appointments/presentation/appointments_page.dart';
-import '../../features/auth/presentation/pages/login_page.dart';
-import '../../features/auth/presentation/pages/register_page.dart';
-import '../../features/auth/presentation/pages/splash_page.dart';
+import '../../features/appointments/presentation/screens/appointment_detail_page.dart';
+import '../../features/appointments/presentation/screens/appointments_page.dart';
+import '../../features/appointments/presentation/screens/catalog_page.dart';
+import '../../features/appointments/presentation/screens/request_visit_page.dart';
 import '../../features/auth/presentation/providers/session_provider.dart';
-import '../../features/home/presentation/home_page.dart';
-import '../../features/notifications/presentation/notifications_page.dart';
-import '../../features/profile/presentation/profile_page.dart';
-import '../../features/property/presentation/property_page.dart';
+import '../../features/auth/presentation/screens/login_page.dart';
+import '../../features/auth/presentation/screens/register_page.dart';
+import '../../features/auth/presentation/screens/splash_page.dart';
+import '../../features/home/presentation/screens/home_page.dart';
+import '../../features/maintenance/presentation/screens/new_report_page.dart';
+import '../../features/maintenance/presentation/screens/report_detail_page.dart';
+import '../../features/notifications/presentation/screens/notifications_page.dart';
+import '../../features/profile/presentation/screens/profile_page.dart';
+import '../../features/property/presentation/screens/property_page.dart';
 import '../widgets/homiz_bottom_nav.dart';
 
 const _authRoutes = {'/login', '/register'};
@@ -51,8 +56,28 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, shell) => _TabsShell(shell: shell),
         branches: [
           StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomePage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/property', builder: (_, _) => const PropertyPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/appointments', builder: (_, _) => const AppointmentsPage())]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/property',
+              builder: (_, state) => PropertyPage(initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '')),
+              routes: [
+                GoRoute(path: 'maintenance/new', builder: (_, state) => NewReportPage(propertyId: state.uri.queryParameters['propertyId'] ?? '')),
+                GoRoute(path: 'maintenance/:id', builder: (_, state) => ReportDetailPage(reportId: state.pathParameters['id']!)),
+              ],
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/appointments',
+              builder: (_, _) => const AppointmentsPage(),
+              routes: [
+                // «catalog» va antes que «:id» para que no se tome como id de cita.
+                GoRoute(path: 'catalog', builder: (_, _) => const CatalogPage()),
+                GoRoute(path: 'catalog/:propertyId', builder: (_, state) => RequestVisitPage(propertyId: state.pathParameters['propertyId']!)),
+                GoRoute(path: ':id', builder: (_, state) => AppointmentDetailPage(appointmentId: state.pathParameters['id']!)),
+              ],
+            ),
+          ]),
         ],
       ),
     ],

@@ -1,0 +1,73 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+import '../../../../core/utils/json_converters.dart';
+
+part 'payment_models.freezed.dart';
+part 'payment_models.g.dart';
+
+/// Pagaré mensual del contrato.
+@freezed
+abstract class PromissoryNote with _$PromissoryNote {
+  const factory PromissoryNote({
+    required String id,
+    required int number,
+    required String label,
+    required double amount,
+    @LocalDate() required DateTime dueDate,
+    required String status,
+    NotePayment? payment,
+    String? proofDocumentId,
+  }) = _PromissoryNote;
+
+  factory PromissoryNote.fromJson(Map<String, dynamic> json) => _$PromissoryNoteFromJson(json);
+}
+
+@freezed
+abstract class NotePayment with _$NotePayment {
+  const factory NotePayment({required String id, required double amount, @LocalDate() required DateTime paidAt, String? receiptFolio}) = _NotePayment;
+
+  factory NotePayment.fromJson(Map<String, dynamic> json) => _$NotePaymentFromJson(json);
+}
+
+/// «Estado de pagos»: pagados X de N, faltan Y por $Z y el próximo pagaré.
+@freezed
+abstract class NotesSummary with _$NotesSummary {
+  const factory NotesSummary({
+    required int total,
+    required int paid,
+    required int remaining,
+    @Default(0) double remainingAmount,
+    NextNote? next,
+  }) = _NotesSummary;
+
+  const NotesSummary._();
+
+  factory NotesSummary.fromJson(Map<String, dynamic> json) => _$NotesSummaryFromJson(json);
+
+  double get progress => total == 0 ? 0 : paid / total;
+}
+
+@freezed
+abstract class NextNote with _$NextNote {
+  const factory NextNote({required int number, @LocalDate() required DateTime dueDate, required double amount}) = _NextNote;
+
+  factory NextNote.fromJson(Map<String, dynamic> json) => _$NextNoteFromJson(json);
+}
+
+/// Recibo de luz/agua (`bill`) o ficha de cobro (`charge_slip`).
+@freezed
+abstract class Receipt with _$Receipt {
+  const factory Receipt({
+    required String id,
+    required String kind,
+    required String concept,
+    String? periodLabel,
+    required double amount,
+    @LocalDateOrNull() DateTime? dueDate,
+    @LocalDateOrNull() DateTime? paidAt,
+    required String status,
+    String? documentId,
+  }) = _Receipt;
+
+  factory Receipt.fromJson(Map<String, dynamic> json) => _$ReceiptFromJson(json);
+}

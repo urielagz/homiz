@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_exception.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
-import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../core/utils/validators.dart';
-import '../../../core/widgets/cards.dart';
-import '../../../core/widgets/confirm_dialog.dart';
-import '../../../core/widgets/initials_avatar.dart';
-import '../../../core/widgets/primary_button.dart';
-import '../../auth/data/repositories/auth_repository.dart';
-import '../../auth/presentation/providers/session_provider.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/formatters.dart';
+import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/cards.dart';
+import '../../../../core/widgets/confirm_dialog.dart';
+import '../../../../core/widgets/initials_avatar.dart';
+import '../../../../core/widgets/primary_button.dart';
+import '../../../auth/data/repositories/auth_repository.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
 
 /// Perfil: datos de la cuenta, editar, cambiar contraseña y cerrar sesión.
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   String _role(List<String> roles, bool isClient) {
-    if (isClient) return 'Cliente';
-    if (roles.contains('admin')) return 'Administrador';
-    if (roles.contains('broker')) return 'Asesor';
-    return 'Personal';
+    if (isClient) return 'Cuenta de cliente';
+    if (roles.contains('admin')) return 'Cuenta de administrador';
+    if (roles.contains('broker')) return 'Cuenta de asesor';
+    return 'Cuenta del personal';
   }
 
   Future<void> _logout(BuildContext context, WidgetRef ref) async {
@@ -50,12 +50,13 @@ class ProfilePage extends ConsumerWidget {
           Text(user.name, textAlign: TextAlign.center, style: AppTextStyles.pageTitle),
           Text(_role(user.roles, user.isClient), textAlign: TextAlign.center, style: AppTextStyles.secondary),
           const SizedBox(height: AppSpacing.xl),
-          Text('Información', style: AppTextStyles.sectionTitle),
-          KeyValueRow(label: 'Correo', value: user.email),
+          Text('Datos personales', style: AppTextStyles.sectionTitle),
+          KeyValueRow(label: 'Nombre completo', value: user.name),
+          KeyValueRow(label: 'Correo electrónico', value: user.email),
           KeyValueRow(label: 'Teléfono', value: user.phone ?? 'Sin registrar'),
           KeyValueRow(label: 'Fecha de nacimiento', value: user.birthDate == null ? 'Sin registrar' : Fmt.longDate(Fmt.parse(user.birthDate!)), showDivider: false),
           const SizedBox(height: AppSpacing.xl),
-          PrimaryButton(label: 'Editar mis datos', icon: Icons.edit_outlined, variant: ButtonVariant.outline, onPressed: () => _openSheet(context, const _EditProfileSheet())),
+          PrimaryButton(label: 'Editar información', icon: Icons.edit_outlined, onPressed: () => _openSheet(context, const _EditProfileSheet())),
           const SizedBox(height: AppSpacing.md),
           PrimaryButton(label: 'Cambiar contraseña', icon: Icons.lock_outline_rounded, variant: ButtonVariant.outline, onPressed: () => _openSheet(context, const _ChangePasswordSheet())),
           const SizedBox(height: AppSpacing.md),
@@ -103,6 +104,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
   late final _user = ref.read(sessionProvider).value!;
   late final _name = TextEditingController(text: _user.name);
   late final _phone = TextEditingController(text: _user.phone ?? '');
+  late DateTime? _birthDate = _user.birthDate == null ? null : Fmt.parse(_user.birthDate!);
   bool _loading = false;
   String? _error;
 
@@ -113,6 +115,22 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
     super.dispose();
   }
 
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 30),
+      firstDate: DateTime(1920),
+      lastDate: now,
+      initialDatePickerMode: DatePickerMode.year,
+      helpText: 'Fecha de nacimiento',
+    );
+    if (picked != null) setState(() => _birthDate = picked);
+  }
+
+  /// AAAA-MM-DD, el formato que acepta la API.
+  static String _iso(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
     setState(() {
@@ -120,7 +138,11 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
       _error = null;
     });
     try {
-      final updated = await ref.read(authRepositoryProvider).updateProfile(name: _name.text, phone: _phone.text);
+      final updated = await ref.read(authRepositoryProvider).updateProfile(
+            name: _name.text,
+            phone: _phone.text,
+            birthDate: _birthDate == null ? null : _iso(_birthDate!),
+          );
       ref.read(sessionProvider.notifier).updateUser(updated);
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -138,11 +160,17 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Editar mis datos', style: AppTextStyles.pageTitle),
+          Text('Editar información', style: AppTextStyles.pageTitle),
           const SizedBox(height: AppSpacing.lg),
           TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Nombre completo'), validator: Validators.name),
           const SizedBox(height: AppSpacing.md),
           TextFormField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Teléfono'), validator: Validators.phone),
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton.icon(
+            onPressed: _loading ? null : _pickBirthDate,
+            icon: const Icon(Icons.cake_outlined),
+            label: Text(_birthDate == null ? 'Fecha de nacimiento' : 'Nació el ${Fmt.longDate(_birthDate!)}'),
+          ),
           const SizedBox(height: AppSpacing.lg),
           if (_error != null) _ErrorText(_error!),
           PrimaryButton(label: 'Guardar', loading: _loading, onPressed: _save),

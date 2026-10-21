@@ -164,6 +164,18 @@ describe('/users/me', () => {
     expect(upd.body.phone).toBe('+52 998 123 4567');
   });
 
+  test('el cliente edita «Mis datos» de su expediente; el personal no tiene expediente', async () => {
+    const s = await login(EMAILS.laura, 'LauraNueva2026');
+    const upd = await api().patch('/api/v1/users/me').set(bearer(s.accessToken)).send({ client: { budgetAmount: 15000, hasPets: false, petsCount: 2, occupants: 4 } });
+    expect(upd.status).toBe(200);
+    expect(upd.body.client).toMatchObject({ budget: '$15,000 MXN / mes', budgetAmount: 15000, hasPets: false, petsCount: 0, occupants: 4 });
+    await api().patch('/api/v1/users/me').set(bearer(s.accessToken)).send({ client: { budgetAmount: 12000, hasPets: true, petsCount: 1, occupants: 3 } });
+
+    const staff = await login(EMAILS.admin);
+    const bad = await api().patch('/api/v1/users/me').set(bearer(staff.accessToken)).send({ client: { occupants: 2 } });
+    expect(bad.status).toBe(400);
+  });
+
   test('un token alterado o ausente no entra', async () => {
     const s = await login(EMAILS.admin);
     expect((await api().get('/api/v1/users/me')).status).toBe(401);

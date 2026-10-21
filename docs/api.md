@@ -50,7 +50,7 @@ revocado se cierran todas las sesiones del usuario.
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
 | GET | `/users/me` | Sesión | Perfil propio. Clientes: incluye `client` (presupuesto, mascotas, inquilinos, propiedad) **sin** datos del broker |
-| PATCH | `/users/me` | Sesión | `{ name?, phone?, birthDate? }` (AAAA-MM-DD) |
+| PATCH | `/users/me` | Sesión | `{ name?, phone?, birthDate? (AAAA-MM-DD), client? }`. `client` solo para clientes: `{ budgetAmount?, hasPets?, petsCount?, occupants? }` («Mis datos»; el personal recibe 400) |
 
 ## Historial (`/activity-log`)
 

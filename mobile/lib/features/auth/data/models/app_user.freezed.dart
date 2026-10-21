@@ -349,7 +349,7 @@ $ClientProfileCopyWith<$Res>? get client {
 /// @nodoc
 mixin _$ClientProfile {
 
- String get id; String get kind; String? get budget; bool get hasPets; int get petsCount; int? get occupants; String? get propertyId;
+ String get id; String get kind; String? get budget; double? get budgetAmount; bool get hasPets; int get petsCount; int? get occupants; String? get propertyId;
 /// Create a copy of ClientProfile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -363,20 +363,20 @@ $ClientProfileCopyWith<ClientProfile> get copyWith => _$ClientProfileCopyWithImp
 @override
 bool operator ==(Object other) {
   final _this = this as ClientProfile;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ClientProfile&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.budget, _this.budget) || other.budget == _this.budget)&&(identical(other.hasPets, _this.hasPets) || other.hasPets == _this.hasPets)&&(identical(other.petsCount, _this.petsCount) || other.petsCount == _this.petsCount)&&(identical(other.occupants, _this.occupants) || other.occupants == _this.occupants)&&(identical(other.propertyId, _this.propertyId) || other.propertyId == _this.propertyId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ClientProfile&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.budget, _this.budget) || other.budget == _this.budget)&&(identical(other.budgetAmount, _this.budgetAmount) || other.budgetAmount == _this.budgetAmount)&&(identical(other.hasPets, _this.hasPets) || other.hasPets == _this.hasPets)&&(identical(other.petsCount, _this.petsCount) || other.petsCount == _this.petsCount)&&(identical(other.occupants, _this.occupants) || other.occupants == _this.occupants)&&(identical(other.propertyId, _this.propertyId) || other.propertyId == _this.propertyId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ClientProfile;
-  return Object.hash(runtimeType,_this.id,_this.kind,_this.budget,_this.hasPets,_this.petsCount,_this.occupants,_this.propertyId);
+  return Object.hash(runtimeType,_this.id,_this.kind,_this.budget,_this.budgetAmount,_this.hasPets,_this.petsCount,_this.occupants,_this.propertyId);
 }
 
 @override
 String toString() {
   final _this = this as ClientProfile;
-  return 'ClientProfile(id: ${_this.id}, kind: ${_this.kind}, budget: ${_this.budget}, hasPets: ${_this.hasPets}, petsCount: ${_this.petsCount}, occupants: ${_this.occupants}, propertyId: ${_this.propertyId})';
+  return 'ClientProfile(id: ${_this.id}, kind: ${_this.kind}, budget: ${_this.budget}, budgetAmount: ${_this.budgetAmount}, hasPets: ${_this.hasPets}, petsCount: ${_this.petsCount}, occupants: ${_this.occupants}, propertyId: ${_this.propertyId})';
 }
 
 
@@ -387,7 +387,7 @@ abstract mixin class $ClientProfileCopyWith<$Res>  {
   factory $ClientProfileCopyWith(ClientProfile value, $Res Function(ClientProfile) _then) = _$ClientProfileCopyWithImpl;
 @useResult
 $Res call({
- String id, String kind, String? budget, bool hasPets, int petsCount, int? occupants, String? propertyId
+ String id, String kind, String? budget, double? budgetAmount, bool hasPets, int petsCount, int? occupants, String? propertyId
 });
 
 
@@ -404,12 +404,13 @@ class _$ClientProfileCopyWithImpl<$Res>
 
 /// Create a copy of ClientProfile
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? budget = freezed,Object? hasPets = null,Object? petsCount = null,Object? occupants = freezed,Object? propertyId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? budget = freezed,Object? budgetAmount = freezed,Object? hasPets = null,Object? petsCount = null,Object? occupants = freezed,Object? propertyId = freezed,}) {
   return _then(ClientProfile(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,budget: freezed == budget ? _self.budget : budget // ignore: cast_nullable_to_non_nullable
-as String?,hasPets: null == hasPets ? _self.hasPets : hasPets // ignore: cast_nullable_to_non_nullable
+as String?,budgetAmount: freezed == budgetAmount ? _self.budgetAmount : budgetAmount // ignore: cast_nullable_to_non_nullable
+as double?,hasPets: null == hasPets ? _self.hasPets : hasPets // ignore: cast_nullable_to_non_nullable
 as bool,petsCount: null == petsCount ? _self.petsCount : petsCount // ignore: cast_nullable_to_non_nullable
 as int,occupants: freezed == occupants ? _self.occupants : occupants // ignore: cast_nullable_to_non_nullable
 as int?,propertyId: freezed == propertyId ? _self.propertyId : propertyId // ignore: cast_nullable_to_non_nullable
@@ -498,10 +499,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String kind,  String? budget,  bool hasPets,  int petsCount,  int? occupants,  String? propertyId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String kind,  String? budget,  double? budgetAmount,  bool hasPets,  int petsCount,  int? occupants,  String? propertyId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ClientProfile() when $default != null:
-return $default(_that.id,_that.kind,_that.budget,_that.hasPets,_that.petsCount,_that.occupants,_that.propertyId);case _:
+return $default(_that.id,_that.kind,_that.budget,_that.budgetAmount,_that.hasPets,_that.petsCount,_that.occupants,_that.propertyId);case _:
   return orElse();
 
 }
@@ -519,10 +520,10 @@ return $default(_that.id,_that.kind,_that.budget,_that.hasPets,_that.petsCount,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String kind,  String? budget,  bool hasPets,  int petsCount,  int? occupants,  String? propertyId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String kind,  String? budget,  double? budgetAmount,  bool hasPets,  int petsCount,  int? occupants,  String? propertyId)  $default,) {final _that = this;
 switch (_that) {
 case _ClientProfile():
-return $default(_that.id,_that.kind,_that.budget,_that.hasPets,_that.petsCount,_that.occupants,_that.propertyId);case _:
+return $default(_that.id,_that.kind,_that.budget,_that.budgetAmount,_that.hasPets,_that.petsCount,_that.occupants,_that.propertyId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -539,10 +540,10 @@ return $default(_that.id,_that.kind,_that.budget,_that.hasPets,_that.petsCount,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String kind,  String? budget,  bool hasPets,  int petsCount,  int? occupants,  String? propertyId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String kind,  String? budget,  double? budgetAmount,  bool hasPets,  int petsCount,  int? occupants,  String? propertyId)?  $default,) {final _that = this;
 switch (_that) {
 case _ClientProfile() when $default != null:
-return $default(_that.id,_that.kind,_that.budget,_that.hasPets,_that.petsCount,_that.occupants,_that.propertyId);case _:
+return $default(_that.id,_that.kind,_that.budget,_that.budgetAmount,_that.hasPets,_that.petsCount,_that.occupants,_that.propertyId);case _:
   return null;
 
 }
@@ -554,12 +555,13 @@ return $default(_that.id,_that.kind,_that.budget,_that.hasPets,_that.petsCount,_
 @JsonSerializable()
 
 class _ClientProfile implements ClientProfile {
-  const _ClientProfile({required this.id, required this.kind, this.budget, this.hasPets = false, this.petsCount = 0, this.occupants, this.propertyId});
+  const _ClientProfile({required this.id, required this.kind, this.budget, this.budgetAmount, this.hasPets = false, this.petsCount = 0, this.occupants, this.propertyId});
   factory _ClientProfile.fromJson(Map<String, dynamic> json) => _$ClientProfileFromJson(json);
 
 @override final  String id;
 @override final  String kind;
 @override final  String? budget;
+@override final  double? budgetAmount;
 @override@JsonKey() final  bool hasPets;
 @override@JsonKey() final  int petsCount;
 @override final  int? occupants;
@@ -578,18 +580,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClientProfile&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.budget, budget) || other.budget == budget)&&(identical(other.hasPets, hasPets) || other.hasPets == hasPets)&&(identical(other.petsCount, petsCount) || other.petsCount == petsCount)&&(identical(other.occupants, occupants) || other.occupants == occupants)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClientProfile&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.budget, budget) || other.budget == budget)&&(identical(other.budgetAmount, budgetAmount) || other.budgetAmount == budgetAmount)&&(identical(other.hasPets, hasPets) || other.hasPets == hasPets)&&(identical(other.petsCount, petsCount) || other.petsCount == petsCount)&&(identical(other.occupants, occupants) || other.occupants == occupants)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,kind,budget,hasPets,petsCount,occupants,propertyId);
+    return Object.hash(runtimeType,id,kind,budget,budgetAmount,hasPets,petsCount,occupants,propertyId);
 }
 
 @override
 String toString() {
-    return 'ClientProfile(id: $id, kind: $kind, budget: $budget, hasPets: $hasPets, petsCount: $petsCount, occupants: $occupants, propertyId: $propertyId)';
+    return 'ClientProfile(id: $id, kind: $kind, budget: $budget, budgetAmount: $budgetAmount, hasPets: $hasPets, petsCount: $petsCount, occupants: $occupants, propertyId: $propertyId)';
 }
 
 
@@ -600,7 +602,7 @@ abstract mixin class _$ClientProfileCopyWith<$Res> implements $ClientProfileCopy
   factory _$ClientProfileCopyWith(_ClientProfile value, $Res Function(_ClientProfile) _then) = __$ClientProfileCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String kind, String? budget, bool hasPets, int petsCount, int? occupants, String? propertyId
+ String id, String kind, String? budget, double? budgetAmount, bool hasPets, int petsCount, int? occupants, String? propertyId
 });
 
 
@@ -617,12 +619,13 @@ class __$ClientProfileCopyWithImpl<$Res>
 
 /// Create a copy of ClientProfile
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? budget = freezed,Object? hasPets = null,Object? petsCount = null,Object? occupants = freezed,Object? propertyId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? budget = freezed,Object? budgetAmount = freezed,Object? hasPets = null,Object? petsCount = null,Object? occupants = freezed,Object? propertyId = freezed,}) {
   return _then(_ClientProfile(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,budget: freezed == budget ? _self.budget : budget // ignore: cast_nullable_to_non_nullable
-as String?,hasPets: null == hasPets ? _self.hasPets : hasPets // ignore: cast_nullable_to_non_nullable
+as String?,budgetAmount: freezed == budgetAmount ? _self.budgetAmount : budgetAmount // ignore: cast_nullable_to_non_nullable
+as double?,hasPets: null == hasPets ? _self.hasPets : hasPets // ignore: cast_nullable_to_non_nullable
 as bool,petsCount: null == petsCount ? _self.petsCount : petsCount // ignore: cast_nullable_to_non_nullable
 as int,occupants: freezed == occupants ? _self.occupants : occupants // ignore: cast_nullable_to_non_nullable
 as int?,propertyId: freezed == propertyId ? _self.propertyId : propertyId // ignore: cast_nullable_to_non_nullable

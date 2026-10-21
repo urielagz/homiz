@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/session_provider.dart';
-import '../../data/notifications_repository.dart';
+import '../../data/models/app_notification.dart';
+import '../../data/repositories/notifications_repository.dart';
 
 /// Bandeja de avisos del usuario de la sesión. Se recarga al cambiar de usuario.
 final notificationsProvider = AsyncNotifierProvider<NotificationsController, NotificationsPage>(NotificationsController.new);
@@ -26,7 +27,7 @@ class NotificationsController extends AsyncNotifier<NotificationsPage> {
     if (target == null || target.read) return;
     await _repo.markRead(id);
     state = AsyncData(NotificationsPage(
-      items: [for (final n in current.items) n.id == id ? n.markedRead() : n],
+      items: [for (final n in current.items) n.id == id ? n.copyWith(read: true) : n],
       unreadCount: (current.unreadCount - 1).clamp(0, current.unreadCount),
     ));
   }
@@ -35,7 +36,7 @@ class NotificationsController extends AsyncNotifier<NotificationsPage> {
     final current = state.value;
     if (current == null) return;
     await _repo.markAllRead();
-    state = AsyncData(NotificationsPage(items: [for (final n in current.items) n.markedRead()], unreadCount: 0));
+    state = AsyncData(NotificationsPage(items: [for (final n in current.items) n.copyWith(read: true)], unreadCount: 0));
   }
 
   Future<void> reload() async {

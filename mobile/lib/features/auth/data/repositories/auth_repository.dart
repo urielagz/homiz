@@ -53,11 +53,13 @@ class AuthRepository {
         return AppUser.fromJson(res.data!);
       });
 
-  Future<AppUser> updateProfile({String? name, String? phone, String? birthDate}) => _call(() async {
+  /// [client]: datos del expediente del cliente (`budgetAmount`, `hasPets`, `petsCount`, `occupants`).
+  Future<AppUser> updateProfile({String? name, String? phone, String? birthDate, Map<String, Object?>? client}) => _call(() async {
         final res = await _dio.patch<Map<String, dynamic>>('/users/me', data: {
           if (name != null) 'name': name.trim(),
           if (phone != null) 'phone': phone.trim(),
           'birthDate': ?birthDate,
+          'client': ?client,
         });
         return AppUser.fromJson(res.data!);
       });
