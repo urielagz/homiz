@@ -176,6 +176,7 @@ void main() {
     expect(sent['POST /appointments/$appointmentId/messages'], {'body': '¿Puedo llegar 10 minutos antes?'});
     expect(find.text('¿Puedo llegar 10 minutos antes?'), findsOneWidget);
 
+    expect(find.text('Escribir por WhatsApp'), findsOneWidget);
     await tester.ensureVisible(find.text('Cancelar cita'));
     await tester.tap(find.text('Cancelar cita'));
     await settle(tester);

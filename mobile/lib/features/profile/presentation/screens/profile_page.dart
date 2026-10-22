@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/utils/whatsapp.dart';
 import '../../../../core/widgets/cards.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/initials_avatar.dart';
@@ -60,6 +61,10 @@ class ProfilePage extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           PrimaryButton(label: 'Cambiar contraseña', icon: Icons.lock_outline_rounded, variant: ButtonVariant.outline, onPressed: () => _openSheet(context, const _ChangePasswordSheet())),
           const SizedBox(height: AppSpacing.md),
+          if (user.isClient) ...[
+            WhatsAppButton(label: 'Ayuda por WhatsApp', message: 'Hola, soy ${user.name} y necesito ayuda con la app Homiz.'),
+            const SizedBox(height: AppSpacing.md),
+          ],
           PrimaryButton(label: 'Cerrar sesión', icon: Icons.logout_rounded, variant: ButtonVariant.danger, onPressed: () => _logout(context, ref)),
         ],
       ),

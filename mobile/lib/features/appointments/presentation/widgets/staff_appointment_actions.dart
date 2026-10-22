@@ -40,7 +40,13 @@ class AppointmentClientCard extends StatelessWidget {
             ),
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: ContactActions(phone: c.phone, email: c.email, subject: 'Tu visita a ${appointment.property.name}'),
+            child: ContactActions(
+              phone: c.phone,
+              email: c.email,
+              subject: 'Tu visita a ${appointment.property.name}',
+              whatsappText: 'Hola ${c.name.split(' ').first}, te escribo de Zugar sobre tu visita a ${appointment.property.name} '
+                  '(${Fmt.appointment(appointment.scheduledAt)}).',
+            ),
           ),
         ],
       ),

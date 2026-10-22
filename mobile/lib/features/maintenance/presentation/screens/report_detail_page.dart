@@ -75,7 +75,11 @@ class ReportDetailView extends StatelessWidget {
               Expanded(child: Text('Lo atiende ${report.provider!.name}${report.provider!.specialty == null ? '' : ' (${report.provider!.specialty})'}', style: AppTextStyles.label)),
             ],
           ),
-          if (staff) ...[const SizedBox(height: AppSpacing.sm), ContactActions(phone: report.provider!.phone)],
+          if (staff) ...[const SizedBox(height: AppSpacing.sm), ContactActions(
+                phone: report.provider!.phone,
+                whatsappText: 'Hola, les escribo de Zugar Inmobiliaria sobre el reporte «${report.title}»'
+                    '${report.property == null ? '' : ' en ${report.property!.name}'}.',
+              )],
         ],
         // Personal con maintenance.manage: UpdateStatusSheet mientras el reporte siga abierto.
         if (staff && report.isOpen) ...[

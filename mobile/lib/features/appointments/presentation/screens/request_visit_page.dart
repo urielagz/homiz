@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/utils/whatsapp.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/states.dart';
 import '../../../property/data/models/property_models.dart';
@@ -151,6 +152,9 @@ class _VisitFormState extends ConsumerState<_VisitForm> {
             child: Semantics(liveRegion: true, child: Text(_error!, style: AppTextStyles.secondary.copyWith(color: AppColors.danger, fontSize: 13))),
           ),
         PrimaryButton(label: 'Solicitar visita', loading: _loading, onPressed: _submit),
+        const SizedBox(height: AppSpacing.md),
+        // Igual que «Prefiero WhatsApp» de la ficha del sitio
+        WhatsAppButton(message: 'Hola, me interesa ${p.name}${p.code == null ? '' : ' (${p.code})'}${p.zone == null ? '' : ' en ${p.zone}'}.'),
       ],
     );
   }

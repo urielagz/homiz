@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/formatters.dart';
+import '../../../../core/utils/whatsapp.dart';
 import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/states.dart';
@@ -131,9 +133,16 @@ class _DetailState extends ConsumerState<_Detail> {
           if (staff) ...[
             const SizedBox(height: AppSpacing.xl),
             StaffAppointmentActions(appointment: a),
-          ] else if (a.isActive) ...[
+          ] else ...[
             const SizedBox(height: AppSpacing.xl),
-            PrimaryButton(label: 'Cancelar cita', variant: ButtonVariant.danger, loading: _cancelling, onPressed: _cancel),
+            WhatsAppButton(
+              label: 'Escribir por WhatsApp',
+              message: 'Hola, tengo una duda sobre mi cita ${a.code} en ${a.property.name} (${Fmt.appointment(a.scheduledAt)}).',
+            ),
+            if (a.isActive) ...[
+              const SizedBox(height: AppSpacing.md),
+              PrimaryButton(label: 'Cancelar cita', variant: ButtonVariant.danger, loading: _cancelling, onPressed: _cancel),
+            ],
           ],
         ],
       ),
