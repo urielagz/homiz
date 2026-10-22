@@ -89,6 +89,20 @@ En la app, `lau.mendez@correo.com` ve las pantallas del cliente; `mariana@zugar.
 
 Más detalle en `mobile/README.md`.
 
+### Sitio y panel conectados a la API (Fase 6)
+
+Los pendientes «Formularios» y «Login del panel» de la sección *Antes de publicar* ya están resueltos:
+
+- `web/assets/js/api.js` (sitio) y `web/admin/js/api.js` (panel) usan `API_URL`, por omisión
+  `http://localhost:3000/api/v1`. Para otro servidor, antes de esos archivos:
+  `<script>window.ZUGAR_API_URL = 'https://api.zugar.mx/api/v1';</script>` (con `''` se desactiva).
+- **Con el servidor encendido:** el listado y la ficha (`paginas/propiedad.html?slug=casa-ceiba`) muestran el catálogo
+  real, los formularios envían a `/public/leads` y muestran el folio real (una visita con fecha y hora crea la cita
+  «por confirmar»), y el panel entra con `/auth/login` y guarda cada cambio en la base.
+- **Sin servidor (o abierto con doble clic):** todo funciona como antes, con datos y envíos simulados.
+- Para usarlo con la API, sirve `web/` en `http://localhost:5500` (por ejemplo, Live Server de VS Code o
+  `python -m http.server 5500 --directory web`); ese origen ya está en `CORS_ORIGINS` del `.env.example`.
+
 ### Usuarios de ejemplo (contraseña de todos: `Zugar2026!`)
 
 | Perfil | Correo |

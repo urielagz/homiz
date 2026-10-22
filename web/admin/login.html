@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/admin.css">
   <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
   <script>if (ZAuth.current()) location.replace('index.html');</script>
 </head>
 <body class="login-page">
@@ -174,16 +175,20 @@
 
     var btn = $('login-submit');
     btn.disabled = true; btn.lastChild.textContent = 'Entrando…';
-    setTimeout(function () {
-      var r = ZAuth.login(email.value, pw.value, $('remember').checked);
+    /* ZAuth.login() valida con la API (o en modo de diseño si no hay servidor) y responde con una promesa */
+    ZAuth.login(email.value, pw.value, $('remember').checked).then(function (r) {
       btn.lastChild.textContent = 'Entrar al panel';
       if (r.ok) { location.replace('index.html' + back); return; }
       btn.disabled = false;
       if (r.error === 'locked') { lockUI(); return; }
+      if (r.error === 'noaccess') {
+        show($('login-error'), icon('alert') + '<div><strong>Esta cuenta no tiene acceso al panel</strong>Las cuentas de clientes e inquilinos entran desde la app Homiz.</div>');
+        pw.value = ''; email.focus(); return;
+      }
       show($('login-error'), icon('alert') + '<div><strong>Correo o contraseña incorrectos</strong>Revisa tus datos e inténtalo de nuevo.' +
         (r.left <= 2 ? ' Te queda' + (r.left === 1 ? '' : 'n') + ' ' + r.left + ' intento' + (r.left === 1 ? '' : 's') + ' antes de un bloqueo temporal.' : '') + '</div>');
       pw.value = ''; pw.focus();
-    }, 450);
+    });
   });
 
   /* Cambiar entre vistas */
@@ -196,11 +201,12 @@
     else $('email').focus();
   });
 
-  /* Recuperar contraseña (simulado: aquí irá la llamada a la API) */
+  /* Recuperar contraseña: POST /auth/forgot-password (el mensaje es el mismo exista o no la cuenta) */
   $('forgot-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var input = $('forgot-email');
     if (setError(input, emailError(input.value.trim()))) { input.focus(); return; }
+    if (window.ZApi) ZApi.olvide(input.value);
     show($('forgot-ok'), icon('check-c') + '<div><strong>Revisa tu bandeja de entrada</strong>Si ' + input.value.trim().replace(/[<>&"]/g, '') + ' está registrado, recibirás un enlace para crear una nueva contraseña en unos minutos.</div>');
   });
 })();

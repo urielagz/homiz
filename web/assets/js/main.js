@@ -4,8 +4,11 @@
    reales, formularios que se adaptan al motivo, favoritos, mapas en vivo,
    calculadora de crédito, etc.
    Los envíos están simulados en enviarFormulario(): ahí se conecta el backend.
+   Con api.js cargado, el catálogo y los envíos usan la API (si responde).
    ========================================================================== */
-(function () {
+document.documentElement.classList.add('js');
+/* Espera a que api.js intente cargar el catálogo; sin api.js arranca de inmediato */
+(window.ZugarAPI ? window.ZugarAPI.listo : function (fn) { fn(); })(function () {
   'use strict';
   document.documentElement.classList.add('js');
 
@@ -78,24 +81,146 @@
     { slug: 'casa-kanan', name: 'Casa Kanán', zona: 'Residencial Arbolada', zonaKey: 'arbolada', mapa: 'Residencial Arbolada, Cancún', op: 'venta', price: 4150000, rec: 3, banos: 3, m2: 190, est: 2, pets: true, amueblada: 'no', tipo: 'casa', asesor: 'Mariana Solís', orden: 2 },
     { slug: 'casa-huayacan', img: 'huayacan-01', name: 'Casa con jardín en Huayacán', zona: 'Huayacán', zonaKey: 'huayacan', mapa: 'Avenida Huayacán, Cancún', op: 'venta', price: 3900000, rec: 3, banos: 3, m2: 140, est: 2, pets: true, amueblada: 'no', tipo: 'casa-condominio', asesor: 'Mariana Solís', orden: 13 }
   ];
+  /* Catálogo real de la API (api.js); si no hay servidor se queda el de arriba */
+  if (window.ZugarAPI && ZugarAPI.catalogo && ZugarAPI.catalogo.length) CATALOGO = ZugarAPI.catalogo;
   var porSlug = {};
   CATALOGO.forEach(function (c) { porSlug[c.slug] = c; c.mapa += ', Quintana Roo'; });
+  function fotoDe(c) { return c.foto || IMG + (c.img || c.slug) + '.jpg'; }
+  function fichaDe(c) { return PAGINAS + 'propiedad.html?slug=' + encodeURIComponent(c.slug); }
 
   function precioCorto(c) { return c.op === 'renta' ? money(c.price) : '$' + (c.price / 1e6).toFixed(2).replace(/\.?0+$/, '') + ' M'; }
   function tarjeta(c) {
     var wa = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Hola, me interesa ' + c.name + ' en ' + c.zona + '.');
     return '<article class="card">' +
-      '<div class="card__media"><div class="photo"><img src="' + IMG + (c.img || c.slug) + '.jpg" alt="' + esc(c.name + ' en ' + c.zona + ', Cancún') + '" loading="lazy"></div>' +
+      '<div class="card__media"><div class="photo"><img src="' + esc(fotoDe(c)) + '" alt="' + esc(c.name + ' en ' + c.zona + ', Cancún') + '" loading="lazy"></div>' +
       '<span class="badge badge--light">' + (c.op === 'renta' ? 'En renta' : 'En venta') + '</span>' +
       '<label class="fav"><input type="checkbox" aria-label="Guardar ' + esc(c.name) + ' en favoritos">' + icon('heart') + '</label></div>' +
       '<div class="card__price"><strong>' + money(c.price) + '</strong><span>' + (c.op === 'renta' ? 'MXN / mes' : 'MXN') + '</span></div>' +
-      '<div class="card__body"><h3 class="card__title"><a class="card__link" href="' + PAGINAS + 'propiedad.html">' + esc(c.name) + '</a></h3>' +
+      '<div class="card__body"><h3 class="card__title"><a class="card__link" href="' + fichaDe(c) + '">' + esc(c.name) + '</a></h3>' +
       '<p class="card__loc">' + esc(c.zona) + ', Cancún</p>' +
       '<ul class="card__specs"><li>' + icon('bed') + c.rec + ' rec.</li><li>' + icon('bath') + c.banos + ' baño' + (c.banos === 1 ? '' : 's') + '</li><li>' + icon('area') + c.m2 + ' m²</li></ul>' +
       '<p class="card__pets">' + icon('paw') + (c.pets ? 'Acepta mascotas' : 'No acepta mascotas') + '</p>' +
-      '<div class="card__actions"><a class="btn" href="' + PAGINAS + 'propiedad.html#contactar">Contactar</a>' +
+      '<div class="card__actions"><a class="btn" href="' + fichaDe(c) + '#contactar">Contactar</a>' +
       '<a class="btn btn--secondary" href="' + wa + '" target="_blank" rel="noopener">' + icon('wa') + 'WhatsApp</a></div></div></article>';
   }
+
+  /* ======================================================================
+     0. Ficha de cada casa (propiedad.html?slug=...) y enlaces a las fichas
+     ====================================================================== */
+  var casaFicha = null;
+  var formFicha = $('.detail-layout .booking-form[data-casa]');
+  if (formFicha && params.get('slug')) {
+    var deApi = window.ZugarAPI && ZugarAPI.ficha && ZugarAPI.ficha.slug === params.get('slug') ? ZugarAPI.ficha : null;
+    if (deApi && !porSlug[deApi.slug]) { deApi.mapa += ', Quintana Roo'; porSlug[deApi.slug] = deApi; }
+    casaFicha = porSlug[params.get('slug')] || null;
+    /* La ficha escrita en el HTML es la de su propia casa: solo se reemplaza con otra casa o con datos de la API */
+    if (casaFicha && (deApi || casaFicha.slug !== formFicha.dataset.casa)) llenarFicha(casaFicha);
+  }
+
+  function llenarFicha(c) {
+    var renta = c.op === 'renta', op = renta ? 'renta' : 'venta';
+    var lugar = c.zona + ', Cancún';
+    var unidad = renta ? 'MXN / mes' : 'MXN';
+    var asesor = c.asesor || 'Tu asesora de Zugar';
+    var fotos = c.photos && c.photos.length ? c.photos : [{ src: fotoDe(c), label: c.name }];
+    var texto = function (sel, t) { var el = $(sel); if (el) el.textContent = t; return el; };
+    var ultimoTexto = function (el, t) { if (el && el.lastChild) el.lastChild.textContent = t; };
+
+    document.title = c.name + ' en ' + op + ', ' + lugar + ' · ' + money(c.price) + ' | Zugar';
+    var meta = $('meta[name="description"]');
+    if (meta) meta.setAttribute('content', c.name + ' en ' + op + ' en ' + lugar + ': ' + c.rec + ' recámaras, ' + c.banos + ' baños' + (c.m2 ? ', ' + c.m2 + ' m² de construcción' : '') + '. ' + money(c.price) + ' ' + unidad + '.');
+    $('.breadcrumb ol').innerHTML = '<li><a href="../index.html">Inicio</a></li>' +
+      '<li><a href="propiedades.html?operacion=' + op + '">' + (renta ? 'Renta' : 'Venta') + '</a></li>' +
+      '<li><a href="propiedades.html?operacion=' + op + '&amp;zona=' + encodeURIComponent(c.zonaKey) + '">' + esc(c.zona) + '</a></li>' +
+      '<li><span aria-current="page">' + esc(c.code || c.name) + '</span></li>';
+    var tags = $('.detail-title .tags');
+    if (tags) tags.innerHTML = '<span class="badge badge--dark">' + esc((c.tipoTexto || 'Casa') + ' en ' + op) + '</span>';
+    texto('.detail-title h1', c.name + ', ' + lugar);
+
+    /* Galería: las 4 fotos visibles y la galería completa */
+    $$('.gallery img').forEach(function (img, i) {
+      if (fotos[i]) { img.src = fotos[i].src; img.alt = fotos[i].label || c.name; } else { img.removeAttribute('src'); img.alt = ''; }
+    });
+    ultimoTexto($('.gallery__count'), '1 / ' + fotos.length + (fotos.length === 1 ? ' foto' : ' fotos'));
+    ultimoTexto($('.gallery__all'), fotos.length === 1 ? 'Ver la foto' : 'Ver las ' + fotos.length + ' fotos');
+    texto('#galeria-titulo', c.name);
+    texto('#galeria-titulo + p', 'Cancún · ' + money(c.price) + ' ' + unidad + ' · ' + fotos.length + (fotos.length === 1 ? ' foto' : ' fotos'));
+    var grid = $('.lightbox__grid');
+    if (grid) grid.innerHTML = fotos.map(function (f, i) {
+      return '<figure><div class="photo"><img src="' + esc(f.src) + '" alt="' + esc(f.label || c.name) + '" loading="lazy"></div><figcaption>' + String(i + 1).padStart(2, '0') + (f.label ? ' · ' + esc(f.label) : '') + '</figcaption></figure>';
+    }).join('');
+
+    /* Precio, ubicación y datos */
+    texto('.price-block .eyebrow', (renta ? 'Renta mensual' : 'Venta') + ' · Precio en pesos mexicanos');
+    $('.price-big').innerHTML = money(c.price) + ' <small>' + unidad + '</small>';
+    var mant = $('.price-block > p.muted');
+    if (mant) { mant.textContent = c.maintenance ? 'Mantenimiento: ' + c.maintenance : ''; mant.hidden = !c.maintenance; }
+    ultimoTexto($('.price-block .address'), c.address || lugar + ', Quintana Roo');
+    var datos = [c.m2 ? c.m2 + ' m²' : '—', c.terreno ? c.terreno + ' m²' : '—', String(c.rec), String(c.banos), String(c.est),
+      c.age === 0 ? 'A estrenar' : c.age ? c.age + (c.age === 1 ? ' año' : ' años') : '—'];
+    $$('.facts .fact strong').forEach(function (s, i) { if (datos[i] != null) ultimoTexto(s, datos[i]); });
+
+    var parrafos = String(c.description || (c.name + ' es una casa en ' + op + ' en ' + lugar + ' con ' + c.rec + ' recámaras y ' + c.banos + ' baños' + (c.m2 ? ', en ' + c.m2 + ' m² de construcción' : '') + '. ' + (c.pets ? 'Acepta mascotas.' : 'No acepta mascotas.'))).split(/\n+/);
+    var prosa = $('#desc-titulo + .prose');
+    if (prosa) prosa.innerHTML = parrafos.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('');
+    var mas = $('#desc-titulo ~ details.more'); if (mas) mas.hidden = true;
+    var amen = $('.amenities');
+    if (amen) {
+      amen.innerHTML = (c.amenities || []).map(function (a) { return '<li>' + icon('check-c') + esc(a) + '</li>'; }).join('');
+      amen.hidden = !(c.amenities || []).length;
+    }
+    var hoja = $('.datasheet dl');
+    if (hoja) hoja.innerHTML = [
+      ['Tipo de inmueble', c.tipoTexto || (c.tipo === 'casa-condominio' ? 'Casa en condominio' : c.tipo === 'townhouse' ? 'Townhouse' : 'Casa')],
+      ['Operación', renta ? 'Renta' : 'Venta'],
+      ['Amueblada', { si: 'Sí', semi: 'Semiamueblada', no: 'No' }[c.amueblada] || 'No'],
+      ['Mascotas', c.pets ? 'Se aceptan' : 'No se aceptan'],
+      ['Clave del anuncio', c.code || '—']
+    ].map(function (d) { return '<div><dt>' + d[0] + '</dt><dd>' + esc(d[1]) + '</dd></div>'; }).join('');
+
+    /* Zona y mapa en vivo */
+    texto('#zona-titulo + p', lugar + ' · Una zona para conectar con todo.');
+    var mapa = $('.map--zone iframe');
+    if (mapa) { mapa.src = mapaEmbebido(c.mapa, 14); mapa.title = 'Mapa de Google con la zona de ' + lugar; }
+    var abrirMapa = $('.map-note a'); if (abrirMapa) abrirMapa.href = mapaEnlace(c.mapa);
+    var distancias = $('.distances'); if (distancias) distancias.hidden = true;
+
+    /* La calculadora de crédito solo aplica a casas en venta */
+    if (renta) $$('#credito-titulo, #credito-titulo + p, form.calc').forEach(function (el) { el.hidden = true; });
+    var publicado = c.publishedAt ? new Date(String(c.publishedAt).slice(0, 10) + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    texto('.published', (publicado ? 'Publicado el ' + publicado + ' · ' : '') + 'Clave ' + (c.code || c.slug));
+
+    /* Tarjeta de la asesora y solicitud de visita */
+    texto('.agent strong', asesor);
+    texto('#agente-titulo + p', 'Agenda una visita a esta casa. ' + asesor.split(' ')[0] + ' te confirmará el día y la hora.');
+    var foto = $('.agent img');
+    if (foto && !/Mariana/.test(asesor)) { foto.removeAttribute('src'); foto.alt = ''; }
+    else if (foto) foto.alt = 'Fotografía de ' + asesor + ', asesora inmobiliaria';
+    formFicha.dataset.casa = c.slug;
+    var clave = formFicha.querySelector('input[name="propiedad"]');
+    if (clave && c.code) clave.value = c.code; else if (clave) clave.remove();
+    var ref = $('#b-casa-ref', formFicha); if (ref) ref.value = c.name + (c.code ? ' · ' + c.code : '');
+    var pres = $('#b-presupuesto', formFicha); if (pres) pres.placeholder = money(c.price) + ' ' + unidad;
+    var pago = $('#b-pago', formFicha);
+    if (pago && renta) { pago.required = false; pago.closest('.field').hidden = true; }
+    var ayudaMascotas = $('.pets-detail .field__help', formFicha);
+    if (ayudaMascotas) ayudaMascotas.textContent = c.pets ? 'Esta casa acepta mascotas.' : 'Esta casa no acepta mascotas; cuéntanos si tienes alguna.';
+    var wa = $('.form-actions a[href^="https://wa.me/"]', formFicha);
+    if (wa) wa.href = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Hola ' + asesor.split(' ')[0] + ', me interesa ' + c.name + (c.code ? ' (' + c.code + ')' : '') + ' en ' + c.zona + '.');
+    var compartir = $('.detail-actions a[href^="https://wa.me/?text"]');
+    if (compartir) compartir.href = 'https://wa.me/?text=' + encodeURIComponent('Mira esta casa en ' + lugar + ': ' + location.href.split('#')[0]);
+  }
+
+  /* Las tarjetas escritas en el HTML (inicio, casas similares) abren la ficha de su casa */
+  $$('.card').forEach(function (card) {
+    var link = $('.card__link', card);
+    var c = link && CATALOGO.filter(function (x) { return x.name === link.textContent.trim(); })[0];
+    if (!c) return;
+    $$('a[href*="propiedad.html"]', card).forEach(function (a) {
+      if (/[?&]slug=/.test(a.getAttribute('href'))) return;
+      a.href = fichaDe(c) + (a.hash || '');
+    });
+  });
 
   /* ======================================================================
      1. Menú móvil
@@ -127,16 +252,21 @@
     storage(FAV_KEY, favs);
     toast(i.checked ? name + ' se guardó en tus favoritos.' : name + ' se quitó de tus favoritos.');
   });
-  $$('.save-toggle input').forEach(function (i) { i.setAttribute('aria-label', 'Guardar Casa con jardín en Huayacán en favoritos'); });
+  $$('.save-toggle input').forEach(function (i) { i.setAttribute('aria-label', 'Guardar ' + (casaFicha ? casaFicha.name : 'Casa con jardín en Huayacán') + ' en favoritos'); });
   aplicarFavoritos();
 
   /* ======================================================================
      3. Validación y envío de formularios
      ====================================================================== */
-  /* Punto de conexión con el backend. Hoy simula una respuesta exitosa. */
+  /* Punto de conexión con el backend: envía a POST /public/leads (api.js) y devuelve el folio real.
+     Sin servidor (o si no responde) simula una respuesta exitosa como antes. */
   function enviarFormulario(form, tipo) {
-    // Ejemplo: return fetch('/api/' + tipo, { method: 'POST', body: new FormData(form) }).then(function (r) { if (!r.ok) throw r; return r.json(); });
-    return new Promise(function (resolve) { setTimeout(function () { resolve({ folio: folio() }); }, 700); });
+    var simulado = function () { return new Promise(function (resolve) { setTimeout(function () { resolve({ folio: folio() }); }, 700); }); };
+    if (!window.ZugarAPI || !ZugarAPI.url) return simulado();
+    return ZugarAPI.enviarSolicitud(form, tipo).catch(function (err) {
+      if (err && err.sinConexion) return simulado();
+      throw err;
+    });
   }
 
   function mensajeError(el) {
@@ -225,9 +355,10 @@
         enviarFormulario(form, opciones.tipo()).then(function (r) {
           ocupado(btn, false);
           opciones.exito(r);
-        }).catch(function () {
+        }).catch(function (err) {
+          if (!err || !err.mensaje) console.error(err);
           ocupado(btn, false);
-          toast('No pudimos enviar tu solicitud. Inténtalo de nuevo o escríbenos por WhatsApp.');
+          toast(err && err.mensaje ? err.mensaje : 'No pudimos enviar tu solicitud. Inténtalo de nuevo o escríbenos por WhatsApp.');
         });
       };
       if (opciones.revisar && opciones.revisar()) abrirRevision(form, seguir); else seguir();
@@ -360,7 +491,7 @@
         precio.innerHTML = '<strong>' + money(c.price) + '</strong> ' + (c.op === 'renta' ? 'MXN / mes' : 'MXN');
         precio.hidden = false;
         summary.querySelector('.summary__specs').textContent = c.rec + ' recámaras · ' + c.banos + ' baños · ' + c.m2 + ' m² · ' + (c.pets ? 'Acepta mascotas' : 'No acepta mascotas');
-        img.src = IMG + (c.img || c.slug) + '.jpg'; img.alt = c.name + ' en ' + c.zona + ', Cancún';
+        img.src = fotoDe(c); img.alt = c.name + ' en ' + c.zona + ', Cancún';
         foto.hidden = false;
         if (!conMotivo) { opSel.value = c.op === 'renta' ? 'renta' : 'compra'; filtrarCasas(); }
         if (dd('asesor')) dd('asesor').textContent = c.asesor;
@@ -442,7 +573,7 @@
           return;
         }
         var cuerpo = {
-          visita: '<strong>¡Listo, ' + esc(nombre) + '! Recibimos tu solicitud de visita.</strong>' + (c ? esc(c.asesor) : 'Tu asesora') + ' te escribirá en menos de 24 horas para confirmar ' + esc((dd('fecha') ? dd('fecha').textContent : fechaLarga(fecha.value)).toLowerCase()) + '.',
+          visita: '<strong>¡Listo, ' + esc(nombre) + '! Recibimos tu solicitud de visita.</strong>' + (c ? esc(c.asesor) : 'Tu asesora') + ' te escribirá en menos de 24 horas para confirmar ' + esc((dd('fecha') ? dd('fecha').textContent : fecha ? fechaLarga(fecha.value) : 'tu visita').toLowerCase()) + '.',
           rentar: '<strong>¡Gracias, ' + esc(nombre) + '! Recibimos tu solicitud.</strong>En un día hábil te enviaremos a ' + esc(correo) + ' casas en renta que encajan contigo.',
           comprar: '<strong>¡Gracias, ' + esc(nombre) + '! Recibimos tu solicitud.</strong>En un día hábil te enviaremos a ' + esc(correo) + ' opciones de compra y cómo financiarlas.',
           publicar: '<strong>¡Gracias, ' + esc(nombre) + '! Queremos conocer tu casa.</strong>Te llamaremos para agendar una visita a tu inmueble y preparar la publicación.',
@@ -678,7 +809,7 @@
   var share = $('.detail-actions a[href^="https://wa.me/?text"]');
   if (share) {
     share.addEventListener('click', function (e) {
-      var data = { title: document.title, text: 'Mira esta casa en Huayacán, Cancún', url: location.href.split('#')[0] };
+      var data = { title: document.title, text: 'Mira esta casa en ' + (casaFicha ? casaFicha.zona : 'Huayacán') + ', Cancún', url: location.href.split('#')[0] };
       if (navigator.share) { e.preventDefault(); navigator.share(data).catch(function () { /* cancelado */ }); }
       else if (navigator.clipboard && window.isSecureContext) {
         e.preventDefault();
@@ -789,4 +920,4 @@
       if (d.open) faqs.forEach(function (o) { if (o !== d) o.open = false; });
     });
   });
-})();
+});

@@ -34,6 +34,7 @@
       onConfirm: function () {
         linked.forEach(function (a) { a.status = 'cancelada'; a.note = (a.note ? a.note + ' ' : '') + 'Cancelada porque la propiedad se retiró del inventario.'; });
         D.properties = D.properties.filter(function (x) { return x.id !== id; });
+        if (window.ZApi) ZApi.propiedadEliminar(p);
         Z.log('Lucía eliminó ' + p.name + ' (' + p.id + ')' + (linked.length ? ' y se canceló ' + (linked.length === 1 ? 'su próxima cita.' : 'sus próximas citas.') : '.'));
         Z.toast(p.name + ' se eliminó del inventario.');
         if (after) after(); else Z.rerender();
@@ -244,6 +245,7 @@
         var pause = t.dataset.action === 'pause';
         p.visibility = pause ? 'pausada' : 'publicada';
         if (!pause && !p.published) p.published = Z.TODAY;
+        if (window.ZApi) ZApi.propiedadVisibilidad(p);
         Z.log('Lucía ' + (pause ? 'pausó' : 'reanudó') + ' la publicación de ' + p.name + '.', p.id);
         Z.toast(pause ? p.name + ' ya no aparece en el catálogo público.' : p.name + ' vuelve a estar visible en el catálogo.');
         detailView(root, id);
@@ -392,7 +394,9 @@
         if (!/^image\/(jpeg|png)$/.test(file.type)) { rejected.push(file.name + ' (formato no permitido)'); return; }
         if (file.size > MAX_MB * 1024 * 1024) { rejected.push(file.name + ' (pesa más de ' + MAX_MB + ' MB)'); return; }
         if (f.photos.length >= MAX_PHOTOS) { rejected.push(file.name + ' (límite de ' + MAX_PHOTOS + ' fotos)'); return; }
-        f.photos.push({ src: URL.createObjectURL(file), label: file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ') });
+        var url = URL.createObjectURL(file);
+        f.photos.push({ src: url, label: file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ') });
+        if (window.ZApi) ZApi.recordarArchivo(url, file); // se sube al guardar
       });
       dirty = true; renderPhotos();
       if (rejected.length) Z.toast('No se agregaron: ' + rejected.join(', ') + '.');
@@ -501,7 +505,9 @@
       };
       if (editing) {
         var prevBroker = src.broker;
+        var antes = Object.assign({}, src);
         Object.assign(src, data);
+        if (window.ZApi) ZApi.propiedadGuardar(src, false, antes);
         if (src.visibility === 'publicada' && !src.published) src.published = Z.TODAY;
         if (prevBroker !== src.broker) {
           Z.upcoming(function (a) { return a.property === src.id; }).forEach(function (a) { a.broker = src.broker; });
@@ -514,6 +520,7 @@
         var nid = 'ZUG-' + String(D.nextNumbers.property++).padStart(3, '0');
         data.id = nid; data.published = f.visibility === 'publicada' ? Z.TODAY : '';
         D.properties.push(data);
+        if (window.ZApi) ZApi.propiedadGuardar(data, true, null);
         Z.log('Lucía creó ' + data.name + ' (' + nid + ') y la asignó a ' + Z.broker(data.broker).name + '.', nid);
         Z.toast(data.name + ' se creó' + (data.visibility === 'publicada' ? ' y ya está publicada.' : ' como ' + data.visibility + '.'));
         location.hash = '#/propiedades/' + nid;

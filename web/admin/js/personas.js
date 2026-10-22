@@ -40,12 +40,14 @@
             if (person) {
               if (data.type !== person.type) delete person.label;
               Object.assign(person, data);
+              if (window.ZApi) ZApi.personaGuardar(person, false);
               Z.log('Lucía actualizó el expediente de ' + person.name + '.');
               Z.toast('Se guardó el expediente de ' + person.name + '.');
               S.selected = person.id;
             } else {
               data.id = 'p' + D.nextNumbers.person++;
               D.people.push(data);
+              if (window.ZApi) ZApi.personaGuardar(data, true);
               Z.log('Lucía agregó a ' + data.name + ' como ' + (data.type === 'cliente' ? 'cliente' : 'inquilino') + '.');
               Z.toast(data.name + ' se agregó al directorio.');
               S.selected = data.id;
@@ -72,6 +74,7 @@
       onConfirm: function () {
         linked.forEach(function (a) { a.status = 'cancelada'; });
         D.people = D.people.filter(function (x) { return x.id !== id; });
+        if (window.ZApi) ZApi.personaEliminar(p);
         if (S.selected === id) S.selected = D.people[0] ? D.people[0].id : null;
         Z.log('Lucía eliminó el expediente de ' + p.name + '.');
         Z.toast('Se eliminó el expediente de ' + p.name + '.');

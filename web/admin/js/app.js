@@ -40,6 +40,15 @@
 
   window.addEventListener('hashchange', route);
 
+  /* Conectado a la API: los datos son reales y se guardan en el servidor */
+  var conectado = !!(window.ZApi && ZApi.activo());
+  if (conectado) {
+    document.querySelectorAll('.badge, .footer span').forEach(function (el) {
+      if (el.textContent === 'Entorno de diseño') el.textContent = 'Conectado al servidor';
+      else if (el.textContent === 'Diseño estático · Datos ilustrativos') el.textContent = 'Datos en vivo';
+    });
+  }
+
   /* Menú de usuario con los datos de la sesión */
   var userBtn = document.querySelector('[data-action="toggle-user"]');
   var userMenu = document.getElementById('user-menu');
@@ -55,7 +64,7 @@
     Z.confirm({
       icon: 'arrow-ur', safe: true,
       title: '¿Cerrar sesión?',
-      lead: 'Los cambios que hiciste en este entorno de diseño se perderán al salir.',
+      lead: conectado ? 'Tus cambios ya están guardados en el servidor de Zugar.' : 'Los cambios que hiciste en este entorno de diseño se perderán al salir.',
       cancel: 'Seguir en el panel', confirm: 'Cerrar sesión',
       onConfirm: function () { ZAuth.logout(); }
     });
@@ -77,10 +86,17 @@
       '<li><strong>Clientes e inquilinos.</strong> Consulta el expediente de cada persona y su próxima visita.</li>' +
       '<li><strong>Brokers.</strong> Asigna un responsable a cada casa; sus próximas citas se reasignan solas.</li>' +
       '<li><strong>Citas.</strong> Confirma, reprograma o cancela visitas desde la agenda semanal.</li>' +
-      '</ul><p class="small muted" style="margin-top:1rem">Entorno de diseño: los datos son ilustrativos y se restablecen al recargar la página. Soporte: soporte@zugar.example</p>' +
+      '</ul><p class="small muted" style="margin-top:1rem">' + (conectado ? 'Conectado al servidor: cada cambio se guarda al momento.' : 'Entorno de diseño: los datos son ilustrativos y se restablecen al recargar la página.') + ' Soporte: soporte@zugar.example</p>' +
       '<div class="dialog__actions"><button class="btn" type="button" data-close>Entendido</button></div>'
     );
   });
 
-  route();
+  /* Con la API, primero se cargan los datos del servidor; sin ella, los de ejemplo */
+  if (conectado) {
+    root.innerHTML = '<p class="muted" role="status">Cargando datos de Zugar…</p>';
+    ZApi.cargar().then(route, function (e) {
+      Z.toast('No se pudieron cargar los datos del servidor' + (e && e.mensaje ? ': ' + e.mensaje : '.'));
+      route();
+    });
+  } else route();
 })();

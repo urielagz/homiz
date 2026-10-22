@@ -109,3 +109,21 @@ Patrón: scripts clásicos (sin módulos) que cuelgan todo de `window.Z`. Datos 
 - Estados de propiedad, citas y motivos de solicitud usan los valores en español de arriba.
 - Las solicitudes de visita (inicio y ficha) no tienen equivalente en `leads.reason`.
 - Claves de propiedad legibles (`ZUG-001`) y `slug` público conviven con el UUID.
+
+## 5. Conexión con la API (Fase 6)
+
+Cambios mínimos sobre lo descrito arriba; el modo sin servidor se conserva.
+
+| Archivo | Cambio |
+|---|---|
+| `assets/js/api.js` (nuevo) | `window.ZugarAPI`: carga el catálogo y la ficha de `/public/properties`, envía formularios a `/public/leads` |
+| `assets/js/main.js` | Arranca cuando `api.js` termina de intentar la carga; `CATALOGO` se reemplaza por el de la API; `enviarFormulario()` envía a la API con respaldo simulado; las tarjetas enlazan a `propiedad.html?slug=`; nueva sección «0. Ficha de cada casa» |
+| `index.html`, `paginas/propiedades.html`, `paginas/propiedad.html`, `paginas/contacto.html` | Cargan `api.js` antes de `main.js` |
+| `admin/js/api.js` (nuevo) | `window.ZApi`: login, olvidé mi contraseña, carga de `Z.data` desde la API y escrituras |
+| `admin/js/auth.js` | `ZAuth.login()` usa `/auth/login` (promesa), guarda el token y lo renueva; la validación de demostración queda para el modo sin servidor |
+| `admin/login.html`, `admin/index.html` | Cargan `api.js`; el login espera la promesa y «olvidé mi contraseña» llama a la API |
+| `admin/js/app.js` | Espera los datos del servidor antes de la primera vista; textos de «Conectado al servidor» |
+| `admin/js/{propiedades,personas,brokers,citas}.js` | Una línea `ZApi.*` junto a cada cambio local |
+
+Correspondencia de datos del panel: `properties[].id` = clave `ZUG-###`; `people[].id`, `brokers[].id` = UUID de la base;
+`appointments[].id` = clave `CIT-###`; fechas y horas de las citas en hora de Cancún.

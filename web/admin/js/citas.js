@@ -43,6 +43,7 @@
             a.date = date.value; a.start = time.value; a.end = Z.addMinutes(a.start, 45);
             a.status = 'por-confirmar'; a.confirmedBy = '';
             var why = dlg.querySelector('#rs-why').value.trim();
+            if (window.ZApi) ZApi.citaReprogramar(a, why);
             Z.log('Lucía reprogramó la visita de ' + Z.person(a.person).name + ' para el ' + Z.dateShort(a.date) + ', ' + a.start + ' h' + (why ? ' (' + why + ')' : '') + '.', a.property);
             Z.toast('Cita reprogramada: ' + Z.dateLong(a.date) + ', ' + a.start + ' h.');
             S.selected = a.id; S.day = null;
@@ -61,6 +62,7 @@
     var name = Z.person(a.person).name, p = Z.prop(a.property);
     a.status = status;
     if (status === 'confirmada') a.confirmedBy = 'Confirmada por Lucía · ' + Z.dateShort(Z.TODAY) + ', ' + Z.nowTime() + ' h.';
+    if (window.ZApi) ZApi.citaEstado(a, status);
     var msg = { confirmada: 'confirmó', realizada: 'marcó como realizada', cancelada: 'canceló' }[status];
     Z.log('Lucía ' + msg + ' la visita de ' + name + ' a ' + (p ? p.name : 'la propiedad') + '.', a.property);
     Z.toast({ confirmada: 'Cita confirmada con ' + name + '.', realizada: 'La visita de ' + name + ' quedó como realizada.', cancelada: 'Se canceló la visita de ' + name + '.' }[status]);
@@ -98,6 +100,7 @@
             if (Z.validate(form, extra).length) return;
             var a = { id: 'CIT-' + String(D.nextNumbers.appointment++).padStart(3, '0'), person: v('#nc-person'), property: v('#nc-prop'), broker: v('#nc-broker'), date: v('#nc-date'), start: v('#nc-time'), end: Z.addMinutes(v('#nc-time'), 45), status: 'por-confirmar', kind: 'Presencial', note: v('#nc-note').trim() };
             D.appointments.push(a);
+            if (window.ZApi) ZApi.citaNueva(a);
             Z.log('Lucía agendó una visita de ' + Z.person(a.person).name + ' a ' + Z.prop(a.property).name + ' para el ' + Z.dateShort(a.date) + ', ' + a.start + ' h.', a.property);
             Z.toast('Cita ' + a.id + ' agendada · ' + Z.dateLong(a.date) + ', ' + a.start + ' h.');
             S.selected = a.id; S.day = null; S.tab = 'todas';

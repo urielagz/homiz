@@ -29,11 +29,13 @@
             data.initials = initials(data.name);
             if (b) {
               Object.assign(b, data);
+              if (window.ZApi) ZApi.brokerGuardar(b, false);
               Z.toast('Se actualizó el perfil de ' + b.name + '.');
             } else {
               data.id = Z.norm(data.name).replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
               data.active = true; data.photo = '';
               D.brokers.push(data);
+              if (window.ZApi) ZApi.brokerGuardar(data, true);
               Z.log('Lucía agregó a ' + data.name + ' al equipo de brokers.');
               Z.toast(data.name + ' ya forma parte del equipo.');
             }
@@ -46,7 +48,7 @@
 
   function toggleActive(b) {
     if (!b.active) {
-      b.active = true; Z.log('Lucía reactivó a ' + b.name + '.'); Z.toast(b.name + ' está activo de nuevo.'); Z.rerender(); return;
+      b.active = true; if (window.ZApi) ZApi.brokerActivo(b); Z.log('Lucía reactivó a ' + b.name + '.'); Z.toast(b.name + ' está activo de nuevo.'); Z.rerender(); return;
     }
     var st = Z.brokerStats(b.id);
     Z.confirm({
@@ -57,7 +59,7 @@
       cancel: 'Mantener activo',
       confirm: 'Sí, desactivar',
       onConfirm: function () {
-        b.active = false; Z.log('Lucía desactivó a ' + b.name + '.'); Z.toast(b.name + ' quedó inactivo.'); Z.rerender();
+        b.active = false; if (window.ZApi) ZApi.brokerActivo(b); Z.log('Lucía desactivó a ' + b.name + '.'); Z.toast(b.name + ' quedó inactivo.'); Z.rerender();
       }
     });
   }
@@ -147,6 +149,7 @@
         var moved = Z.upcoming(function (a) { return a.property === current.id; });
         moved.forEach(function (a) { a.broker = sel.value; });
         current.broker = sel.value;
+        if (window.ZApi) ZApi.propiedadBroker(current);
         var nb = Z.broker(sel.value).name;
         Z.log('Lucía asignó ' + current.name + ' a ' + nb + (moved.length ? ' y se reasignaron ' + moved.length + ' cita' + (moved.length === 1 ? '' : 's') + '.' : '.'), current.id);
         Z.toast(current.name + ' ahora está a cargo de ' + nb + '.');
