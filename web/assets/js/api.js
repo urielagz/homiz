@@ -9,7 +9,16 @@
 (function () {
   'use strict';
 
-  var API_URL = window.ZUGAR_API_URL !== undefined ? window.ZUGAR_API_URL : 'http://localhost:3000/api/v1';
+  /* Por omisión, la API está en el puerto 3000 del mismo servidor que sirve el sitio:
+     localhost:5500 → localhost:3000 · 192.168.1.68:5500 → 192.168.1.68:3000 ·
+     puerto reenviado de VS Code https://abc-5500.usw2.devtunnels.ms → https://abc-3000.usw2.devtunnels.ms */
+  function apiPorOmision() {
+    if (!/^https?:$/.test(location.protocol)) return 'http://localhost:3000/api/v1'; // abierto con doble clic
+    var host = location.hostname;
+    if (/^[a-z0-9]+-\d+\./i.test(host) && /\.devtunnels\.ms$/i.test(host)) return location.protocol + '//' + host.replace(/-\d+\./, '-3000.') + '/api/v1';
+    return location.protocol + '//' + host + ':3000/api/v1';
+  }
+  var API_URL = window.ZUGAR_API_URL !== undefined ? window.ZUGAR_API_URL : apiPorOmision();
   /* Si la API no contesta en este tiempo, se usa el modo sin servidor. Con el servidor apagado la conexión
      se rechaza al instante; el límite solo cuenta cuando responde lento. */
   var ESPERA_MS = 8000;

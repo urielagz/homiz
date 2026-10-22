@@ -103,6 +103,24 @@ Los pendientes «Formularios» y «Login del panel» de la sección *Antes de pu
 - Para usarlo con la API, sirve `web/` en `http://localhost:5500` (por ejemplo, Live Server de VS Code o
   `python -m http.server 5500 --directory web`); ese origen ya está en `CORS_ORIGINS` del `.env.example`.
 
+### Abrirlo desde otro equipo o con los Puertos de VS Code
+
+El sitio, el panel y la app web buscan la API en el **puerto 3000 del mismo servidor** desde el que se abrieron
+(`localhost`, la IP de la red o un puerto reenviado de VS Code). Servicios:
+
+| Puerto | Qué es | Cómo se levanta |
+|---|---|---|
+| 3000 | API | `cd backend && npm run dev` |
+| 5500 | Sitio y panel (`/admin/login.html`) | `python -m http.server 5500 --bind 0.0.0.0 --directory web` |
+| 5600 | App web | `python -m http.server 5600 --bind 0.0.0.0 --directory mobile/build/web` (después de `flutter build web --release`) |
+
+- **En la misma red Wi-Fi:** `http://<IP de la PC>:5500` y `http://<IP de la PC>:5600`. Agrega esos orígenes a
+  `CORS_ORIGINS` y abre los puertos en el firewall de Windows (perfil privado).
+- **Puertos de VS Code (pestaña «Puertos» → «Reenviar un puerto»):** reenvía 3000, 5500 y 5600 y cambia la visibilidad
+  de los tres a **Pública** (clic derecho → *Visibilidad del puerto*). Con `https://*.*.devtunnels.ms` en `CORS_ORIGINS`,
+  la API acepta las URL de los túneles. Los documentos y fotos usan `API_PUBLIC_URL`: para verlos por el túnel, pon ahí
+  la URL reenviada del puerto 3000.
+
 ### Usuarios de ejemplo (contraseña de todos: `Zugar2026!`)
 
 | Perfil | Correo |

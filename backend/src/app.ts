@@ -3,6 +3,15 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
+
+/** Origen permitido: igual a uno de CORS_ORIGINS o a un patrón con «*» (p. ej. https://*.devtunnels.ms). */
+export function corsAllowed(origin: string, allowed: string[] = env.corsOrigins): boolean {
+  return allowed.some((o) =>
+    o.includes('*')
+      ? new RegExp('^' + o.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\/]/g, '\\$&')).join('[a-z0-9-]+') + '$', 'i').test(origin)
+      : o === origin,
+  );
+}
 import { logger } from './config/logger.js';
 import { requestId } from './middlewares/request-id.js';
 import { errorHandler, notFound } from './middlewares/error-handler.js';
@@ -22,11 +31,12 @@ export function createApp() {
       serializers: { req: (req) => ({ id: req.id, method: req.method, url: req.url }) },
     }),
   );
-  app.use(helmet());
+  // Las fotos firmadas (/files/:token) se muestran desde el sitio, el panel y la app, que viven en otro origen.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(
     cors({
-      // CORS mínimo: solo los orígenes configurados (sitio web y panel).
-      origin: (origin, cb) => cb(null, !origin || env.corsOrigins.includes(origin)),
+      // CORS mínimo: solo los orígenes configurados (sitio web, panel y app web).
+      origin: (origin, cb) => cb(null, !origin || corsAllowed(origin)),
       credentials: false,
     }),
   );
