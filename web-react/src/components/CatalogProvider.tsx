@@ -33,10 +33,12 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<CatalogState>(() => {
+    const loading = houses === null;
     const fromApi = !!houses && houses.length > 0;
-    const list = fromApi ? houses! : FALLBACK_CATALOG;
-    // Las casas de respaldo siguen disponibles por slug (enlaces viejos o ficha de ejemplo)
-    return { houses: list, bySlug: { ...index(FALLBACK_CATALOG), ...index(list) }, loading: houses === null, fromApi };
+    // Mientras responde la API, el listado espera (no se muestra el respaldo y luego otras casas)
+    const list = loading ? [] : fromApi ? houses! : FALLBACK_CATALOG;
+    // Por slug siempre hay datos (portada, formularios y enlaces viejos); los de la API tienen prioridad
+    return { houses: list, bySlug: { ...index(FALLBACK_CATALOG), ...index(list) }, loading, fromApi };
   }, [houses]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;

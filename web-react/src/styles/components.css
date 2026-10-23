@@ -1013,3 +1013,6 @@ form:has(:user-invalid) .alert--on-invalid { display: flex; }
 .map-popup .map-popup__more { margin-top: 0.25rem; color: var(--accion); font-weight: 600; }
 .map-popup:hover .map-popup__more { text-decoration: underline; }
 .map-popup:not(:has(img)) { padding-top: 0.75rem; }
+
+/* Galería completa: en React se abre con estado (antes con #galeria y :target) */
+.lightbox.is-open { display: block; }

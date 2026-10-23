@@ -45,7 +45,7 @@ export function SiteHeader({ light = false }: { light?: boolean }) {
           <ul className="site-nav__links">
             {LINKS.map(([to, label]) => (
               <li key={to}>
-                <Link to={to} aria-current={pathname.startsWith(to) ? 'page' : undefined}>
+                <Link to={to} aria-current={pathname.startsWith(to === '/propiedades' ? '/propiedad' : to) ? 'page' : undefined}>
                   {label}
                 </Link>
               </li>

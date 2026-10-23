@@ -4,8 +4,13 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation, useSearchParams } 
 import { CatalogProvider } from './components/CatalogProvider';
 import { SiteLayout } from './components/SiteLayout';
 import { ToastProvider } from './components/Toasts';
+import { Contact } from './pages/Contact';
+import { Detail } from './pages/Detail';
 import { Home } from './pages/Home';
-import { Pending } from './pages/Pending';
+import { HowWeWork } from './pages/HowWeWork';
+import { Listing } from './pages/Listing';
+import { NotFound } from './pages/NotFound';
+import { Thanks } from './pages/Thanks';
 import './styles.css';
 
 /* Direcciones del sitio HTML anterior (enlaces guardados, la app y correos): llevan a la página nueva. */
@@ -28,12 +33,12 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route element={<SiteLayout />}>
               <Route index element={<Home />} />
-              <Route path="propiedades" element={<Pending name="Propiedades" />} />
-              <Route path="propiedad/:slug" element={<Pending name="Ficha de la casa" />} />
-              <Route path="contacto" element={<Pending name="Contáctanos" />} />
-              <Route path="como-trabajamos" element={<Pending name="Cómo trabajamos" />} />
-              <Route path="gracias" element={<Pending name="Gracias" />} />
-              <Route path="*" element={<Pending name="Página no encontrada" />} />
+              <Route path="propiedades" element={<Listing />} />
+              <Route path="propiedad/:slug" element={<Detail />} />
+              <Route path="contacto" element={<Contact />} />
+              <Route path="como-trabajamos" element={<HowWeWork />} />
+              <Route path="gracias" element={<Thanks />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
             <Route path="index.html" element={<LegacyRedirect to="/" />} />
             <Route path="paginas/propiedades.html" element={<LegacyRedirect to="/propiedades" />} />
