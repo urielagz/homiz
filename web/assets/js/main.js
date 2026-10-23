@@ -86,6 +86,33 @@ document.documentElement.classList.add('js');
   var porSlug = {};
   CATALOGO.forEach(function (c) { porSlug[c.slug] = c; c.mapa += ', Quintana Roo'; });
   function fotoDe(c) { return c.foto || IMG + (c.img || c.slug) + '.jpg'; }
+
+  /* Los botones de WhatsApp de Zugar llevan a la app Homiz (puerto 5600 del mismo servidor que el sitio:
+     localhost, IP de la red o puerto reenviado de VS Code). Otra dirección: window.ZUGAR_APP_URL antes de main.js. */
+  function appPorOmision() {
+    if (!/^https?:$/.test(location.protocol)) return 'http://localhost:5600/'; // abierto con doble clic
+    var host = location.hostname;
+    if (/^[a-z0-9]+-\d+\./i.test(host) && /\.devtunnels\.ms$/i.test(host)) return location.protocol + '//' + host.replace(/-\d+\./, '-5600.') + '/';
+    return location.protocol + '//' + host + ':5600/';
+  }
+  var APP_URL = window.ZUGAR_APP_URL || appPorOmision();
+  function textoApp(t) {
+    var s = t.trim();
+    if (s === 'WhatsApp') return 'Usar la app';
+    if (/^WhatsApp\s·/.test(s)) return 'App Homiz';
+    if (s === 'Escríbenos por WhatsApp') return 'Usa la app Homiz';
+    return s.replace(/por WhatsApp/g, 'en la app Homiz').replace(/WhatsApp/g, 'la app Homiz');
+  }
+  function enlacesAApp(ctx) {
+    $$('a[href^="https://wa.me/' + WHATSAPP + '"]', ctx).forEach(function (a) {
+      a.href = APP_URL;
+      var use = a.querySelector('use'); if (use) use.setAttribute('href', '#i-phone');
+      if (a.getAttribute('aria-label')) a.setAttribute('aria-label', 'Abrir la app Homiz');
+      Array.prototype.forEach.call(a.childNodes, function (n) {
+        if (n.nodeType === 3 && /WhatsApp/.test(n.textContent)) n.textContent = textoApp(n.textContent);
+      });
+    });
+  }
   function fichaDe(c) { return PAGINAS + 'propiedad.html?slug=' + encodeURIComponent(c.slug); }
 
   function precioCorto(c) { return c.op === 'renta' ? money(c.price) : '$' + (c.price / 1e6).toFixed(2).replace(/\.?0+$/, '') + ' M'; }
@@ -920,4 +947,7 @@ document.documentElement.classList.add('js');
       if (d.open) faqs.forEach(function (o) { if (o !== d) o.open = false; });
     });
   });
+
+  /* Al final, cuando ya están las tarjetas del listado y la ficha: WhatsApp de Zugar → app Homiz */
+  enlacesAApp(document);
 });
