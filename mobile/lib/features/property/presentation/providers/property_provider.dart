@@ -8,7 +8,9 @@ final propertyDetailProvider = FutureProvider.family<PropertyDetail, String>((re
 
 final dossierProvider = FutureProvider.family<Dossier, String>((ref, id) => ref.watch(propertyRepositoryProvider).dossier(id));
 
-final catalogProvider = FutureProvider<List<PropertyDetail>>((ref) => ref.watch(propertyRepositoryProvider).catalog());
+final propertyBySlugProvider = FutureProvider.family<PropertyDetail?, String>((ref, slug) => ref.watch(propertyRepositoryProvider).bySlug(slug));
+
+final catalogProvider =FutureProvider<List<PropertyDetail>>((ref) => ref.watch(propertyRepositoryProvider).catalog());
 
 /// Casas del personal: el broker ve las suyas; la administración, todo el inventario. [q] busca por nombre o clave.
 final inventoryProvider = FutureProvider.family<List<PropertyDetail>, String>((ref, q) {

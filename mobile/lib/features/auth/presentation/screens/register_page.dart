@@ -12,6 +12,7 @@ import '../../../../core/widgets/auth_background.dart';
 import '../../../../core/widgets/auth_text_field.dart';
 import '../../../../core/widgets/password_strength_bar.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../appointments/presentation/providers/pending_visit_provider.dart';
 import '../providers/session_provider.dart';
 
 /// Pantalla 3 · Crea tu cuenta (solo clientes). Al registrarse entra directo a /home.
@@ -87,7 +88,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 const SizedBox(height: AppSpacing.xl),
                 Semantics(header: true, child: Text('Crea tu cuenta', style: AppTextStyles.authTitle)),
                 const SizedBox(height: AppSpacing.xs),
-                Text('Consulta tu propiedad, pagos y citas desde tu celular.', style: AppTextStyles.body.copyWith(color: Colors.white70)),
+                Text(
+                  ref.watch(pendingVisitProvider) != null
+                      ? 'Crea tu cuenta para agendar la visita a la casa que elegiste. Después eliges el día y la hora.'
+                      : 'Consulta tu propiedad, pagos y citas desde tu celular.',
+                  style: AppTextStyles.body.copyWith(color: Colors.white70),
+                ),
                 const SizedBox(height: AppSpacing.xl),
                 AuthTextField(
                   label: 'Nombre completo',

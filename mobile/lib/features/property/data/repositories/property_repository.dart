@@ -23,6 +23,14 @@ class PropertyRepository {
         return dataList(res.data, PropertyDetail.fromJson);
       });
 
+  /// Casa del catálogo por su slug (el de la dirección del sitio: propiedad.html?slug=…). null si ya no está disponible.
+  Future<PropertyDetail?> bySlug(String slug) => apiCall(() async {
+        final res = await _dio.get<Map<String, dynamic>>('/properties', queryParameters: {'limit': 100});
+        final rows = (res.data?['data'] as List? ?? const []).cast<Map<String, dynamic>>();
+        final row = rows.where((r) => r['slug'] == slug).firstOrNull;
+        return row == null ? null : PropertyDetail.fromJson(row);
+      });
+
   /// Inventario para el personal. Con [brokerId] solo las casas de ese broker.
   Future<List<PropertyDetail>> inventory({String? brokerId, String? q}) => apiCall(() async {
         final res = await _dio.get<Map<String, dynamic>>('/properties', queryParameters: {

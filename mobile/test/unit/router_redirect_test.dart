@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homiz/core/router/app_router.dart';
+import 'package:homiz/features/appointments/presentation/providers/pending_visit_provider.dart';
 
 void main() {
   const loading = AsyncLoading<Object?>();
@@ -26,6 +27,23 @@ void main() {
     expect(go('/profile', signedOut), '/login');
     expect(go('/login', signedOut), isNull);
     expect(go('/register', signedOut), isNull);
+  });
+
+  test('casa elegida en el sitio: sin sesión pide crear cuenta; al entrar abre su visita', () {
+    String? visit(String location, AsyncValue<Object?> session) =>
+        sessionRedirect(splashDone: true, session: session, location: location, pendingVisit: 'casa-ceiba');
+    expect(visit('/splash', signedOut), '/register');
+    expect(visit('/login', signedOut), isNull); // quien ya tiene cuenta puede iniciar sesión
+    expect(visit('/register', signedIn), '/appointments/visit/casa-ceiba');
+    expect(visit('/login', signedIn), '/appointments/visit/casa-ceiba');
+    expect(visit('/splash', signedIn), '/appointments/visit/casa-ceiba');
+    expect(visit('/appointments/visit/casa-ceiba', signedIn), isNull);
+  });
+
+  test('solo se acepta un slug válido en ?casa=', () {
+    expect(visitSlugFromUri(Uri.parse('http://localhost:5600/?casa=casa-ceiba#/splash')), 'casa-ceiba');
+    expect(visitSlugFromUri(Uri.parse('http://localhost:5600/')), isNull);
+    expect(visitSlugFromUri(Uri.parse('http://localhost:5600/?casa=../x')), isNull);
   });
 
   test('con sesión las rutas de acceso llevan a /home', () {

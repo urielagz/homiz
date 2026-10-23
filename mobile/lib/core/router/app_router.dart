@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/appointments/presentation/screens/appointment_detail_page.dart';
 import '../../features/appointments/presentation/screens/appointments_page.dart';
 import '../../features/appointments/presentation/screens/catalog_page.dart';
+import '../../features/appointments/presentation/providers/pending_visit_provider.dart';
 import '../../features/appointments/presentation/screens/request_visit_page.dart';
 import '../../features/auth/presentation/providers/session_provider.dart';
 import '../../features/auth/presentation/screens/login_page.dart';
@@ -27,13 +28,14 @@ const _authRoutes = {'/login', '/register'};
 int? _intParam(GoRouterState state, String name) => int.tryParse(state.uri.queryParameters[name] ?? '');
 
 /// Decide a dónde ir según la sesión. Pura para poder probarla sin widgets.
+/// [pendingVisit]: casa elegida en el sitio; sin sesión se pide crear cuenta y al entrar se abre su visita.
 @visibleForTesting
-String? sessionRedirect({required bool splashDone, required AsyncValue<Object?> session, required String location}) {
+String? sessionRedirect({required bool splashDone, required AsyncValue<Object?> session, required String location, String? pendingVisit}) {
   // Mientras se recupera la sesión guardada (o si no hubo red) se queda en la bienvenida.
   if (!splashDone || session.isLoading || session.hasError) return location == '/splash' ? null : '/splash';
   final signedIn = session.value != null;
-  if (!signedIn) return _authRoutes.contains(location) ? null : '/login';
-  if (location == '/splash' || _authRoutes.contains(location)) return '/home';
+  if (!signedIn) return _authRoutes.contains(location) ? null : (pendingVisit != null ? '/register' : '/login');
+  if (location == '/splash' || _authRoutes.contains(location)) return pendingVisit != null ? '/appointments/visit/$pendingVisit' : '/home';
   return null;
 }
 
@@ -47,11 +49,17 @@ final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     initialLocation: '/splash',
     refreshListenable: refresh,
-    redirect: (context, state) => sessionRedirect(
-      splashDone: ref.read(splashDelayProvider).hasValue,
-      session: ref.read(sessionProvider),
-      location: state.matchedLocation,
-    ),
+    redirect: (context, state) {
+      final session = ref.read(sessionProvider);
+      final user = session.value;
+      return sessionRedirect(
+        splashDone: ref.read(splashDelayProvider).hasValue,
+        session: session,
+        location: state.matchedLocation,
+        // Solo los clientes solicitan visitas; el personal entra a su inicio de siempre.
+        pendingVisit: user == null || user.isClient ? ref.read(pendingVisitProvider) : null,
+      );
+    },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
@@ -93,6 +101,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 // «catalog» va antes que «:id» para que no se tome como id de cita.
                 GoRoute(path: 'catalog', builder: (_, _) => const CatalogPage()),
                 GoRoute(path: 'catalog/:propertyId', builder: (_, state) => RequestVisitPage(propertyId: state.pathParameters['propertyId']!)),
+                // Casa elegida en el sitio de Zugar (por su slug).
+                GoRoute(path: 'visit/:slug', builder: (_, state) => VisitFromSitePage(slug: state.pathParameters['slug']!)),
                 GoRoute(path: ':id', builder: (_, state) => AppointmentDetailPage(appointmentId: state.pathParameters['id']!)),
               ],
             ),

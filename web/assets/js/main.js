@@ -144,9 +144,20 @@ document.documentElement.classList.add('js');
     if (s === 'Escríbenos por WhatsApp') return 'Usa la app Homiz';
     return s.replace(/por WhatsApp/g, 'en la app Homiz').replace(/WhatsApp/g, 'la app Homiz');
   }
+  /* Casa a la que se refiere el botón: la de su tarjeta o la de la ficha abierta. La app la recibe en ?casa=,
+     pide crear cuenta (o iniciar sesión) y abre «Solicitar visita» de esa casa. */
+  function casaDelEnlace(a) {
+    var card = a.closest('.card');
+    var ficha = card && card.querySelector('a[href*="propiedad.html?slug="]');
+    if (ficha) return new URL(ficha.getAttribute('href'), location.href).searchParams.get('slug');
+    if (card) return null;
+    if (formFicha) return casaFicha ? casaFicha.slug : formFicha.dataset.casa;
+    return null;
+  }
   function enlacesAApp(ctx) {
     $$('a[href^="https://wa.me/' + WHATSAPP + '"]', ctx).forEach(function (a) {
-      a.href = APP_URL;
+      var casa = casaDelEnlace(a);
+      a.href = casa ? APP_URL + '?casa=' + encodeURIComponent(casa) : APP_URL;
       var use = a.querySelector('use'); if (use) use.setAttribute('href', '#i-phone');
       if (a.getAttribute('aria-label')) a.setAttribute('aria-label', 'Abrir la app Homiz');
       Array.prototype.forEach.call(a.childNodes, function (n) {

@@ -13,6 +13,7 @@ import '../../../property/data/models/property_models.dart';
 import '../../../property/presentation/providers/property_provider.dart';
 import '../../../property/presentation/widgets/property_widgets.dart';
 import '../providers/appointments_provider.dart';
+import '../providers/pending_visit_provider.dart';
 
 /// Ficha de una casa del catálogo con el formulario para solicitar visita.
 class RequestVisitPage extends ConsumerWidget {
@@ -28,6 +29,45 @@ class RequestVisitPage extends ConsumerWidget {
       body: switch (property) {
         AsyncData(:final value) => _VisitForm(property: value),
         AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(propertyDetailProvider(propertyId))),
+        _ => const LoadingState(items: 3, itemHeight: 120),
+      },
+    );
+  }
+}
+
+/// Casa elegida en el sitio de Zugar («Usar la app»): se busca por su slug y se muestra el mismo formulario.
+class VisitFromSitePage extends ConsumerStatefulWidget {
+  const VisitFromSitePage({super.key, required this.slug});
+
+  final String slug;
+
+  @override
+  ConsumerState<VisitFromSitePage> createState() => _VisitFromSitePageState();
+}
+
+class _VisitFromSitePageState extends ConsumerState<VisitFromSitePage> {
+  @override
+  void initState() {
+    super.initState();
+    // Ya llegó a la casa: al volver a entrar a la app no se redirige otra vez.
+    Future.microtask(() => ref.read(pendingVisitProvider.notifier).clear());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final property = ref.watch(propertyBySlugProvider(widget.slug));
+    return Scaffold(
+      appBar: AppBar(),
+      body: switch (property) {
+        AsyncData(value: final PropertyDetail p) => _VisitForm(property: p),
+        AsyncData() => EmptyState(
+            icon: Icons.home_work_outlined,
+            title: 'Esta casa ya no está disponible',
+            message: 'Puede que ya se haya rentado o vendido. Mira otras casas del catálogo.',
+            actionLabel: 'Ver catálogo',
+            onAction: () => context.go('/appointments/catalog'),
+          ),
+        AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(propertyBySlugProvider(widget.slug))),
         _ => const LoadingState(items: 3, itemHeight: 120),
       },
     );

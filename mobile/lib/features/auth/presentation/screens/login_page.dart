@@ -11,6 +11,7 @@ import '../../../../core/widgets/auth_background.dart';
 import '../../../../core/widgets/auth_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../../appointments/presentation/providers/pending_visit_provider.dart';
 import '../providers/session_provider.dart';
 
 /// Pantalla 2 · Iniciar sesión. Al entrar, el router lleva a /home.
@@ -88,6 +89,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const Center(child: ZugarLogo(height: 40)),
                 const SizedBox(height: AppSpacing.xxl),
                 Semantics(header: true, child: Text('Iniciar sesión', style: AppTextStyles.authTitle)),
+                if (ref.watch(pendingVisitProvider) != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text('Entra para agendar la visita a la casa que elegiste en el sitio.', style: AppTextStyles.body.copyWith(color: Colors.white70)),
+                ],
                 const SizedBox(height: AppSpacing.xl),
                 AuthTextField(
                   label: 'Correo electrónico',

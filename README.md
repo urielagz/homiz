@@ -141,3 +141,9 @@ Las diferencias entre el prompt del monorepo y el sitio existente están en `doc
   Para usar la API de Google agrega en `backend/.env`: `GOOGLE_MAPS_API_KEY=tu_clave` (Geocoding y Places).
 - Para una base que ya existía: `cd backend && npx tsx src/config/run-sql.ts db/004_coordenadas.sql`
   (solo llena las casas sin ubicación).
+
+### Del sitio a la app: registrarse y agendar la visita
+
+En una tarjeta o en la ficha de una casa, **Usar la app** abre la app con la casa elegida
+(`http://<servidor>:5600/?casa=casa-ceiba`). La persona crea su cuenta (o inicia sesión) y la app abre
+directamente *Solicitar visita* de esa casa para elegir día y hora.
