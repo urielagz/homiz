@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
-import { apiForgot } from '../api';
+import { apiForgot, apiReset, type ApiFailure } from '../api';
 import { currentSession, lockState, loggedOut, login } from '../auth';
 import { Icon } from '../components/ui';
 
@@ -14,7 +14,10 @@ export function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const back = /^\/[\w/-]*(\?[\w=&-]*)?$/.test(params.get('volver') || '') ? params.get('volver')! : '/resumen';
-  const [view, setView] = useState<'login' | 'forgot'>('login');
+  const resetToken = params.get('token') || '';
+  const [view, setView] = useState<'login' | 'forgot' | 'reset'>(resetToken ? 'reset' : 'login');
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
@@ -40,7 +43,7 @@ export function Login() {
   }, []);
   const prevView = useRef(view);
   useEffect(() => {
-    document.title = (view === 'forgot' ? 'Recuperar contraseña' : 'Iniciar sesión') + ' | Panel administrativo de Zugar';
+    document.title = ({ forgot: 'Recuperar contraseña', reset: 'Nueva contraseña', login: 'Iniciar sesión' }[view]) + ' | Panel administrativo de Zugar';
     if (prevView.current === view) return; // solo al cambiar de vista, no al abrir la página
     prevView.current = view;
     (view === 'forgot' ? document.getElementById('forgot-title') : emailRef.current)?.focus();
@@ -95,6 +98,32 @@ export function Login() {
     setForgotOk(forgotEmail.trim());
   };
 
+  /* Nueva contraseña desde el enlace del correo (…/admin/#/login?token=…) */
+  const onReset = async (e: FormEvent) => {
+    e.preventDefault();
+    const rules = !newPw ? 'Escribe tu nueva contraseña.' : newPw.length < 8 ? 'La contraseña debe tener al menos 8 caracteres.'
+      : !/[A-ZÁÉÍÓÚÑ]/.test(newPw) ? 'La contraseña debe incluir al menos una mayúscula.' : !/[a-záéíóúñ]/.test(newPw) ? 'La contraseña debe incluir al menos una minúscula.'
+      : !/\d/.test(newPw) ? 'La contraseña debe incluir al menos un número.' : '';
+    const errs: Record<string, string> = {};
+    if (rules) errs['new-password'] = rules;
+    else if (newPw2 !== newPw) errs['new-password2'] = 'Las contraseñas no coinciden.';
+    setErrors(errs);
+    if (Object.keys(errs).length) return document.getElementById(Object.keys(errs)[0])?.focus();
+    setBusy(true);
+    try {
+      const r = await apiReset(resetToken, newPw);
+      setInfo({ tone: 'info', icon: 'check-c', text: r.message });
+      setError(null);
+      setView('login');
+      navigate('/login', { replace: true });
+    } catch (err) {
+      const x = err as ApiFailure;
+      setError({ tone: 'error', icon: 'alert', title: 'No pudimos cambiar tu contraseña', text: x?.sinConexion ? 'No hay conexión con el servidor de Zugar.' : x?.mensaje || 'El enlace ya no es válido. Pide uno nuevo con «¿Olvidaste tu contraseña?».' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const fieldErr = (id: string) =>
     errors[id] ? <p className="field__error" id={id + '-error'}><Icon id="alert" className="icon--sm" />{errors[id]}</p> : null;
   const inv = (id: string) => (errors[id] ? { 'aria-invalid': true as const, 'aria-describedby': id + '-error' } : {});
@@ -118,7 +147,29 @@ export function Login() {
 
       <main className="login__main" id="contenido">
         <div className="login__card">
-          {view === 'login' ? (
+          {view === 'reset' ? (
+            <section id="view-reset" aria-labelledby="reset-title">
+              <h1 id="reset-title">Crea tu nueva contraseña</h1>
+              <p className="login__lead">Usa al menos 8 caracteres, con una mayúscula, una minúscula y un número.</p>
+              {error && <div className="notice notice--error" role="alert"><Icon id={error.icon} /><div><strong>{error.title}</strong>{error.text}</div></div>}
+              <form id="reset-form" noValidate onSubmit={onReset}>
+                <div className="field">
+                  <label className="field__label" htmlFor="new-password">Nueva contraseña</label>
+                  <input className="input" id="new-password" type="password" autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} {...inv('new-password')} />
+                  {fieldErr('new-password')}
+                </div>
+                <div className="field">
+                  <label className="field__label" htmlFor="new-password2">Confirma la contraseña</label>
+                  <input className="input" id="new-password2" type="password" autoComplete="new-password" value={newPw2} onChange={(e) => setNewPw2(e.target.value)} {...inv('new-password2')} />
+                  {fieldErr('new-password2')}
+                </div>
+                <button className="btn btn--block" type="submit" disabled={busy}><Icon id="lock" />{busy ? 'Guardando…' : 'Guardar contraseña'}</button>
+              </form>
+              <button className="link link--muted login__back" type="button" style={{ marginTop: '1rem' }} onClick={() => { setErrors({}); setError(null); setView('login'); navigate('/login', { replace: true }); }}>
+                <Icon id="left" className="icon--sm" />Volver a iniciar sesión
+              </button>
+            </section>
+          ) : view === 'login' ? (
             <section id="view-login" aria-labelledby="login-title">
               <h1 id="login-title">Inicia sesión</h1>
               <p className="login__lead">Entra con tu correo de Zugar para administrar el inventario y la agenda.</p>

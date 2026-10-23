@@ -1,49 +1,44 @@
 # homiz
 
-Sitio web y panel administrativo de **Zugar Inmobiliaria** (Cancún, Quintana Roo). HTML, CSS y JavaScript sin dependencias: se abre con doble clic, sin servidor.
+Sitio web y panel administrativo de **Zugar Inmobiliaria** (Cancún, Quintana Roo), hechos con **React + Tailwind CSS**
+(Vite y TypeScript). Viven en `web/`; la versión anterior en HTML, CSS y JavaScript queda en el historial de git.
 
-## Estructura
+## Estructura (`web/`)
 
 ```
-index.html                 Inicio
-paginas/
-  propiedades.html         Listado con filtros, orden, páginas y mapa de Google
-  propiedad.html           Ficha de una casa con solicitud de visita
-  contacto.html            Contáctanos: el formulario cambia según el motivo
-  como-trabajamos.html     Proceso, requisitos y preguntas frecuentes
-  gracias.html             Confirmación después de contactar a la asesora
-assets/
-  css/styles.css           Estilos del sitio (variables en :root)
-  js/main.js               Comportamiento del sitio (mejora progresiva)
-  img/                     Fotos del sitio y del panel (ver img/LEEME.txt)
-admin/
-  login.html               Inicio de sesión del panel
-  index.html               Panel: Resumen, Propiedades, Clientes, Brokers y Citas
-  css/admin.css            Estilos del panel
-  js/                      auth.js (sesión), data.js (datos), ui.js (componentes) y un archivo por módulo
+index.html                 Entrada del sitio público
+admin/index.html           Entrada del panel (rutas con #: /admin/#/propiedades)
+admin/login.html           Dirección vieja del acceso: lleva a /admin/#/login
+public/                    Archivos tal cual: assets/img/ (fotos, ver LEEME.txt) y admin/ (avisos push)
+src/
+  main.tsx                 Rutas del sitio y redirecciones desde las direcciones .html anteriores
+  styles.css, styles/      Tailwind: theme.css (colores y tipografías en @theme), base.css y components.css
+  pages/                   Inicio, Propiedades, Ficha (/propiedad/:slug), Contáctanos, Cómo trabajamos, Gracias, 404
+  components/              Encabezado, pie, tarjeta, mapas (Leaflet), formularios de visita, diálogos…
+  lib/                     API, catálogo, enlaces a la app, favoritos, formatos y validación
+  admin/                   Panel: store.ts (datos), api.ts, auth.ts, push.ts, components/ y views/ (una por sección)
 ```
 
 ## Antes de publicar
 
-- **Fotos:** sube los archivos a `assets/img/` con los nombres de `assets/img/LEEME.txt`.
+- **Fotos:** sube los archivos a `web/public/assets/img/` con los nombres de `LEEME.txt`.
 - **Contacto:** reemplaza el teléfono `+52 998 555 0142`, el correo `hola@zugar.mx` y las redes sociales.
-- **Formularios:** conecta tu backend en `enviarFormulario()` de `assets/js/main.js`.
-- **Login del panel:** la validación actual es de demostración (`admin/js/auth.js`); reemplázala por tu API antes de publicar.
-- **Mapas:** son de Google Maps en vivo. Para una ubicación exacta, cambia el texto de `q=` del iframe por la dirección o por `latitud,longitud`.
+- **Versión final:** `cd web && npm run build` genera `web/dist/` (sitio en `/` y panel en `/admin/`). El servidor que
+  la publique debe responder `index.html` para las rutas del sitio (`/propiedades`, `/propiedad/…`).
 
 ---
 
 ## Monorepo Homiz (Rentia)
 
-> Desde la Fase 0 el sitio de arriba vive en **`web/`** (se movió con `git mv`, sin cambios). Las rutas de las secciones
-> anteriores son relativas a esa carpeta: `web/index.html`, `web/paginas/…`, `web/assets/…`, `web/admin/…`.
+> El sitio y el panel viven en **`web/`**: desde la Fase 0 eran el HTML original y desde el pedido de React + Tailwind
+> son una aplicación de Vite (decisión 66 en `docs/decisiones.md`).
 
 ```
 backend/      API Node.js + Express + TypeScript + PostgreSQL (/api/v1)
   src/        config, controllers, middlewares, routes, app.ts, server.ts
   db/         001_schema.sql (esquema) y 002_seed.sql (datos de ejemplo)
 mobile/       App Flutter del cliente/inquilino y del personal (desde la Fase 3)
-web/          Sitio público + panel administrativo (estático, funciona con doble clic)
+web/          Sitio público + panel administrativo (React + Tailwind CSS, Vite)
 docs/         sitio-existente.md, decisiones.md (y más documentación por fase)
 docker-compose.yml   PostgreSQL para desarrollo
 ```
@@ -91,17 +86,18 @@ Más detalle en `mobile/README.md`.
 
 ### Sitio y panel conectados a la API (Fase 6)
 
-Los pendientes «Formularios» y «Login del panel» de la sección *Antes de publicar* ya están resueltos:
+En `web/`: `npm install` y `npm run dev` → sitio en `http://localhost:5500` y panel en `http://localhost:5500/admin/`.
 
-- `web/assets/js/api.js` (sitio) y `web/admin/js/api.js` (panel) usan `API_URL`, por omisión
-  `http://localhost:3000/api/v1`. Para otro servidor, antes de esos archivos:
-  `<script>window.ZUGAR_API_URL = 'https://api.zugar.mx/api/v1';</script>` (con `''` se desactiva).
-- **Con el servidor encendido:** el listado y la ficha (`paginas/propiedad.html?slug=casa-ceiba`) muestran el catálogo
-  real, los formularios envían a `/public/leads` y muestran el folio real (una visita con fecha y hora crea la cita
+- La API se busca en el **puerto 3000 del mismo servidor** (`http://localhost:3000/api/v1`). Para otro servidor,
+  crea `web/.env` con `VITE_API_URL=https://api.zugar.mx/api/v1`; con `VITE_API_URL=/api/v1` las peticiones pasan
+  por el proxy de Vite (útil si el origen no está en `CORS_ORIGINS`).
+- **Con el servidor encendido:** el listado y la ficha (`/propiedad/casa-ceiba`) muestran el catálogo real, los
+  formularios envían a `/public/leads` y muestran el folio real (una visita con fecha y hora crea la cita
   «por confirmar»), y el panel entra con `/auth/login` y guarda cada cambio en la base.
-- **Sin servidor (o abierto con doble clic):** todo funciona como antes, con datos y envíos simulados.
-- Para usarlo con la API, sirve `web/` en `http://localhost:5500` (por ejemplo, Live Server de VS Code o
-  `python -m http.server 5500 --directory web`); ese origen ya está en `CORS_ORIGINS` del `.env.example`.
+- **Sin servidor:** el sitio usa su catálogo de respaldo y los envíos se simulan; el panel entra en modo de diseño
+  con `lucia@zugar.example` / `Zugar2026!` y datos de ejemplo.
+- **Recuperar contraseña:** el correo lleva a `/admin/#/login?token=…`, donde se crea la nueva contraseña
+  (`APP_RESET_URL` del backend).
 
 ### Abrirlo desde otro equipo o con los Puertos de VS Code
 
@@ -111,7 +107,7 @@ El sitio, el panel y la app web buscan la API en el **puerto 3000 del mismo serv
 | Puerto | Qué es | Cómo se levanta |
 |---|---|---|
 | 3000 | API | `cd backend && npm run dev` |
-| 5500 | Sitio y panel (`/admin/login.html`) | `python -m http.server 5500 --bind 0.0.0.0 --directory web` |
+| 5500 | Sitio y panel (`/admin/`) | `cd web && npm run dev` (ya escucha en la red y acepta los túneles de VS Code) |
 | 5600 | App web | `python -m http.server 5600 --bind 0.0.0.0 --directory mobile/build/web` (después de `flutter build web --release`) |
 
 - **En la misma red Wi-Fi:** `http://<IP de la PC>:5500` y `http://<IP de la PC>:5600`. Agrega esos orígenes a

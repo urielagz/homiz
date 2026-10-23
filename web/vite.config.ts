@@ -6,8 +6,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   // /api pasa a la API del puerto 3000 (útil con VITE_API_URL=/api/v1: mismo origen, sin CORS)
-  server: { host: true, port: 5500, strictPort: true, proxy: { '/api': 'http://localhost:3000' } },
-  preview: { host: true, port: 5500, strictPort: true },
+  // allowedHosts: los puertos reenviados de VS Code (https://abc-5500.usw2.devtunnels.ms)
+  server: { host: true, port: 5500, strictPort: true, allowedHosts: ['.devtunnels.ms'], proxy: { '/api': 'http://localhost:3000' } },
+  preview: { host: true, port: 5500, strictPort: true, allowedHosts: ['.devtunnels.ms'] },
   // Dos páginas: el sitio público (index.html) y el panel (admin/index.html), cada una con su CSS
   build: {
     rollupOptions: {

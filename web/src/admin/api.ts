@@ -99,6 +99,15 @@ export function apiForgot(email: string) {
   });
 }
 
+/** Nueva contraseña con el código del correo de recuperación (POST /auth/reset-password) */
+export function apiReset(token: string, password: string) {
+  return fetchJson<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ token, password }),
+  });
+}
+
 export function apiLogout() {
   const s = currentSession();
   if (!apiActive() || !s?.refresh) return;

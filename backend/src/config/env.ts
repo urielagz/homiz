@@ -21,7 +21,7 @@ const schema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   RATE_LIMIT_LOGIN_MAX: z.coerce.number().int().positive().default(20),
   CORS_ORIGINS: z.string().default(''),
-  APP_RESET_URL: z.string().default('http://localhost:5500/web/admin/login.html'),
+  APP_RESET_URL: z.string().default('http://localhost:5500/admin/#/login'), // el panel abre «Crea tu nueva contraseña» con ?token=
   MAIL_OUTBOX_DIR: z.string().default('outbox'),
   API_PUBLIC_URL: z.string().default('http://localhost:3000'),
   STORAGE_DRIVER: z.enum(['local', 'r2']).default('local'),
