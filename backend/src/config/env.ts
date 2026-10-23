@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
 
 /* Variables de entorno validadas al arrancar: si falta algo obligatorio, el servidor no inicia. */
@@ -30,6 +32,7 @@ const schema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().default(''),
   R2_BUCKET: z.string().default(''),
   PUSH_DRIVER: z.enum(['mock', 'fcm']).default('mock'),
+  FCM_KEY_FILE: z.string().default(''),
   FCM_PROJECT_ID: z.string().default(''),
   FCM_CLIENT_EMAIL: z.string().default(''),
   FCM_PRIVATE_KEY: z.string().default(''),
@@ -44,8 +47,22 @@ const schema = z.object({
     message: 'Con STORAGE_DRIVER=r2 se requieren R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY y R2_BUCKET',
   })
   .refine((e) => e.PUSH_DRIVER !== 'fcm' || (e.FCM_PROJECT_ID && e.FCM_CLIENT_EMAIL && e.FCM_PRIVATE_KEY), {
-    message: 'Con PUSH_DRIVER=fcm se requieren FCM_PROJECT_ID, FCM_CLIENT_EMAIL y FCM_PRIVATE_KEY',
+    message: 'Con PUSH_DRIVER=fcm se requiere FCM_KEY_FILE (JSON de Firebase) o FCM_PROJECT_ID, FCM_CLIENT_EMAIL y FCM_PRIVATE_KEY',
   });
+
+/* Firebase: en lugar de copiar los datos a .env, FCM_KEY_FILE puede apuntar al JSON de la cuenta de servicio
+   (Firebase → Configuración del proyecto → Cuentas de servicio → Generar nueva clave privada). */
+if (process.env.FCM_KEY_FILE) {
+  try {
+    const key = JSON.parse(readFileSync(path.resolve(process.env.FCM_KEY_FILE), 'utf8')) as Record<string, string>;
+    process.env.FCM_PROJECT_ID ||= key.project_id;
+    process.env.FCM_CLIENT_EMAIL ||= key.client_email;
+    process.env.FCM_PRIVATE_KEY ||= key.private_key;
+  } catch {
+    console.error(`No se pudo leer FCM_KEY_FILE (${process.env.FCM_KEY_FILE}). Revisa la ruta del archivo de Firebase.`);
+    process.exit(1);
+  }
+}
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {

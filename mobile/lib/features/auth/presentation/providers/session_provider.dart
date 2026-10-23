@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/push/push_controller.dart';
 import '../../data/models/app_user.dart';
 import '../../data/repositories/auth_repository.dart';
 
@@ -46,6 +47,7 @@ class SessionController extends AsyncNotifier<AppUser?> {
   void updateUser(AppUser user) => state = AsyncData(user);
 
   Future<void> logout() async {
+    await ref.read(pushProvider).unregister(); // antes de borrar la sesión (necesita el token de acceso)
     await _repo.logout();
     state = const AsyncData(null);
   }

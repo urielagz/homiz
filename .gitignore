@@ -28,3 +28,7 @@ mobile/**/*.g.dart.bak
 .DS_Store
 Thumbs.db
 *.log
+
+# Firebase: llave privada del servidor (cuenta de servicio). Nunca se sube.
+backend/firebase-key.json
+*firebase-adminsdk*.json

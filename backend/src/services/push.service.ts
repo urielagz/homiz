@@ -41,7 +41,16 @@ async function sendFcm(token: string, message: PushMessage): Promise<'ok' | 'inv
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${env.FCM_PROJECT_ID}/messages:send`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${await fcmAccessToken()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: { token, notification: { title: message.title, body: message.body }, data: message.data ?? {} } }),
+    body: JSON.stringify({
+      message: {
+        token,
+        notification: { title: message.title, body: message.body },
+        data: message.data ?? {},
+        // Android: que aparezca aunque la app esté cerrada; iPhone: con sonido.
+        android: { priority: 'high', notification: { sound: 'default' } },
+        apns: { payload: { aps: { sound: 'default' } } },
+      },
+    }),
   });
   if (res.ok) return 'ok';
   return res.status === 404 || res.status === 400 ? 'invalid' : 'error';

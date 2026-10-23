@@ -94,6 +94,7 @@
   /* Con la API, primero se cargan los datos del servidor; sin ella, los de ejemplo */
   if (conectado) {
     root.innerHTML = '<p class="muted" role="status">Cargando datos de Zugar…</p>';
+    if (window.ZPush) ZPush.iniciar(); // avisos en el navegador (Firebase)
     ZApi.cargar().then(route, function (e) {
       Z.toast('No se pudieron cargar los datos del servidor' + (e && e.mensaje ? ': ' + e.mensaje : '.'));
       route();

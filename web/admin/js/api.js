@@ -153,6 +153,7 @@
     salir: function () {
       var s = sesion();
       if (!api.activo() || !s.refresh) return;
+      if (window.ZPush) ZPush.salir(s.token); // este navegador deja de recibir los avisos de la cuenta
       fetchJson('/auth/logout', {
         method: 'POST', keepalive: true,
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + s.token },

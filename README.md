@@ -147,3 +147,22 @@ Las diferencias entre el prompt del monorepo y el sitio existente están en `doc
 En una tarjeta o en la ficha de una casa, **Usar la app** abre la app con la casa elegida
 (`http://<servidor>:5600/?casa=casa-ceiba`). La persona crea su cuenta (o inicia sesión) y la app abre
 directamente *Solicitar visita* de esa casa para elegir día y hora.
+
+### Notificaciones push (Firebase Cloud Messaging)
+
+Proyecto de Firebase: **homiz-413ff**. Un solo sistema para la app (Android, iOS y web) y el panel.
+
+1. **Servidor:** guarda la llave privada (Firebase → Configuración del proyecto → *Cuentas de servicio* →
+   *Generar nueva clave privada*) como `backend/firebase-key.json` (ya está en `.gitignore`) y en `backend/.env`:
+   ```
+   PUSH_DRIVER=fcm
+   FCM_KEY_FILE=firebase-key.json
+   ```
+2. **Panel y app web:** ya configurados (`web/admin/js/firebase-config.js`, `mobile/web/firebase-messaging-sw.js`).
+   En el panel: menú de usuario → **Activar avisos en este navegador**. Solo funciona en `https` o `localhost`.
+3. **Android:** registra la app `mx.zugar.homiz` en Firebase y copia `google-services.json` a `mobile/android/app/`;
+   sus datos van en `mobile/lib/core/push/firebase_options.dart`.
+4. **iPhone:** registra la app `mx.zugar.homiz`, copia `GoogleService-Info.plist` a `mobile/ios/Runner/` y sube la
+   clave APNs (`.p8`, cuenta de Apple Developer) en Firebase → *Cloud Messaging*. Se compila en una Mac.
+
+Sin Firebase configurado (`PUSH_DRIVER=mock`) todo funciona igual: los avisos quedan en la bandeja de la app.
