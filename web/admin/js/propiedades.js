@@ -285,6 +285,10 @@
         '<div class="field"><label class="field__label" for="p-zone">Zona *</label><select class="select" id="p-zone" name="zone" required>' + Z.options(Z.ZONES, f.zone, 'Elige una zona') + '</select></div>' +
         '<div class="field"><label class="field__label" for="p-city">Ciudad *</label><input class="input" id="p-city" name="city" required value="' + Z.esc(f.city) + '"></div>' +
         '<div class="field span-all"><label class="field__label" for="p-address">Dirección completa *</label><input class="input" id="p-address" name="address" required value="' + Z.esc(f.address) + '" placeholder="Calle, número, residencial y código postal" autocomplete="off"></div>' +
+        '<div class="field span-all"><label class="field__label" for="p-maps">Enlace de Google Maps</label>' +
+          '<div class="locate-row"><input class="input" id="p-maps" inputmode="url" autocomplete="off" placeholder="https://maps.app.goo.gl/…" aria-describedby="p-maps-hint">' +
+          '<button class="btn btn--secondary" type="button" data-action="locate">' + Z.icon('pin') + 'Ubicar</button></div>' +
+          '<p class="field__hint" id="p-maps-hint" aria-live="polite"></p><div class="locate-preview" id="p-maps-preview" hidden></div></div>' +
         '<div class="field span-all"><label class="field__label" for="p-desc">Descripción pública *</label><textarea class="textarea" id="p-desc" name="desc" required placeholder="Cuenta cómo se vive en esta casa.">' + Z.esc(f.desc) + '</textarea><p class="field__hint">Aparece en la publicación del sitio.</p></div>' +
       '</div><div class="form-grid form-grid--3" style="margin-top:1rem">' +
         '<div class="field"><label class="field__label" for="p-m2">Construcción (m²) *</label><input class="input" id="p-m2" name="m2" required data-number inputmode="numeric" value="' + Z.esc(f.m2) + '"></div>' +
@@ -401,6 +405,34 @@
       dirty = true; renderPhotos();
       if (rejected.length) Z.toast('No se agregaron: ' + rejected.join(', ') + '.');
     }
+    /* Ubicación: el enlace de Google Maps se convierte en latitud y longitud en el servidor */
+    function renderLocation(address) {
+      var hint = el('#p-maps-hint'), box = el('#p-maps-preview');
+      if (f.lat == null || f.lng == null) {
+        hint.textContent = 'En Google Maps abre la casa, toca «Compartir» y pega aquí el enlace. En el sitio solo se muestra la zona aproximada.';
+        box.hidden = true; box.innerHTML = '';
+        return;
+      }
+      var d = 0.004, bbox = [f.lng - d, f.lat - d, f.lng + d, f.lat + d].join(',');
+      hint.innerHTML = Z.icon('check', 'icon--sm') + (address ? Z.esc(address) + ' · ' : 'Ubicación guardada · ') + f.lat.toFixed(6) + ', ' + f.lng.toFixed(6);
+      box.hidden = false;
+      box.innerHTML = '<iframe title="Vista previa de la ubicación de ' + Z.esc(f.name || 'la propiedad') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
+        encodeURIComponent(bbox) + '&layer=mapnik&marker=' + encodeURIComponent(f.lat + ',' + f.lng) + '"></iframe>';
+    }
+    function locate(btn) {
+      var input = el('#p-maps'), hint = el('#p-maps-hint'), url = input.value.trim();
+      input.removeAttribute('aria-invalid');
+      var fallo = function (msg) { input.setAttribute('aria-invalid', 'true'); hint.innerHTML = Z.icon('alert', 'icon--sm') + Z.esc(msg); input.focus(); };
+      if (!url) return fallo('Pega el enlace de Google Maps de la casa.');
+      if (!window.ZApi || !ZApi.activo()) return fallo('Para ubicar la casa se necesita la conexión con el servidor de Zugar.');
+      btn.disabled = true; hint.textContent = 'Buscando la ubicación…';
+      ZApi.ubicar(url).then(function (r) {
+        f.lat = r.lat; f.lng = r.lng; dirty = true;
+        renderLocation(r.address); refresh();
+      }, function (e) { fallo(e && e.mensaje ? e.mensaje : 'No pudimos leer ese enlace.'); })
+        .finally(function () { btn.disabled = false; });
+    }
+
     function addAmenity() {
       var input = el('#p-new-amen'), v = input.value.trim().replace(/\s+/g, ' ');
       var field = input.closest('.field'); var old = field.querySelector('.field__error'); if (old) old.remove(); input.removeAttribute('aria-invalid');
@@ -434,11 +466,13 @@
     };
     root.onkeydown = function (e) {
       if (e.target.id === 'p-new-amen' && e.key === 'Enter') { e.preventDefault(); addAmenity(); }
+      if (e.target.id === 'p-maps' && e.key === 'Enter') { e.preventDefault(); locate(el('[data-action="locate"]')); }
     };
     root.onclick = function (e) {
       var t = e.target.closest('button'); if (!t) return;
       if (t.dataset.action === 'pick') el('#p-files').click();
       else if (t.dataset.action === 'add-amen') addAmenity();
+      else if (t.dataset.action === 'locate') locate(t);
       else if (t.dataset.removeAmen != null) {
         var a = t.dataset.removeAmen; e.preventDefault();
         custom = custom.filter(function (x) { return x !== a; });
@@ -501,6 +535,7 @@
         desc: f.desc, m2: f.m2, terreno: f.terreno, age: f.age, rec: f.rec, banos: f.banos, est: f.est,
         op: f.op, price: f.price, status: f.status, availableFrom: f.availableFrom, maintenance: f.maintenance || 'No aplica',
         deposit: f.deposit, visibility: f.visibility, broker: f.broker, amenities: f.amenities.slice(), photos: f.photos.slice(),
+        lat: f.lat == null ? null : f.lat, lng: f.lng == null ? null : f.lng,
         furnished: f.amenities.indexOf('Amueblada') >= 0 ? 'Amueblada' : (src && src.furnished !== 'Amueblada' ? src.furnished : 'Sin amueblar')
       };
       if (editing) {
@@ -527,7 +562,7 @@
       }
     };
 
-    renderAmenities(); renderPhotos();
+    renderAmenities(); renderPhotos(); renderLocation();
     var target = params.seccion && root.querySelector('#' + params.seccion);
     if (target) setTimeout(function () { target.scrollIntoView({ block: 'start' }); var fi = target.querySelector('input, button'); if (fi) fi.focus({ preventScroll: true }); }, 0);
   }

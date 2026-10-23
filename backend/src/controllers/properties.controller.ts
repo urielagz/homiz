@@ -3,6 +3,7 @@ import { z } from 'zod';
 import * as Properties from '../models/property.model.js';
 import * as Svc from '../services/property.service.js';
 import { checkPropertyAccess } from '../services/access.service.js';
+import { locateFromMapsUrl } from '../services/maps.service.js';
 import { currentUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { dateField, money, pagination, paged, positiveMoney, queryArray } from '../middlewares/validate.js';
@@ -96,6 +97,8 @@ export const availabilityDto = z
 
 export const brokerDto = z.object({ brokerId: z.uuid({ error: 'Elige un broker válido.' }) });
 
+export const locateDto = z.object({ url: z.string().trim().min(1, 'Pega el enlace de Google Maps.').max(2048) });
+
 /* ---------- Controladores ---------- */
 export const list: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
@@ -163,6 +166,11 @@ export const reassign: RequestHandler = async (_req, res) => {
   const row = (await Properties.findById(id))!;
   const extras = await Svc.loadExtras([row]);
   res.json({ ...(await Svc.present(row, extras.amenities(id), extras.photos(id), currentUser(res))), appointmentsReassigned: moved });
+};
+
+/** Convierte el enlace de Google Maps que pega el personal en latitud, longitud y dirección. */
+export const locate: RequestHandler = async (_req, res) => {
+  res.json(await locateFromMapsUrl((res.locals.body as z.infer<typeof locateDto>).url));
 };
 
 export const remove: RequestHandler = async (_req, res) => {

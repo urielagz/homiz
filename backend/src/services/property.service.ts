@@ -65,6 +65,8 @@ export async function present(row: Properties.PropertyRow, amenities: string[], 
   };
 }
 
+const approx = (v: number | null) => (v == null ? null : Math.round(v * 1000) / 1000);
+
 /** Formato del catálogo público (mismos nombres que usa el sitio en assets/js/main.js). */
 export async function presentPublic(row: Properties.PropertyRow, amenities: string[], photos: Properties.PhotoRow[]) {
   return {
@@ -87,6 +89,9 @@ export async function presentPublic(row: Properties.PropertyRow, amenities: stri
     zona: row.zone,
     zonaKey: row.zone_key,
     mapa: row.map_query,
+    // Ubicación aproximada (3 decimales ≈ 100 m): el sitio público no revela la dirección exacta.
+    lat: approx(row.lat),
+    lng: approx(row.lng),
     address: row.address,
     status: row.status,
     publishedAt: row.published_at,

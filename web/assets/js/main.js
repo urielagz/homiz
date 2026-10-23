@@ -52,6 +52,47 @@ document.documentElement.classList.add('js');
   function mapaEmbebido(q, zoom) { return 'https://maps.google.com/maps?q=' + encodeURIComponent(q) + '&z=' + (zoom || 15) + '&hl=es&output=embed'; }
   function mapaEnlace(q) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q); }
 
+  /* Mapa con Leaflet + OpenStreetMap cuando la casa trae coordenadas (catálogo de la API).
+     Se carga solo en el listado y la ficha; si no carga (sin internet), se queda el mapa de Google. */
+  var LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet';
+  var cargaLeaflet = null;
+  function cargarLeaflet() {
+    if (window.L) return Promise.resolve(window.L);
+    if (!cargaLeaflet) cargaLeaflet = new Promise(function (ok, mal) {
+      var css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = LEAFLET + '.css'; css.crossOrigin = '';
+      css.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+      document.head.appendChild(css);
+      var js = document.createElement('script');
+      js.src = LEAFLET + '.js'; js.crossOrigin = '';
+      js.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+      js.onload = function () { if (window.L) ok(window.L); else mal(); };
+      js.onerror = mal;
+      document.head.appendChild(js);
+      setTimeout(mal, 10000);
+    });
+    return cargaLeaflet;
+  }
+  function conCoordenadas(c) { return c && typeof c.lat === 'number' && typeof c.lng === 'number' && isFinite(c.lat) && isFinite(c.lng); }
+  /* Cambia el iframe de Google por un mapa de Leaflet en el mismo contenedor .map */
+  function mapaLeaflet(iframe, L) {
+    var div = document.createElement('div');
+    div.className = 'map__leaflet';
+    div.setAttribute('role', 'region');
+    div.setAttribute('aria-label', iframe.title.replace(/^Mapa de Google/, 'Mapa'));
+    iframe.parentNode.insertBefore(div, iframe);
+    iframe.hidden = true;
+    iframe.removeAttribute('src');
+    var mapa = L.map(div, { scrollWheelZoom: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(mapa);
+    return mapa;
+  }
+  function pinZugar(L) {
+    return L.divIcon({ className: 'map-pin', html: icon('pin'), iconSize: [34, 34], iconAnchor: [17, 32], popupAnchor: [0, -28] });
+  }
+
   /* Avisos flotantes */
   var toastBox = document.createElement('div');
   toastBox.className = 'site-toasts';
@@ -210,6 +251,13 @@ document.documentElement.classList.add('js');
     var mapa = $('.map--zone iframe');
     if (mapa) { mapa.src = mapaEmbebido(c.mapa, 14); mapa.title = 'Mapa de Google con la zona de ' + lugar; }
     var abrirMapa = $('.map-note a'); if (abrirMapa) abrirMapa.href = mapaEnlace(c.mapa);
+    if (mapa && conCoordenadas(c)) cargarLeaflet().then(function (L) {
+      // Círculo de zona en lugar de un marcador: la ubicación es aproximada a propósito
+      var centro = [c.lat, c.lng];
+      var m = mapaLeaflet(mapa, L).setView(centro, 15);
+      L.circle(centro, { radius: 350, className: 'map-area' }).addTo(m);
+      if (abrirMapa) abrirMapa.href = mapaEnlace(c.lat + ',' + c.lng);
+    }, function () { /* sin Leaflet se queda el mapa de Google */ });
     var distancias = $('.distances'); if (distancias) distancias.hidden = true;
 
     /* La calculadora de crédito solo aplica a casas en venta */
@@ -815,14 +863,43 @@ document.documentElement.classList.add('js');
       lugares.innerHTML = pagina.map(function (c) {
         return '<li><button type="button" aria-pressed="false" data-slug="' + c.slug + '">' + icon('pin') + '<span>' + esc(c.name) + ' · ' + precioCorto(c) + ' · ' + esc(c.zona.replace(/^Residencial /, '')) + '</span></button></li>';
       }).join('') || '<li class="muted small">Sin casas para mostrar en el mapa.</li>';
+      var mapaL = null, marcadores = null; // con Leaflet: el mapa y slug → marcador
       lugares.addEventListener('click', function (e) {
         var b = e.target.closest('button'); if (!b) return;
         var c = porSlug[b.dataset.slug];
         $$('button', lugares).forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        var marcador = marcadores && marcadores[c.slug];
+        if (marcador) {
+          mapaL.flyTo(marcador.getLatLng(), 15, { duration: 0.8 });
+          marcador.openPopup();
+          abrir.href = mapaEnlace(c.lat + ',' + c.lng);
+          return;
+        }
         iframe.src = mapaEmbebido(c.mapa, 15);
         iframe.title = 'Mapa de Google con la zona de ' + c.name;
         abrir.href = mapaEnlace(c.mapa);
       });
+
+      /* Con coordenadas: mapa de Leaflet con un marcador por casa de esta página */
+      var ubicadas = pagina.filter(conCoordenadas);
+      if (ubicadas.length) cargarLeaflet().then(function (L) {
+        var m = mapaL = mapaLeaflet(iframe, L), pin = pinZugar(L);
+        marcadores = {};
+        var limites = ubicadas.map(function (c) {
+          marcadores[c.slug] = L.marker([c.lat, c.lng], { icon: pin, title: c.name, alt: c.name })
+            .bindPopup(
+              '<a class="map-popup" href="' + esc(fichaDe(c)) + '">' +
+                '<img src="' + esc(fotoDe(c)) + '" alt="" loading="lazy" onerror="this.remove()">' +
+                '<strong>' + esc(c.name) + '</strong><span>' + esc(c.zona) + '</span>' +
+                '<span class="map-popup__price">' + precioCorto(c) + (c.op === 'renta' ? ' al mes' : '') + '</span>' +
+                '<span class="map-popup__more">Ver la casa</span>' +
+              '</a>', { minWidth: 200, maxWidth: 240 })
+            .addTo(m);
+          return [c.lat, c.lng];
+        });
+        if (limites.length === 1) m.setView(limites[0], 14);
+        else m.fitBounds(limites, { padding: [36, 36], maxZoom: 15 });
+      }, function () { /* sin Leaflet se queda el mapa de Google */ });
     }
 
     var togg = $('#filtros-toggle');

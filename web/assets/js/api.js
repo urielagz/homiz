@@ -60,6 +60,9 @@
       zonaKey: p.zonaKey,
       // main.js agrega ", Quintana Roo" al armar el mapa
       mapa: String(p.mapa || p.zona + ', Cancún').replace(/,\s*Quintana Roo\s*$/i, ''),
+      // Ubicación aproximada para el mapa de Leaflet (sin coordenadas se queda el mapa de Google)
+      lat: p.lat == null ? null : Number(p.lat),
+      lng: p.lng == null ? null : Number(p.lng),
       op: p.op,
       price: Number(p.price),
       rec: Number(p.rec),

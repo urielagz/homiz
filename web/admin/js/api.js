@@ -83,7 +83,7 @@
     uuid.prop[p.code] = p.id;
     var act = p.updatedAt ? enCancun(p.updatedAt) : null;
     return {
-      id: p.code, _id: p.id, _zoneKey: p.zoneKey,
+      id: p.code, _id: p.id, _zoneKey: p.zoneKey, lat: p.lat == null ? null : Number(p.lat), lng: p.lng == null ? null : Number(p.lng),
       name: p.name, type: p.type, zone: p.zone, city: p.city, address: p.address, street: p.street || '',
       op: p.operation, price: Number(p.price), rec: Number(p.rec), banos: Number(p.banos), m2: p.m2 == null ? '' : Number(p.m2),
       terreno: p.terreno == null ? '' : Number(p.terreno), est: p.est, age: p.age == null ? '' : p.age,
@@ -254,6 +254,9 @@
     brokerActivo: function (b) { api.sincronizar(pedir('PATCH', '/users/' + b.id, { active: !!b.active })); },
     propiedadBroker: function (p) { api.sincronizar(pedir('PATCH', '/properties/' + uuid.prop[p.id] + '/broker', { brokerId: p.broker })); },
 
+    /* Enlace de Google Maps → { lat, lng, address } (lo procesa el servidor; sin clave usa OpenStreetMap) */
+    ubicar: function (url) { return pedir('POST', '/properties/locate', { url: url }); },
+
     propiedadEliminar: function (p) { api.sincronizar(pedir('DELETE', '/properties/' + (p._id || uuid.prop[p.id]))); },
     propiedadVisibilidad: function (p) {
       api.sincronizar(pedir('PATCH', '/properties/' + (p._id || uuid.prop[p.id]) + '/availability', { visibility: p.visibility }));
@@ -276,6 +279,8 @@
         zoneKey: zonaPrevia || (mismaZona ? mismaZona._zoneKey : slug(p.zone)),
         mapQuery: p.zone + ', Cancún, Quintana Roo', amenities: p.amenities
       };
+      // Ubicación del enlace de Google Maps (solo se envía si se conoce: no borra la que ya tenga)
+      if (p.lat != null && p.lng != null) { datos.lat = p.lat; datos.lng = p.lng; }
       var id = antes ? antes._id : null;
       var guardar = (nueva
         ? pedir('POST', '/properties', Object.assign({ brokerId: p.broker || undefined }, datos)).then(function (r) { id = r.id; p._code = r.code; })

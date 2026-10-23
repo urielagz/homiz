@@ -130,3 +130,14 @@ El sitio, el panel y la app web buscan la API en el **puerto 3000 del mismo serv
 | Cliente (inquilina de Casa Las Palmas) | `lau.mendez@correo.com` |
 
 Las diferencias entre el prompt del monorepo y el sitio existente están en `docs/decisiones.md`.
+### Mapas (Leaflet + enlace de Google Maps)
+
+- **Sitio:** el listado y la ficha muestran un mapa de Leaflet con OpenStreetMap cuando la casa tiene coordenadas
+  (marcadores con ventana en el listado, círculo de zona en la ficha). Sin coordenadas o sin servidor se queda el
+  mapa de Google de siempre.
+- **Panel:** en *Editar propiedad*, pega el enlace de Google Maps de la casa (en Google Maps: el lugar → *Compartir*
+  → copiar enlace) y presiona **Ubicar**; aparece la dirección y una vista previa. Se guarda con *Guardar cambios*.
+- **Servidor:** `POST /api/v1/properties/locate { "url": "…" }`. Funciona sin clave (Nominatim de OpenStreetMap).
+  Para usar la API de Google agrega en `backend/.env`: `GOOGLE_MAPS_API_KEY=tu_clave` (Geocoding y Places).
+- Para una base que ya existía: `cd backend && npx tsx src/config/run-sql.ts db/004_coordenadas.sql`
+  (solo llena las casas sin ubicación).

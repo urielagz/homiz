@@ -36,6 +36,9 @@ const schema = z.object({
   JOBS_ENABLED: z.enum(['true', 'false']).default('true'),
   JOBS_CRON: z.string().default('0 7 * * *'),
   TZ_APP: z.string().default('America/Cancun'),
+  // Ubicación de las casas (enlace de Google Maps → coordenadas). Sin clave se usa Nominatim (OpenStreetMap).
+  GOOGLE_MAPS_API_KEY: z.string().default(''),
+  NOMINATIM_URL: z.string().default('https://nominatim.openstreetmap.org'),
 })
   .refine((e) => e.STORAGE_DRIVER !== 'r2' || (e.R2_ACCOUNT_ID && e.R2_ACCESS_KEY_ID && e.R2_SECRET_ACCESS_KEY && e.R2_BUCKET), {
     message: 'Con STORAGE_DRIVER=r2 se requieren R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY y R2_BUCKET',
