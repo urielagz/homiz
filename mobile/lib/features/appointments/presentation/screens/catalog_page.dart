@@ -6,7 +6,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../core/utils/whatsapp.dart';
 import '../../../../core/widgets/states.dart';
 import '../../../property/presentation/providers/property_provider.dart';
 import '../../../property/presentation/widgets/property_widgets.dart';
@@ -34,7 +33,7 @@ class CatalogPage extends ConsumerWidget {
               separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
               itemBuilder: (context, i) {
                 final p = value[i];
-                final tarjeta = Semantics(
+                return Semantics(
                   button: true,
                   label: '${p.name}, ${p.zone ?? ''}, ${Fmt.money(p.price)}',
                   child: InkWell(
@@ -59,22 +58,6 @@ class CatalogPage extends ConsumerWidget {
                       ),
                     ),
                   ),
-                );
-                // Como en las tarjetas del sitio: escribir a Zugar por esta casa
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    tarjeta,
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        style: TextButton.styleFrom(foregroundColor: WhatsAppButton.color),
-                        onPressed: () => WhatsApp.open(context, 'Hola, me interesa ${p.name}${p.zone == null ? '' : ' en ${p.zone}'}.'),
-                        icon: const Icon(Icons.chat_outlined, size: 18),
-                        label: Text('WhatsApp por ${p.name}'),
-                      ),
-                    ),
-                  ],
                 );
               },
             ),

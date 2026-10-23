@@ -115,12 +115,7 @@ class ProviderCard extends StatelessWidget {
             Text(p.notes!, style: AppTextStyles.body.copyWith(fontSize: 13)),
           ],
           const SizedBox(height: AppSpacing.md),
-          ContactActions(
-            phone: p.phone,
-            email: p.email,
-            subject: 'Servicio para Inmobiliaria Zugar',
-            whatsappText: 'Hola, les escribo de Zugar Inmobiliaria para solicitar un servicio de ${p.specialty.toLowerCase()}.',
-          ),
+          ContactActions(phone: p.phone, email: p.email, subject: 'Servicio para Inmobiliaria Zugar'),
         ],
       ),
     );

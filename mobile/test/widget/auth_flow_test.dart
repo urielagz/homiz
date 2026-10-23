@@ -95,8 +95,7 @@ void main() {
     await settle(tester);
     expect(find.text('lau.mendez@correo.com'), findsOneWidget);
 
-    // La lista del perfil es perezosa: se desplaza hasta que el botón exista
-    await tester.dragUntilVisible(find.text('Cerrar sesión'), find.byType(ListView).first, const Offset(0, -250));
+    await tester.ensureVisible(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cerrar sesión'));
     await settle(tester);
