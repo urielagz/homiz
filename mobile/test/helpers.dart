@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:homiz/app.dart';
+import 'package:homiz/core/live/live_updates.dart';
 import 'package:homiz/core/network/api_client.dart';
 import 'package:homiz/core/network/token_storage.dart';
 import 'package:homiz/features/auth/presentation/providers/session_provider.dart';
@@ -59,6 +60,8 @@ List<Override> testOverrides({required FakeAdapter adapter, TokenStorage? storag
       httpAdapterProvider.overrideWithValue(adapter),
       apiBaseUrlProvider.overrideWithValue('http://api.test/api/v1'),
       splashDelayProvider.overrideWith((ref) async {}),
+      // Sin servidor real: el tiempo real queda con la consulta periódica (sin WebSocket)
+      liveSocketEnabledProvider.overrideWithValue(false),
     ];
 
 Widget testApp(List<Override> overrides) => ProviderScope(overrides: overrides, child: const HomizApp());

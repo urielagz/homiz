@@ -1,19 +1,21 @@
 import { createReadStream } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
-import { pool } from '../config/database.js';
+import { pool, withTransaction } from '../config/database.js';
 import {
-  buildKey, createDownloadUrl, createUploadUrl, decodeLocalToken, ensureLocalDir, FILE_RULES, fileSize, keyBelongsTo, localPath, type FilePurpose,
+  buildKey, createDownloadUrl, createUploadUrl, decodeLocalToken, deleteFile, FILE_RULES, fileSize, keyBelongsTo, localPath, putObject, type FilePurpose,
 } from '../config/storage.js';
+import { logger } from '../config/logger.js';
 import { env } from '../config/env.js';
 import { insertActivity } from '../models/activity.model.js';
 import { currentUser, type AuthUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { pagination, paged } from '../middlewares/validate.js';
 import { assertPropertyAccess, propertyScope } from '../services/access.service.js';
+import { activeContractOf, clientDocumentFilter } from '../models/property-access.model.js';
 
-const DOC_TYPES = ['contract', 'deposit', 'delivery_sheet', 'rules', 'annex', 'receipt', 'proof', 'photo', 'other'] as const;
+// stamp: foto del sello de un pagaré (constancia de entrega en físico y digital), siempre ligada a ese pagaré
+const DOC_TYPES = ['contract', 'deposit', 'delivery_sheet', 'rules', 'annex', 'receipt', 'proof', 'photo', 'other', 'promissory_note', 'stamp'] as const;
 
 export const uploadUrlDto = z.object({
   propertyId: z.uuid({ error: 'Indica la propiedad.' }),
@@ -60,7 +62,8 @@ export const uploadUrl: RequestHandler = async (_req, res) => {
   if (d.size > rule.maxBytes) throw new AppError(400, 'FILE_TOO_LARGE', `El archivo pesa más de ${rule.maxBytes / 1024 / 1024} MB.`);
   const { rows } = await pool.query<{ code: string }>('SELECT code FROM properties WHERE id = $1', [d.propertyId]);
   const storageKey = buildKey(rows[0].code, d.purpose, d.mime);
-  res.status(201).json({ storageKey, maxBytes: rule.maxBytes, upload: await createUploadUrl(storageKey, d.mime, rule.maxBytes) });
+  // La subida va a esta misma API por la dirección que usa quien sube (panel, red local o túnel público)
+  res.status(201).json({ storageKey, maxBytes: rule.maxBytes, upload: await createUploadUrl(storageKey, d.mime, rule.maxBytes, `${_req.protocol}://${_req.get('host')}`) });
 };
 
 /** POST /documents — confirma un documento ya subido y lo registra en el expediente. */
@@ -70,8 +73,25 @@ export const confirm: RequestHandler = async (_req, res) => {
   await assertPropertyAccess(user, d.propertyId);
   const { rows: p } = await pool.query<{ code: string }>('SELECT code FROM properties WHERE id = $1', [d.propertyId]);
   if (!keyBelongsTo(d.storageKey, p[0].code, 'document')) throw new AppError(400, 'INVALID_FILE', 'El archivo no corresponde a esta propiedad.');
+  // El tipo guardado (con el que se entrega al descargar) es el de la extensión que generó el servidor, no el que se declara
+  if (d.mime !== mimeOfKey(d.storageKey)) throw new AppError(400, 'INVALID_FILE_TYPE', 'El tipo de archivo no coincide con el archivo subido.');
+  if (d.type === 'promissory_note' && !d.promissoryNoteId) throw new AppError(400, 'VALIDATION_ERROR', 'Indica a qué pagaré corresponde el PDF.');
+  if (d.type === 'stamp') {
+    if (!d.promissoryNoteId) throw new AppError(400, 'VALIDATION_ERROR', 'Indica a qué pagaré corresponde la foto del sello.');
+    if (!d.mime.startsWith('image/')) throw new AppError(400, 'INVALID_FILE_TYPE', 'La foto del sello debe ser una imagen (JPG, PNG o WEBP).');
+  }
+  if (d.promissoryNoteId) {
+    const note = await pool.query(
+      'SELECT 1 FROM promissory_notes n JOIN contracts ct ON ct.id = n.contract_id WHERE n.id = $1 AND ct.property_id = $2',
+      [d.promissoryNoteId, d.propertyId],
+    );
+    if (!note.rowCount) throw new AppError(400, 'INVALID_NOTE', 'El pagaré no corresponde a esta propiedad.');
+  }
   const size = await fileSize(d.storageKey);
   if (size === null) throw new AppError(400, 'UPLOAD_NOT_FOUND', 'No encontramos el archivo. Termina de subirlo e inténtalo de nuevo.');
+  // Los documentos personales (contrato, depósito, entrega, recibos…) se ligan al contrato vigente de la casa:
+  // así solo los ve ese inquilino, no el anterior ni el siguiente. Reglamento, anexos y fotos son de la casa.
+  if (!d.contractId && !d.promissoryNoteId && !['rules', 'annex', 'photo'].includes(d.type)) d.contractId = await activeContractOf(d.propertyId);
   const { rows } = await pool.query<{ id: string }>(
     `INSERT INTO documents (property_id, type, name, description, storage_key, mime, size, visible_to_client, uploaded_by,
                             contract_id, promissory_note_id, receipt_id, report_id, expense_id)
@@ -100,6 +120,11 @@ async function load(user: AuthUser, id: string) {
   const d = rows[0];
   if (!d || (user.type === 'client' && !d.visible_to_client)) throw new AppError(404, 'NOT_FOUND', 'El documento no existe.');
   await assertPropertyAccess(user, d.property_id);
+  // El cliente solo ve lo de su contrato (no los documentos de otro inquilino de la misma casa)
+  if (user.type === 'client') {
+    const own = await pool.query(`SELECT 1 FROM documents d WHERE d.id = $1 AND ${clientDocumentFilter('$2')}`, [id, user.clientId]);
+    if (!own.rowCount) throw new AppError(404, 'NOT_FOUND', 'El documento no existe.');
+  }
   return d;
 }
 
@@ -110,7 +135,7 @@ export const list: RequestHandler = async (_req, res) => {
   const params: unknown[] = [];
   const where: string[] = [];
   if (scope) where.push(`d.property_id = ANY($${params.push(scope)}::uuid[])`);
-  if (user.type === 'client') where.push('d.visible_to_client');
+  if (user.type === 'client') where.push('d.visible_to_client', clientDocumentFilter(`$${params.push(user.clientId)}`));
   if (q.propertyId) where.push(`d.property_id = $${params.push(q.propertyId)}`);
   if (q.type) where.push(`d.type = $${params.push(q.type)}`);
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -141,17 +166,54 @@ export const update: RequestHandler = async (_req, res) => {
   res.json(present(await load(user, id), user));
 };
 
-/* ---------- Almacenamiento local: destino de las URL firmadas (solo STORAGE_DRIVER=local) ---------- */
+/**
+ * DELETE /documents/:id — elimina el documento del expediente (permiso documents.delete: administración y propietario).
+ * Se quita de los contratos y recibos que lo usaban; el historial conserva quién lo eliminó.
+ */
+export const remove: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  const { id } = res.locals.params as { id: string };
+  const d = await load(user, id);
+  await withTransaction(async (db) => {
+    await db.query('UPDATE contracts SET document_id = NULL WHERE document_id = $1', [id]);
+    await db.query('UPDATE receipts SET document_id = NULL WHERE document_id = $1', [id]);
+    await db.query('DELETE FROM documents WHERE id = $1', [id]);
+    await insertActivity({ userId: user.id, propertyId: d.property_id, entity: 'document', entityId: id, action: 'delete', description: `${user.name} eliminó «${d.name}» del expediente.`, oldValues: { name: d.name, type: d.type, storageKey: d.storage_key } }, db);
+  });
+  // El registro ya no existe; si el archivo no se puede borrar, solo queda huérfano en el almacenamiento.
+  await deleteFile(d.storage_key).catch((err) => logger.warn({ err, key: d.storage_key }, 'No se pudo borrar el archivo del documento'));
+  res.status(204).end();
+};
 
-/** PUT /files/:token — recibe el archivo crudo. Valida firma, vigencia, tipo y tamaño. */
+/* ---------- Destino de las URL firmadas: subidas (local o R2) y descargas (solo local) ---------- */
+
+/** Firma de los primeros bytes de cada tipo permitido (evita subir HTML o scripts disfrazados) */
+export function contentMatches(mime: string, b: Buffer): boolean {
+  const starts = (sig: number[], at = 0) => sig.every((x, i) => b[at + i] === x);
+  switch (mime) {
+    case 'application/pdf': return starts([0x25, 0x50, 0x44, 0x46, 0x2d]); // %PDF-
+    case 'image/jpeg': return starts([0xff, 0xd8, 0xff]);
+    case 'image/png': return starts([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    case 'image/webp': return starts([0x52, 0x49, 0x46, 0x46]) && starts([0x57, 0x45, 0x42, 0x50], 8); // RIFF....WEBP
+    default: return false;
+  }
+}
+
+/** Tipo que corresponde a la extensión de la clave (la generó el servidor) */
+const MIME_BY_EXT: Record<string, string> = { pdf: 'application/pdf', jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const mimeOfKey = (key: string) => MIME_BY_EXT[key.split('.').pop() ?? ''] ?? null;
+
+/** PUT /files/:token — recibe el archivo crudo y lo guarda (carpeta local o R2). Valida firma, vigencia, tipo y tamaño. */
 export const putFile: RequestHandler = async (req, res) => {
   const t = decodeLocalToken(String(req.params.token));
-  if (env.STORAGE_DRIVER !== 'local' || !t || t.op !== 'put') throw new AppError(403, 'INVALID_SIGNATURE', 'El enlace de subida no es válido o ya expiró.');
+  if (!t || t.op !== 'put') throw new AppError(403, 'INVALID_SIGNATURE', 'El enlace de subida no es válido o ya expiró.');
   if ((req.header('content-type') ?? '').split(';')[0] !== t.mime) throw new AppError(400, 'INVALID_FILE_TYPE', 'El tipo de archivo no coincide con el solicitado.');
   const body = req.body as Buffer;
   if (!Buffer.isBuffer(body) || !body.length) throw new AppError(400, 'EMPTY_FILE', 'El archivo está vacío.');
   if (t.max && body.length > t.max) throw new AppError(413, 'FILE_TOO_LARGE', 'El archivo supera el tamaño permitido.');
-  await writeFile(await ensureLocalDir(t.key), body);
+  // El contenido debe ser de verdad lo que dice ser (no basta el encabezado): PDF, JPG, PNG o WEBP
+  if (!contentMatches(t.mime, body)) throw new AppError(400, 'INVALID_FILE_CONTENT', 'El archivo no es un PDF o imagen válido.');
+  await putObject(t.key, t.mime, body);
   res.status(201).json({ storageKey: t.key, size: body.length });
 };
 

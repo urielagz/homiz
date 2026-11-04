@@ -4,7 +4,8 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  min-width: 960px;
+  /* Responsivo: sin ancho mínimo (decisión 110). En celular el menú lateral es un menú ☰. */
+  overflow-x: hidden;
   font-family: var(--font-sans);
   font-size: var(--fs-base);
   line-height: 1.5;

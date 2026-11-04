@@ -46,11 +46,15 @@ async function staffDashboard(user: AuthUser) {
   const scope = await propertyScope(user); // null = administrador (todo)
   const p = scope ? [scope] : [];
   const inScope = (col: string) => (scope ? `${col} = ANY($1::uuid[])` : 'TRUE');
+  // Citas: las que tiene asignadas el broker (administración asigna cualquier casa a cualquier broker), igual que la lista de Citas
+  const mine = scope ? [user.id] : [];
+  const myAppts = (alias = '') => (scope ? `${alias}broker_id = $1` : 'TRUE');
+  const oneMine = async (sql: string) => Number((await pool.query<{ n: string }>(sql, mine)).rows[0].n);
   const one = async (sql: string) => Number((await pool.query<{ n: string }>(sql, p)).rows[0].n);
 
   const counts = {
-    appointmentsToConfirm: await one(`SELECT count(*) AS n FROM appointments WHERE status = 'por-confirmar' AND scheduled_at > now() AND ${inScope('property_id')}`),
-    appointmentsToday: await one(`SELECT count(*) AS n FROM appointments WHERE status = 'confirmada' AND (scheduled_at AT TIME ZONE 'America/Cancun')::date = (now() AT TIME ZONE 'America/Cancun')::date AND ${inScope('property_id')}`),
+    appointmentsToConfirm: await oneMine(`SELECT count(*) AS n FROM appointments WHERE status = 'por-confirmar' AND scheduled_at > now() AND ${myAppts()}`),
+    appointmentsToday: await oneMine(`SELECT count(*) AS n FROM appointments WHERE status = 'confirmada' AND (scheduled_at AT TIME ZONE 'America/Cancun')::date = (now() AT TIME ZONE 'America/Cancun')::date AND ${myAppts()}`),
     overdueNotes: await one(`SELECT count(*) AS n FROM promissory_notes n JOIN contracts ct ON ct.id = n.contract_id WHERE n.status = 'overdue' AND ${inScope('ct.property_id')}`),
     upcomingNotes: await one(`SELECT count(*) AS n FROM promissory_notes n JOIN contracts ct ON ct.id = n.contract_id WHERE n.status = 'pending' AND n.due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 7 AND ${inScope('ct.property_id')}`),
     newReports: await one(`SELECT count(*) AS n FROM maintenance_reports WHERE status = 'reported' AND ${inScope('property_id')}`),
@@ -63,8 +67,8 @@ async function staffDashboard(user: AuthUser) {
   const pendingAppointments = (await pool.query(
     `SELECT a.id, a.code, c.name AS "clientName", p.name AS "propertyName", a.scheduled_at AS "scheduledAt"
        FROM appointments a JOIN clients c ON c.id = a.client_id JOIN properties p ON p.id = a.property_id
-      WHERE a.status = 'por-confirmar' AND a.scheduled_at > now() AND ${inScope('a.property_id')} ORDER BY a.scheduled_at LIMIT 5`,
-    p,
+      WHERE a.status = 'por-confirmar' AND a.scheduled_at > now() AND ${myAppts('a.')} ORDER BY a.scheduled_at LIMIT 5`,
+    mine,
   )).rows;
   const overdue = (await pool.query(
     `SELECT n.id, n.number, n.amount, to_char(n.due_date, 'YYYY-MM-DD') AS "dueDate", c.name AS "clientName", pr.name AS "propertyName", pr.id AS "propertyId"

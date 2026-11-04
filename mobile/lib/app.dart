@@ -32,6 +32,8 @@ class HomizApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      // Horas en formato de 24 horas en toda la app (también el reloj para elegir la hora)
+      builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false), child: child!),
     );
   }
 }

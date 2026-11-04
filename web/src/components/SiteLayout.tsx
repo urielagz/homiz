@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router';
+import { AppLinkGate } from './AppLinkGate';
 import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import { Sprite } from './Sprite';
@@ -23,6 +24,8 @@ export function SiteLayout() {
         <Outlet />
       </main>
       <SiteFooter />
+      {/* En la computadora, los enlaces a la app muestran el QR para seguir en el celular */}
+      <AppLinkGate />
     </>
   );
 }

@@ -17,6 +17,10 @@ abstract class PromissoryNote with _$PromissoryNote {
     required String status,
     NotePayment? payment,
     String? proofDocumentId,
+    // PDF del pagaré firmado.
+    String? documentId,
+    // Fotos de los sellos (entrega en físico y digital).
+    @Default(<NoteStamp>[]) List<NoteStamp> stamps,
     NoteRef? property,
     // Solo para el personal:
     NoteRef? client,
@@ -29,6 +33,14 @@ abstract class PromissoryNote with _$PromissoryNote {
   factory PromissoryNote.fromJson(Map<String, dynamic> json) => _$PromissoryNoteFromJson(json);
 }
 
+/// Foto del sello de un pagaré.
+@freezed
+abstract class NoteStamp with _$NoteStamp {
+  const factory NoteStamp({required String id, required String name, @LocalDate() required DateTime createdAt}) = _NoteStamp;
+
+  factory NoteStamp.fromJson(Map<String, dynamic> json) => _$NoteStampFromJson(json);
+}
+
 @freezed
 abstract class NoteRef with _$NoteRef {
   const factory NoteRef({required String id, required String name}) = _NoteRef;
@@ -38,7 +50,15 @@ abstract class NoteRef with _$NoteRef {
 
 @freezed
 abstract class NotePayment with _$NotePayment {
-  const factory NotePayment({required String id, required double amount, @LocalDate() required DateTime paidAt, String? receiptFolio}) = _NotePayment;
+  const factory NotePayment({
+    required String id,
+    required double amount,
+    @LocalDate() required DateTime paidAt,
+    String? receiptFolio,
+    String? notes,
+    // Solo para el personal:
+    String? registeredBy,
+  }) = _NotePayment;
 
   factory NotePayment.fromJson(Map<String, dynamic> json) => _$NotePaymentFromJson(json);
 }

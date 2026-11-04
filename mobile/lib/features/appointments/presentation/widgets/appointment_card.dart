@@ -18,7 +18,10 @@ class AppointmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: AppRadius.cardAll, side: const BorderSide(color: AppColors.divider)),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.cardAll,
+        side: const BorderSide(color: AppColors.divider),
+      ),
       child: InkWell(
         borderRadius: AppRadius.cardAll,
         onTap: onTap,

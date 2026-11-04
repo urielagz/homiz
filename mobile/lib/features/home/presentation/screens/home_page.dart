@@ -9,6 +9,7 @@ import '../../../../core/widgets/homiz_header.dart';
 import '../../../../core/widgets/states.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../notifications/presentation/providers/notifications_provider.dart';
+import '../../../sales/data/sales_repository.dart';
 import '../../data/models/client_dashboard.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/staff_home.dart';
@@ -38,13 +39,16 @@ class _ClientHome extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(clientDashboardProvider);
+    // Compras cerradas: si falla o no hay, simplemente no aparece la tarjeta
+    final purchases = ref.watch(myPurchasesProvider).value ?? const <Purchase>[];
     Future<void> reload() async {
       ref.invalidate(notificationsProvider);
+      ref.invalidate(myPurchasesProvider);
       return ref.refresh(clientDashboardProvider.future).then((_) {});
     }
 
     return switch (dashboard) {
-      AsyncData(:final value) => RefreshIndicator(onRefresh: reload, child: DashboardCards(dashboard: value)),
+      AsyncData(:final value) => RefreshIndicator(onRefresh: reload, child: DashboardCards(dashboard: value, purchases: purchases)),
       AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(clientDashboardProvider)),
       _ => const LoadingState(items: 3, itemHeight: 132),
     };
@@ -53,9 +57,12 @@ class _ClientHome extends ConsumerWidget {
 
 /// Las tres tarjetas azules del inicio (separadas para probarlas sin red).
 class DashboardCards extends StatelessWidget {
-  const DashboardCards({super.key, required this.dashboard});
+  const DashboardCards({super.key, required this.dashboard, this.purchases = const []});
 
   final ClientDashboard dashboard;
+
+  /// Casas que compró con nosotros: tarjeta «Mis compras» con el comprobante
+  final List<Purchase> purchases;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +72,16 @@ class DashboardCards extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.sm, AppSpacing.screen, AppSpacing.xl),
       children: [
+        if (purchases.where((p) => p.isClosed).firstOrNull case final last?) ...[
+          DashboardCard(
+            title: 'Mis compras...',
+            value: last.propertyName,
+            detail: 'Compra cerrada · ${last.folio} · Ver comprobante',
+            illustration: 'assets/illustrations/solicitud.svg',
+            onTap: () => context.push('/home/purchases'),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
         DashboardCard(
           title: 'Próximo pago...',
           value: pay == null ? 'Sin pagos pendientes' : Fmt.dayMonth(pay.dueDate),
@@ -91,6 +108,15 @@ class DashboardCards extends StatelessWidget {
                   : '${reports.latest!.title} · Detalles...',
           illustration: 'assets/illustrations/reportes.svg',
           onTap: () => context.go('/property?tab=3'),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        // «Busco casa»: lo que pide al asesor y las casas que le propone (en lugar del correo)
+        DashboardCard(
+          title: 'Mis solicitudes...',
+          value: 'Nueva solicitud',
+          detail: 'Rentar, comprar o publicar: tu asesor te contesta aquí',
+          illustration: 'assets/illustrations/solicitud.svg',
+          onTap: () => context.go('/home/requests'),
         ),
       ],
     );

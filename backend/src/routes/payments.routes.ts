@@ -9,6 +9,8 @@ export const paymentsRouter = Router();
 paymentsRouter.use(authenticate);
 
 paymentsRouter.get('/', validate({ query: C.listQueryDto }), C.list);
+paymentsRouter.post('/', requireStaff, requirePermission('contracts.manage'), validate({ body: C.createNoteDto }), C.createNote);
+paymentsRouter.post('/:id/cancel', requireStaff, requirePermission('contracts.manage'), validate({ params: idParam, body: C.cancelNoteDto }), C.cancelNote);
 paymentsRouter.get('/:id', validate({ params: idParam }), C.getOne);
 paymentsRouter.patch('/:id', requireStaff, requirePermission('contracts.manage'), validate({ params: idParam, body: C.updateNoteDto }), C.updateNote);
 paymentsRouter.post('/:id/payments', requireStaff, requirePermission('payments.register'), validate({ params: idParam, body: C.paymentDto }), C.registerPayment);

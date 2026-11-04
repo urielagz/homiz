@@ -18,8 +18,13 @@ abstract final class FirebaseConfig {
     appId: '1:781670117568:web:ce01ba2a927343e7c57d25',
   );
 
-  // Pendiente: se llena con google-services.json.
-  static const FirebaseOptions? _android = null;
+  static const FirebaseOptions _android = FirebaseOptions(
+    apiKey: 'AIzaSyD9ABCMIBFZ3uXA3OvCBHz_le7DifocQQs',
+    appId: '1:781670117568:android:76ec2a2314de49f6c57d25',
+    messagingSenderId: '781670117568',
+    projectId: 'homiz-413ff',
+    storageBucket: 'homiz-413ff.firebasestorage.app',
+  );
 
   // Pendiente: se llena con GoogleService-Info.plist.
   static const FirebaseOptions? _ios = null;

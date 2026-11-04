@@ -32,3 +32,14 @@ Thumbs.db
 # Firebase: llave privada del servidor (cuenta de servicio). Nunca se sube.
 backend/firebase-key.json
 *firebase-adminsdk*.json
+
+# Respaldos de la base (tienen datos personales)
+respaldos/
+
+# Llave de firma de Android (privada): nunca se sube
+mobile/android/key.properties
+*.jks
+*.keystore
+
+# Copias comprimidas del proyecto (pueden incluir dependencias o datos)
+*.zip

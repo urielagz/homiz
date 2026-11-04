@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import { apiActive, load, request } from '../api';
 import { currentSession, loggedOut, logout } from '../auth';
+import { startLive } from '../live';
 import { pushSupported, registerBrowser } from '../push';
 import { rerender } from '../store';
+import { NotificationsBell, noticesRefresh } from './Notifications';
 import { useOverlay } from './Overlay';
 import { Icon } from './ui';
 
@@ -13,6 +15,9 @@ const NAV: [string, string, string][] = [
   ['personas', 'users', 'Clientes e inquilinos'],
   ['brokers', 'user-key', 'Brokers'],
   ['citas', 'cal', 'Citas'],
+  ['solicitudes', 'mail', 'Solicitudes'],
+  ['rentas', 'folder', 'Rentas y ventas'],
+  ['pagos', 'cash', 'Pagos'],
 ];
 
 /** Marco del panel: encabezado, menú lateral y la sección activa. Sin sesión, manda al acceso. */
@@ -23,6 +28,9 @@ export function Shell() {
   const connected = apiActive();
   const [ready, setReady] = useState(!connected);
   const [userOpen, setUserOpen] = useState(false);
+  // Menú lateral en pantallas chicas (☰)
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuBtn = useRef<HTMLButtonElement>(null);
   const [permission, setPermission] = useState(() => ('Notification' in window ? Notification.permission : 'denied'));
   const userBtn = useRef<HTMLButtonElement>(null);
   const section = pathname.split('/')[1] || 'resumen';
@@ -36,11 +44,14 @@ export function Shell() {
     );
     // Avisos en el navegador: con permiso ya concedido se vuelve a registrar en silencio (Firebase puede renovar el token)
     if (pushSupported() && Notification.permission === 'granted') registerPush().catch((e) => console.warn('Avisos: no se registró este navegador', e));
+    // Tiempo real: lo que cambie otra persona (o la app) aparece solo, sin recargar la página
+    return startLive();
   }, []);
 
   // Al cambiar de sección: arriba y foco en el título
   const first = useRef(true);
   useEffect(() => {
+    setMenuOpen(false); // al elegir una sección, el menú ☰ se cierra
     if (first.current) { first.current = false; return; }
     window.scrollTo(0, 0);
     document.querySelector<HTMLElement>('#view h1')?.focus({ preventScroll: true });
@@ -59,6 +70,19 @@ export function Shell() {
     return () => { document.removeEventListener('click', onClick); document.removeEventListener('keydown', onKey); };
   }, [userOpen]);
 
+  // Menú ☰: Escape lo cierra y regresa el foco al botón; con el menú abierto la página no se desplaza
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setMenuOpen(false); menuBtn.current?.focus(); } };
+    document.addEventListener('keydown', onKey);
+    document.body.classList.add('menu-open');
+    // El menú se vuelve visible en el siguiente cuadro: hasta entonces no puede recibir el foco
+    const t = setTimeout(() => document.querySelector<HTMLElement>('#sidebar nav a')?.focus(), 30);
+    return () => { clearTimeout(t); document.removeEventListener('keydown', onKey); document.body.classList.remove('menu-open'); };
+  }, [menuOpen]);
+
+  // Entró con la contraseña temporal y no ha creado la suya: vuelve al acceso a crearla
+  if (session?.mustChange) return <Navigate to="/login" replace />;
   if (!session) {
     if (loggedOut.value) return <Navigate to="/login?salida=1" replace />; // el acceso la apaga al abrir
     return <Navigate to={'/login' + (pathname !== '/' ? '?volver=' + encodeURIComponent(pathname + search) : '')} replace />;
@@ -67,7 +91,7 @@ export function Shell() {
   function registerPush() {
     return registerBrowser(
       (token) => request('POST', '/devices', { fcmToken: token, platform: 'web' }),
-      (title, body) => { toast((title ? title + ': ' : '') + body); load().then(rerender, () => {}); },
+      (title, body) => { toast((title ? title + ': ' : '') + body); noticesRefresh.now(); load().then(rerender, () => {}); },
     );
   }
   const activatePush = async () => {
@@ -103,6 +127,8 @@ export function Shell() {
           <li><strong>Clientes e inquilinos.</strong> Consulta el expediente de cada persona y su próxima visita.</li>
           <li><strong>Brokers.</strong> Asigna un responsable a cada casa; sus próximas citas se reasignan solas.</li>
           <li><strong>Citas.</strong> Confirma, reprograma o cancela visitas desde la agenda semanal.</li>
+          <li><strong>Solicitudes.</strong> Lo que piden en el sitio y en la app. Contesta y propón casas: al cliente le llega a la app Homiz, en «Mis solicitudes», en lugar del correo.</li>
+          <li><strong>Pagos y expediente.</strong> En cada casa, pestañas «Expediente» y «Pagos». Lo que puedes hacer depende de tu rol: el broker registra pagos y sube documentos de sus casas; administración además corrige o anula pagos y elimina documentos.</li>
         </ul>
         <p className="small muted" style={{ marginTop: '1rem' }}>{connected ? 'Conectado al servidor: cada cambio se guarda al momento.' : 'Entorno de diseño: los datos son ilustrativos y se restablecen al recargar la página.'} Soporte: soporte@zugar.example</p>
         <div className="dialog__actions"><button className="btn" type="button" onClick={close}>Entendido</button></div>
@@ -113,17 +139,23 @@ export function Shell() {
     <>
       <a className="skip-link" href="#view">Saltar al contenido</a>
       <header className="topbar">
+        <button ref={menuBtn} className="menu-btn" type="button" aria-expanded={menuOpen} aria-controls="sidebar"
+          aria-label={menuOpen ? 'Cerrar el menú' : 'Abrir el menú'} onClick={() => setMenuOpen(!menuOpen)}>
+          <Icon id={menuOpen ? 'x' : 'menu'} />
+        </button>
         <Link className="brand" to="/resumen" aria-label="Zugar administración, ir al resumen">
-          <span className="brand__name">Zugar<span>.</span></span>
+          <img className="brand__logo" src="/assets/img/logo-zugar-blanco-1200.png" alt="Inmobiliaria Zugar" width="1200" height="492" />
           <span className="brand__tag">Administración · Cancún</span>
         </Link>
         <nav className="topnav" aria-label="Accesos generales">
-          <Link to="/resumen" aria-current="page">Panel administrativo</Link>
-          <a href="/" target="_blank" rel="noopener">Ver sitio público <Icon id="arrow-ur" className="icon--sm" /></a>
-          <a href="#" onClick={(e) => { e.preventDefault(); help(); }}>Ayuda</a>
+          <Link className="topnav__extra" to="/resumen" aria-current="page">Panel administrativo</Link>
+          <a className="topnav__extra" href="/" target="_blank" rel="noopener">Ver sitio público <Icon id="arrow-ur" className="icon--sm" /></a>
+          <a className="topnav__extra" href="#" onClick={(e) => { e.preventDefault(); help(); }}>Ayuda</a>
+          <NotificationsBell />
           <div className="user">
             <button ref={userBtn} className="user__btn" type="button" aria-expanded={userOpen} aria-controls="user-menu" id="user-btn" onClick={(e) => { e.stopPropagation(); setUserOpen(!userOpen); }}>
-              {session.name} · {session.role}
+              <span className="user__full">{session.name} · {session.role}</span>
+              <span className="user__short" aria-hidden="true">{session.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
             </button>
             <div className="user__menu" id="user-menu" hidden={!userOpen}>
               <strong id="user-name">{session.name}</strong>
@@ -142,7 +174,8 @@ export function Shell() {
         </nav>
       </header>
       <div className="shell">
-        <aside className="sidebar">
+        {menuOpen && <div className="sidebar-backdrop" aria-hidden="true" onClick={() => setMenuOpen(false)} />}
+        <aside className={'sidebar' + (menuOpen ? ' is-open' : '')} id="sidebar">
           <p className="sidebar__label" id="menu-label">Gestión inmobiliaria</p>
           <nav aria-labelledby="menu-label">
             <ul>
@@ -151,6 +184,11 @@ export function Shell() {
               ))}
             </ul>
           </nav>
+          {/* En celular, los accesos de la barra superior pasan al menú */}
+          <ul className="sidebar__extra">
+            <li><a href="/" target="_blank" rel="noopener"><Icon id="arrow-ur" />Ver sitio público</a></li>
+            <li><a href="#" onClick={(e) => { e.preventDefault(); setMenuOpen(false); help(); }}><Icon id="info" />Ayuda</a></li>
+          </ul>
           <div className="sidebar__foot">
             <p>Casas para vivir Cancún.</p>
             <p>Equipo local · Octubre 2026</p>

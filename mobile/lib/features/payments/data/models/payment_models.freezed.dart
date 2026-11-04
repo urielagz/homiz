@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PromissoryNote {
 
- String get id; int get number; String get label; double get amount;@LocalDate() DateTime get dueDate; String get status; NotePayment? get payment; String? get proofDocumentId; NoteRef? get property; NoteRef? get client;
+ String get id; int get number; String get label; double get amount;@LocalDate() DateTime get dueDate; String get status; NotePayment? get payment; String? get proofDocumentId; String? get documentId; List<NoteStamp> get stamps; NoteRef? get property; NoteRef? get client;
 /// Create a copy of PromissoryNote
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $PromissoryNoteCopyWith<PromissoryNote> get copyWith => _$PromissoryNoteCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as PromissoryNote;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PromissoryNote&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.number, _this.number) || other.number == _this.number)&&(identical(other.label, _this.label) || other.label == _this.label)&&(identical(other.amount, _this.amount) || other.amount == _this.amount)&&(identical(other.dueDate, _this.dueDate) || other.dueDate == _this.dueDate)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.payment, _this.payment) || other.payment == _this.payment)&&(identical(other.proofDocumentId, _this.proofDocumentId) || other.proofDocumentId == _this.proofDocumentId)&&(identical(other.property, _this.property) || other.property == _this.property)&&(identical(other.client, _this.client) || other.client == _this.client));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PromissoryNote&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.number, _this.number) || other.number == _this.number)&&(identical(other.label, _this.label) || other.label == _this.label)&&(identical(other.amount, _this.amount) || other.amount == _this.amount)&&(identical(other.dueDate, _this.dueDate) || other.dueDate == _this.dueDate)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.payment, _this.payment) || other.payment == _this.payment)&&(identical(other.proofDocumentId, _this.proofDocumentId) || other.proofDocumentId == _this.proofDocumentId)&&(identical(other.documentId, _this.documentId) || other.documentId == _this.documentId)&&const DeepCollectionEquality().equals(other.stamps, _this.stamps)&&(identical(other.property, _this.property) || other.property == _this.property)&&(identical(other.client, _this.client) || other.client == _this.client));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as PromissoryNote;
-  return Object.hash(runtimeType,_this.id,_this.number,_this.label,_this.amount,_this.dueDate,_this.status,_this.payment,_this.proofDocumentId,_this.property,_this.client);
+  return Object.hash(runtimeType,_this.id,_this.number,_this.label,_this.amount,_this.dueDate,_this.status,_this.payment,_this.proofDocumentId,_this.documentId,const DeepCollectionEquality().hash(_this.stamps),_this.property,_this.client);
 }
 
 @override
 String toString() {
   final _this = this as PromissoryNote;
-  return 'PromissoryNote(id: ${_this.id}, number: ${_this.number}, label: ${_this.label}, amount: ${_this.amount}, dueDate: ${_this.dueDate}, status: ${_this.status}, payment: ${_this.payment}, proofDocumentId: ${_this.proofDocumentId}, property: ${_this.property}, client: ${_this.client})';
+  return 'PromissoryNote(id: ${_this.id}, number: ${_this.number}, label: ${_this.label}, amount: ${_this.amount}, dueDate: ${_this.dueDate}, status: ${_this.status}, payment: ${_this.payment}, proofDocumentId: ${_this.proofDocumentId}, documentId: ${_this.documentId}, stamps: ${_this.stamps}, property: ${_this.property}, client: ${_this.client})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $PromissoryNoteCopyWith<$Res>  {
   factory $PromissoryNoteCopyWith(PromissoryNote value, $Res Function(PromissoryNote) _then) = _$PromissoryNoteCopyWithImpl;
 @useResult
 $Res call({
- String id, int number, String label, double amount,@LocalDate() DateTime dueDate, String status, NotePayment? payment, String? proofDocumentId, NoteRef? property, NoteRef? client
+ String id, int number, String label, double amount,@LocalDate() DateTime dueDate, String status, NotePayment? payment, String? proofDocumentId, String? documentId, List<NoteStamp> stamps, NoteRef? property, NoteRef? client
 });
 
 
@@ -71,7 +71,7 @@ class _$PromissoryNoteCopyWithImpl<$Res>
 
 /// Create a copy of PromissoryNote
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? number = null,Object? label = null,Object? amount = null,Object? dueDate = null,Object? status = null,Object? payment = freezed,Object? proofDocumentId = freezed,Object? property = freezed,Object? client = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? number = null,Object? label = null,Object? amount = null,Object? dueDate = null,Object? status = null,Object? payment = freezed,Object? proofDocumentId = freezed,Object? documentId = freezed,Object? stamps = null,Object? property = freezed,Object? client = freezed,}) {
   return _then(PromissoryNote(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,number: null == number ? _self.number : number // ignore: cast_nullable_to_non_nullable
@@ -81,7 +81,9 @@ as double,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nul
 as DateTime,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,payment: freezed == payment ? _self.payment : payment // ignore: cast_nullable_to_non_nullable
 as NotePayment?,proofDocumentId: freezed == proofDocumentId ? _self.proofDocumentId : proofDocumentId // ignore: cast_nullable_to_non_nullable
-as String?,property: freezed == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
+as String?,documentId: freezed == documentId ? _self.documentId : documentId // ignore: cast_nullable_to_non_nullable
+as String?,stamps: null == stamps ? _self.stamps : stamps // ignore: cast_nullable_to_non_nullable
+as List<NoteStamp>,property: freezed == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
 as NoteRef?,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
 as NoteRef?,
   ));
@@ -204,10 +206,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int number,  String label,  double amount, @LocalDate()  DateTime dueDate,  String status,  NotePayment? payment,  String? proofDocumentId,  NoteRef? property,  NoteRef? client)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int number,  String label,  double amount, @LocalDate()  DateTime dueDate,  String status,  NotePayment? payment,  String? proofDocumentId,  String? documentId,  List<NoteStamp> stamps,  NoteRef? property,  NoteRef? client)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PromissoryNote() when $default != null:
-return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_that.status,_that.payment,_that.proofDocumentId,_that.property,_that.client);case _:
+return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_that.status,_that.payment,_that.proofDocumentId,_that.documentId,_that.stamps,_that.property,_that.client);case _:
   return orElse();
 
 }
@@ -225,10 +227,10 @@ return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int number,  String label,  double amount, @LocalDate()  DateTime dueDate,  String status,  NotePayment? payment,  String? proofDocumentId,  NoteRef? property,  NoteRef? client)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int number,  String label,  double amount, @LocalDate()  DateTime dueDate,  String status,  NotePayment? payment,  String? proofDocumentId,  String? documentId,  List<NoteStamp> stamps,  NoteRef? property,  NoteRef? client)  $default,) {final _that = this;
 switch (_that) {
 case _PromissoryNote():
-return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_that.status,_that.payment,_that.proofDocumentId,_that.property,_that.client);case _:
+return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_that.status,_that.payment,_that.proofDocumentId,_that.documentId,_that.stamps,_that.property,_that.client);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -245,10 +247,10 @@ return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int number,  String label,  double amount, @LocalDate()  DateTime dueDate,  String status,  NotePayment? payment,  String? proofDocumentId,  NoteRef? property,  NoteRef? client)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int number,  String label,  double amount, @LocalDate()  DateTime dueDate,  String status,  NotePayment? payment,  String? proofDocumentId,  String? documentId,  List<NoteStamp> stamps,  NoteRef? property,  NoteRef? client)?  $default,) {final _that = this;
 switch (_that) {
 case _PromissoryNote() when $default != null:
-return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_that.status,_that.payment,_that.proofDocumentId,_that.property,_that.client);case _:
+return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_that.status,_that.payment,_that.proofDocumentId,_that.documentId,_that.stamps,_that.property,_that.client);case _:
   return null;
 
 }
@@ -260,7 +262,7 @@ return $default(_that.id,_that.number,_that.label,_that.amount,_that.dueDate,_th
 @JsonSerializable()
 
 class _PromissoryNote extends PromissoryNote {
-  const _PromissoryNote({required this.id, required this.number, required this.label, required this.amount, @LocalDate() required this.dueDate, required this.status, this.payment, this.proofDocumentId, this.property, this.client}): super._();
+  const _PromissoryNote({required this.id, required this.number, required this.label, required this.amount, @LocalDate() required this.dueDate, required this.status, this.payment, this.proofDocumentId, this.documentId,  List<NoteStamp> stamps = const <NoteStamp>[], this.property, this.client}): _stamps = stamps,super._();
   factory _PromissoryNote.fromJson(Map<String, dynamic> json) => _$PromissoryNoteFromJson(json);
 
 @override final  String id;
@@ -271,6 +273,14 @@ class _PromissoryNote extends PromissoryNote {
 @override final  String status;
 @override final  NotePayment? payment;
 @override final  String? proofDocumentId;
+@override final  String? documentId;
+ final  List<NoteStamp> _stamps;
+@override@JsonKey() List<NoteStamp> get stamps {
+  if (_stamps is EqualUnmodifiableListView) return _stamps;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_stamps);
+}
+
 @override final  NoteRef? property;
 @override final  NoteRef? client;
 
@@ -287,18 +297,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PromissoryNote&&(identical(other.id, id) || other.id == id)&&(identical(other.number, number) || other.number == number)&&(identical(other.label, label) || other.label == label)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.status, status) || other.status == status)&&(identical(other.payment, payment) || other.payment == payment)&&(identical(other.proofDocumentId, proofDocumentId) || other.proofDocumentId == proofDocumentId)&&(identical(other.property, property) || other.property == property)&&(identical(other.client, client) || other.client == client));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PromissoryNote&&(identical(other.id, id) || other.id == id)&&(identical(other.number, number) || other.number == number)&&(identical(other.label, label) || other.label == label)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.status, status) || other.status == status)&&(identical(other.payment, payment) || other.payment == payment)&&(identical(other.proofDocumentId, proofDocumentId) || other.proofDocumentId == proofDocumentId)&&(identical(other.documentId, documentId) || other.documentId == documentId)&&const DeepCollectionEquality().equals(other.stamps, _stamps)&&(identical(other.property, property) || other.property == property)&&(identical(other.client, client) || other.client == client));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,number,label,amount,dueDate,status,payment,proofDocumentId,property,client);
+    return Object.hash(runtimeType,id,number,label,amount,dueDate,status,payment,proofDocumentId,documentId,const DeepCollectionEquality().hash(_stamps),property,client);
 }
 
 @override
 String toString() {
-    return 'PromissoryNote(id: $id, number: $number, label: $label, amount: $amount, dueDate: $dueDate, status: $status, payment: $payment, proofDocumentId: $proofDocumentId, property: $property, client: $client)';
+    return 'PromissoryNote(id: $id, number: $number, label: $label, amount: $amount, dueDate: $dueDate, status: $status, payment: $payment, proofDocumentId: $proofDocumentId, documentId: $documentId, stamps: $stamps, property: $property, client: $client)';
 }
 
 
@@ -309,7 +319,7 @@ abstract mixin class _$PromissoryNoteCopyWith<$Res> implements $PromissoryNoteCo
   factory _$PromissoryNoteCopyWith(_PromissoryNote value, $Res Function(_PromissoryNote) _then) = __$PromissoryNoteCopyWithImpl;
 @override @useResult
 $Res call({
- String id, int number, String label, double amount,@LocalDate() DateTime dueDate, String status, NotePayment? payment, String? proofDocumentId, NoteRef? property, NoteRef? client
+ String id, int number, String label, double amount,@LocalDate() DateTime dueDate, String status, NotePayment? payment, String? proofDocumentId, String? documentId, List<NoteStamp> stamps, NoteRef? property, NoteRef? client
 });
 
 
@@ -326,7 +336,7 @@ class __$PromissoryNoteCopyWithImpl<$Res>
 
 /// Create a copy of PromissoryNote
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? number = null,Object? label = null,Object? amount = null,Object? dueDate = null,Object? status = null,Object? payment = freezed,Object? proofDocumentId = freezed,Object? property = freezed,Object? client = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? number = null,Object? label = null,Object? amount = null,Object? dueDate = null,Object? status = null,Object? payment = freezed,Object? proofDocumentId = freezed,Object? documentId = freezed,Object? stamps = null,Object? property = freezed,Object? client = freezed,}) {
   return _then(_PromissoryNote(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,number: null == number ? _self.number : number // ignore: cast_nullable_to_non_nullable
@@ -336,7 +346,9 @@ as double,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nul
 as DateTime,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,payment: freezed == payment ? _self.payment : payment // ignore: cast_nullable_to_non_nullable
 as NotePayment?,proofDocumentId: freezed == proofDocumentId ? _self.proofDocumentId : proofDocumentId // ignore: cast_nullable_to_non_nullable
-as String?,property: freezed == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
+as String?,documentId: freezed == documentId ? _self.documentId : documentId // ignore: cast_nullable_to_non_nullable
+as String?,stamps: null == stamps ? _self._stamps : stamps // ignore: cast_nullable_to_non_nullable
+as List<NoteStamp>,property: freezed == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
 as NoteRef?,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
 as NoteRef?,
   ));
@@ -379,6 +391,282 @@ $NoteRefCopyWith<$Res>? get client {
     return _then(_self.copyWith(client: value));
   });
 }
+}
+
+
+/// @nodoc
+mixin _$NoteStamp {
+
+ String get id; String get name;@LocalDate() DateTime get createdAt;
+/// Create a copy of NoteStamp
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$NoteStampCopyWith<NoteStamp> get copyWith => _$NoteStampCopyWithImpl<NoteStamp>(this as NoteStamp, _$identity);
+
+  /// Serializes this NoteStamp to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as NoteStamp;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is NoteStamp&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as NoteStamp;
+  return Object.hash(runtimeType,_this.id,_this.name,_this.createdAt);
+}
+
+@override
+String toString() {
+  final _this = this as NoteStamp;
+  return 'NoteStamp(id: ${_this.id}, name: ${_this.name}, createdAt: ${_this.createdAt})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $NoteStampCopyWith<$Res>  {
+  factory $NoteStampCopyWith(NoteStamp value, $Res Function(NoteStamp) _then) = _$NoteStampCopyWithImpl;
+@useResult
+$Res call({
+ String id, String name,@LocalDate() DateTime createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$NoteStampCopyWithImpl<$Res>
+    implements $NoteStampCopyWith<$Res> {
+  _$NoteStampCopyWithImpl(this._self, this._then);
+
+  final NoteStamp _self;
+  final $Res Function(NoteStamp) _then;
+
+/// Create a copy of NoteStamp
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? createdAt = null,}) {
+  return _then(NoteStamp(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [NoteStamp].
+extension NoteStampPatterns on NoteStamp {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _NoteStamp value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _NoteStamp() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _NoteStamp value)  $default,){
+final _that = this;
+switch (_that) {
+case _NoteStamp():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _NoteStamp value)?  $default,){
+final _that = this;
+switch (_that) {
+case _NoteStamp() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name, @LocalDate()  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _NoteStamp() when $default != null:
+return $default(_that.id,_that.name,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name, @LocalDate()  DateTime createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _NoteStamp():
+return $default(_that.id,_that.name,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name, @LocalDate()  DateTime createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _NoteStamp() when $default != null:
+return $default(_that.id,_that.name,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _NoteStamp implements NoteStamp {
+  const _NoteStamp({required this.id, required this.name, @LocalDate() required this.createdAt});
+  factory _NoteStamp.fromJson(Map<String, dynamic> json) => _$NoteStampFromJson(json);
+
+@override final  String id;
+@override final  String name;
+@override@LocalDate() final  DateTime createdAt;
+
+/// Create a copy of NoteStamp
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$NoteStampCopyWith<_NoteStamp> get copyWith => __$NoteStampCopyWithImpl<_NoteStamp>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$NoteStampToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _NoteStamp&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,name,createdAt);
+}
+
+@override
+String toString() {
+    return 'NoteStamp(id: $id, name: $name, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$NoteStampCopyWith<$Res> implements $NoteStampCopyWith<$Res> {
+  factory _$NoteStampCopyWith(_NoteStamp value, $Res Function(_NoteStamp) _then) = __$NoteStampCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String name,@LocalDate() DateTime createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$NoteStampCopyWithImpl<$Res>
+    implements _$NoteStampCopyWith<$Res> {
+  __$NoteStampCopyWithImpl(this._self, this._then);
+
+  final _NoteStamp _self;
+  final $Res Function(_NoteStamp) _then;
+
+/// Create a copy of NoteStamp
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? createdAt = null,}) {
+  return _then(_NoteStamp(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,
+  ));
+}
+
+
 }
 
 
@@ -658,7 +946,7 @@ as String,
 /// @nodoc
 mixin _$NotePayment {
 
- String get id; double get amount;@LocalDate() DateTime get paidAt; String? get receiptFolio;
+ String get id; double get amount;@LocalDate() DateTime get paidAt; String? get receiptFolio; String? get notes; String? get registeredBy;
 /// Create a copy of NotePayment
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -672,20 +960,20 @@ $NotePaymentCopyWith<NotePayment> get copyWith => _$NotePaymentCopyWithImpl<Note
 @override
 bool operator ==(Object other) {
   final _this = this as NotePayment;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotePayment&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.amount, _this.amount) || other.amount == _this.amount)&&(identical(other.paidAt, _this.paidAt) || other.paidAt == _this.paidAt)&&(identical(other.receiptFolio, _this.receiptFolio) || other.receiptFolio == _this.receiptFolio));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotePayment&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.amount, _this.amount) || other.amount == _this.amount)&&(identical(other.paidAt, _this.paidAt) || other.paidAt == _this.paidAt)&&(identical(other.receiptFolio, _this.receiptFolio) || other.receiptFolio == _this.receiptFolio)&&(identical(other.notes, _this.notes) || other.notes == _this.notes)&&(identical(other.registeredBy, _this.registeredBy) || other.registeredBy == _this.registeredBy));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as NotePayment;
-  return Object.hash(runtimeType,_this.id,_this.amount,_this.paidAt,_this.receiptFolio);
+  return Object.hash(runtimeType,_this.id,_this.amount,_this.paidAt,_this.receiptFolio,_this.notes,_this.registeredBy);
 }
 
 @override
 String toString() {
   final _this = this as NotePayment;
-  return 'NotePayment(id: ${_this.id}, amount: ${_this.amount}, paidAt: ${_this.paidAt}, receiptFolio: ${_this.receiptFolio})';
+  return 'NotePayment(id: ${_this.id}, amount: ${_this.amount}, paidAt: ${_this.paidAt}, receiptFolio: ${_this.receiptFolio}, notes: ${_this.notes}, registeredBy: ${_this.registeredBy})';
 }
 
 
@@ -696,7 +984,7 @@ abstract mixin class $NotePaymentCopyWith<$Res>  {
   factory $NotePaymentCopyWith(NotePayment value, $Res Function(NotePayment) _then) = _$NotePaymentCopyWithImpl;
 @useResult
 $Res call({
- String id, double amount,@LocalDate() DateTime paidAt, String? receiptFolio
+ String id, double amount,@LocalDate() DateTime paidAt, String? receiptFolio, String? notes, String? registeredBy
 });
 
 
@@ -713,12 +1001,14 @@ class _$NotePaymentCopyWithImpl<$Res>
 
 /// Create a copy of NotePayment
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? amount = null,Object? paidAt = null,Object? receiptFolio = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? amount = null,Object? paidAt = null,Object? receiptFolio = freezed,Object? notes = freezed,Object? registeredBy = freezed,}) {
   return _then(NotePayment(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,paidAt: null == paidAt ? _self.paidAt : paidAt // ignore: cast_nullable_to_non_nullable
 as DateTime,receiptFolio: freezed == receiptFolio ? _self.receiptFolio : receiptFolio // ignore: cast_nullable_to_non_nullable
+as String?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,registeredBy: freezed == registeredBy ? _self.registeredBy : registeredBy // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -804,10 +1094,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  double amount, @LocalDate()  DateTime paidAt,  String? receiptFolio)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  double amount, @LocalDate()  DateTime paidAt,  String? receiptFolio,  String? notes,  String? registeredBy)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _NotePayment() when $default != null:
-return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio);case _:
+return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio,_that.notes,_that.registeredBy);case _:
   return orElse();
 
 }
@@ -825,10 +1115,10 @@ return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  double amount, @LocalDate()  DateTime paidAt,  String? receiptFolio)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  double amount, @LocalDate()  DateTime paidAt,  String? receiptFolio,  String? notes,  String? registeredBy)  $default,) {final _that = this;
 switch (_that) {
 case _NotePayment():
-return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio);case _:
+return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio,_that.notes,_that.registeredBy);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -845,10 +1135,10 @@ return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  double amount, @LocalDate()  DateTime paidAt,  String? receiptFolio)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  double amount, @LocalDate()  DateTime paidAt,  String? receiptFolio,  String? notes,  String? registeredBy)?  $default,) {final _that = this;
 switch (_that) {
 case _NotePayment() when $default != null:
-return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio);case _:
+return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio,_that.notes,_that.registeredBy);case _:
   return null;
 
 }
@@ -860,13 +1150,15 @@ return $default(_that.id,_that.amount,_that.paidAt,_that.receiptFolio);case _:
 @JsonSerializable()
 
 class _NotePayment implements NotePayment {
-  const _NotePayment({required this.id, required this.amount, @LocalDate() required this.paidAt, this.receiptFolio});
+  const _NotePayment({required this.id, required this.amount, @LocalDate() required this.paidAt, this.receiptFolio, this.notes, this.registeredBy});
   factory _NotePayment.fromJson(Map<String, dynamic> json) => _$NotePaymentFromJson(json);
 
 @override final  String id;
 @override final  double amount;
 @override@LocalDate() final  DateTime paidAt;
 @override final  String? receiptFolio;
+@override final  String? notes;
+@override final  String? registeredBy;
 
 /// Create a copy of NotePayment
 /// with the given fields replaced by the non-null parameter values.
@@ -881,18 +1173,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotePayment&&(identical(other.id, id) || other.id == id)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.receiptFolio, receiptFolio) || other.receiptFolio == receiptFolio));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotePayment&&(identical(other.id, id) || other.id == id)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.receiptFolio, receiptFolio) || other.receiptFolio == receiptFolio)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.registeredBy, registeredBy) || other.registeredBy == registeredBy));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,amount,paidAt,receiptFolio);
+    return Object.hash(runtimeType,id,amount,paidAt,receiptFolio,notes,registeredBy);
 }
 
 @override
 String toString() {
-    return 'NotePayment(id: $id, amount: $amount, paidAt: $paidAt, receiptFolio: $receiptFolio)';
+    return 'NotePayment(id: $id, amount: $amount, paidAt: $paidAt, receiptFolio: $receiptFolio, notes: $notes, registeredBy: $registeredBy)';
 }
 
 
@@ -903,7 +1195,7 @@ abstract mixin class _$NotePaymentCopyWith<$Res> implements $NotePaymentCopyWith
   factory _$NotePaymentCopyWith(_NotePayment value, $Res Function(_NotePayment) _then) = __$NotePaymentCopyWithImpl;
 @override @useResult
 $Res call({
- String id, double amount,@LocalDate() DateTime paidAt, String? receiptFolio
+ String id, double amount,@LocalDate() DateTime paidAt, String? receiptFolio, String? notes, String? registeredBy
 });
 
 
@@ -920,12 +1212,14 @@ class __$NotePaymentCopyWithImpl<$Res>
 
 /// Create a copy of NotePayment
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? amount = null,Object? paidAt = null,Object? receiptFolio = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? amount = null,Object? paidAt = null,Object? receiptFolio = freezed,Object? notes = freezed,Object? registeredBy = freezed,}) {
   return _then(_NotePayment(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as double,paidAt: null == paidAt ? _self.paidAt : paidAt // ignore: cast_nullable_to_non_nullable
 as DateTime,receiptFolio: freezed == receiptFolio ? _self.receiptFolio : receiptFolio // ignore: cast_nullable_to_non_nullable
+as String?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,registeredBy: freezed == registeredBy ? _self.registeredBy : registeredBy // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

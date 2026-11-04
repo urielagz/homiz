@@ -30,6 +30,8 @@ abstract class AppNotification with _$AppNotification {
         'maintenance_report' when entityId != null => '/property/maintenance/$entityId',
         'document' => '/property?tab=1',
         'property' || 'contract' => '/property',
+        'sale' => '/home/purchases',
+        'lead' when entityId != null => '/home/requests/$entityId',
         _ => null,
       };
 }

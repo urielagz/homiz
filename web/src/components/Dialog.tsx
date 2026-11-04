@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
 /** Diálogo modal del sitio (<dialog> nativo): cierra con Esc, con el fondo o con onClose. */
-export function Dialog({ open, onClose, labelledBy, children }: { open: boolean; onClose: () => void; labelledBy: string; children: ReactNode }) {
+export function Dialog({ open, onClose, labelledBy, children, wide }: { open: boolean; onClose: () => void; labelledBy: string; children: ReactNode; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dlg = ref.current;
@@ -16,7 +16,7 @@ export function Dialog({ open, onClose, labelledBy, children }: { open: boolean;
   return (
     <dialog
       ref={ref}
-      className="site-dialog"
+      className={'site-dialog' + (wide ? ' site-dialog--wide' : '')}
       aria-labelledby={labelledBy}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}

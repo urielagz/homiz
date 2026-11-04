@@ -25,6 +25,7 @@ _AppUser _$AppUserFromJson(Map<String, dynamic> json) => _AppUser(
   client: json['client'] == null
       ? null
       : ClientProfile.fromJson(json['client'] as Map<String, dynamic>),
+  mustChangePassword: json['mustChangePassword'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$AppUserToJson(_AppUser instance) => <String, dynamic>{
@@ -38,6 +39,7 @@ Map<String, dynamic> _$AppUserToJson(_AppUser instance) => <String, dynamic>{
   'roles': instance.roles,
   'permissions': instance.permissions,
   'client': instance.client,
+  'mustChangePassword': instance.mustChangePassword,
 };
 
 _ClientProfile _$ClientProfileFromJson(Map<String, dynamic> json) =>

@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AppUser {
 
- String get id; String get name; String get email; String? get phone; String? get birthDate; String get type; String? get initials; List<String> get roles; List<String> get permissions; ClientProfile? get client;
+ String get id; String get name; String get email; String? get phone; String? get birthDate; String get type; String? get initials; List<String> get roles; List<String> get permissions; ClientProfile? get client;/// Entró con la contraseña temporal del correo: antes de seguir crea la suya.
+ bool get mustChangePassword;
 /// Create a copy of AppUser
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $AppUserCopyWith<AppUser> get copyWith => _$AppUserCopyWithImpl<AppUser>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as AppUser;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppUser&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.phone, _this.phone) || other.phone == _this.phone)&&(identical(other.birthDate, _this.birthDate) || other.birthDate == _this.birthDate)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.initials, _this.initials) || other.initials == _this.initials)&&const DeepCollectionEquality().equals(other.roles, _this.roles)&&const DeepCollectionEquality().equals(other.permissions, _this.permissions)&&(identical(other.client, _this.client) || other.client == _this.client));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppUser&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.phone, _this.phone) || other.phone == _this.phone)&&(identical(other.birthDate, _this.birthDate) || other.birthDate == _this.birthDate)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.initials, _this.initials) || other.initials == _this.initials)&&const DeepCollectionEquality().equals(other.roles, _this.roles)&&const DeepCollectionEquality().equals(other.permissions, _this.permissions)&&(identical(other.client, _this.client) || other.client == _this.client)&&(identical(other.mustChangePassword, _this.mustChangePassword) || other.mustChangePassword == _this.mustChangePassword));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as AppUser;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.email,_this.phone,_this.birthDate,_this.type,_this.initials,const DeepCollectionEquality().hash(_this.roles),const DeepCollectionEquality().hash(_this.permissions),_this.client);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.email,_this.phone,_this.birthDate,_this.type,_this.initials,const DeepCollectionEquality().hash(_this.roles),const DeepCollectionEquality().hash(_this.permissions),_this.client,_this.mustChangePassword);
 }
 
 @override
 String toString() {
   final _this = this as AppUser;
-  return 'AppUser(id: ${_this.id}, name: ${_this.name}, email: ${_this.email}, phone: ${_this.phone}, birthDate: ${_this.birthDate}, type: ${_this.type}, initials: ${_this.initials}, roles: ${_this.roles}, permissions: ${_this.permissions}, client: ${_this.client})';
+  return 'AppUser(id: ${_this.id}, name: ${_this.name}, email: ${_this.email}, phone: ${_this.phone}, birthDate: ${_this.birthDate}, type: ${_this.type}, initials: ${_this.initials}, roles: ${_this.roles}, permissions: ${_this.permissions}, client: ${_this.client}, mustChangePassword: ${_this.mustChangePassword})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $AppUserCopyWith<$Res>  {
   factory $AppUserCopyWith(AppUser value, $Res Function(AppUser) _then) = _$AppUserCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String email, String? phone, String? birthDate, String type, String? initials, List<String> roles, List<String> permissions, ClientProfile? client
+ String id, String name, String email, String? phone, String? birthDate, String type, String? initials, List<String> roles, List<String> permissions, ClientProfile? client, bool mustChangePassword
 });
 
 
@@ -71,7 +72,7 @@ class _$AppUserCopyWithImpl<$Res>
 
 /// Create a copy of AppUser
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? birthDate = freezed,Object? type = null,Object? initials = freezed,Object? roles = null,Object? permissions = null,Object? client = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? birthDate = freezed,Object? type = null,Object? initials = freezed,Object? roles = null,Object? permissions = null,Object? client = freezed,Object? mustChangePassword = null,}) {
   return _then(AppUser(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -83,7 +84,8 @@ as String,initials: freezed == initials ? _self.initials : initials // ignore: c
 as String?,roles: null == roles ? _self.roles : roles // ignore: cast_nullable_to_non_nullable
 as List<String>,permissions: null == permissions ? _self.permissions : permissions // ignore: cast_nullable_to_non_nullable
 as List<String>,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
-as ClientProfile?,
+as ClientProfile?,mustChangePassword: null == mustChangePassword ? _self.mustChangePassword : mustChangePassword // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of AppUser
@@ -180,10 +182,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone,  String? birthDate,  String type,  String? initials,  List<String> roles,  List<String> permissions,  ClientProfile? client)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone,  String? birthDate,  String type,  String? initials,  List<String> roles,  List<String> permissions,  ClientProfile? client,  bool mustChangePassword)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AppUser() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_that.type,_that.initials,_that.roles,_that.permissions,_that.client);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_that.type,_that.initials,_that.roles,_that.permissions,_that.client,_that.mustChangePassword);case _:
   return orElse();
 
 }
@@ -201,10 +203,10 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone,  String? birthDate,  String type,  String? initials,  List<String> roles,  List<String> permissions,  ClientProfile? client)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email,  String? phone,  String? birthDate,  String type,  String? initials,  List<String> roles,  List<String> permissions,  ClientProfile? client,  bool mustChangePassword)  $default,) {final _that = this;
 switch (_that) {
 case _AppUser():
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_that.type,_that.initials,_that.roles,_that.permissions,_that.client);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_that.type,_that.initials,_that.roles,_that.permissions,_that.client,_that.mustChangePassword);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -221,10 +223,10 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email,  String? phone,  String? birthDate,  String type,  String? initials,  List<String> roles,  List<String> permissions,  ClientProfile? client)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email,  String? phone,  String? birthDate,  String type,  String? initials,  List<String> roles,  List<String> permissions,  ClientProfile? client,  bool mustChangePassword)?  $default,) {final _that = this;
 switch (_that) {
 case _AppUser() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_that.type,_that.initials,_that.roles,_that.permissions,_that.client);case _:
+return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_that.type,_that.initials,_that.roles,_that.permissions,_that.client,_that.mustChangePassword);case _:
   return null;
 
 }
@@ -236,7 +238,7 @@ return $default(_that.id,_that.name,_that.email,_that.phone,_that.birthDate,_tha
 @JsonSerializable()
 
 class _AppUser extends AppUser {
-  const _AppUser({required this.id, required this.name, required this.email, this.phone, this.birthDate, required this.type, this.initials,  List<String> roles = const <String>[],  List<String> permissions = const <String>[], this.client}): _roles = roles,_permissions = permissions,super._();
+  const _AppUser({required this.id, required this.name, required this.email, this.phone, this.birthDate, required this.type, this.initials,  List<String> roles = const <String>[],  List<String> permissions = const <String>[], this.client, this.mustChangePassword = false}): _roles = roles,_permissions = permissions,super._();
   factory _AppUser.fromJson(Map<String, dynamic> json) => _$AppUserFromJson(json);
 
 @override final  String id;
@@ -261,6 +263,8 @@ class _AppUser extends AppUser {
 }
 
 @override final  ClientProfile? client;
+/// Entró con la contraseña temporal del correo: antes de seguir crea la suya.
+@override@JsonKey() final  bool mustChangePassword;
 
 /// Create a copy of AppUser
 /// with the given fields replaced by the non-null parameter values.
@@ -275,18 +279,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.birthDate, birthDate) || other.birthDate == birthDate)&&(identical(other.type, type) || other.type == type)&&(identical(other.initials, initials) || other.initials == initials)&&const DeepCollectionEquality().equals(other.roles, _roles)&&const DeepCollectionEquality().equals(other.permissions, _permissions)&&(identical(other.client, client) || other.client == client));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.birthDate, birthDate) || other.birthDate == birthDate)&&(identical(other.type, type) || other.type == type)&&(identical(other.initials, initials) || other.initials == initials)&&const DeepCollectionEquality().equals(other.roles, _roles)&&const DeepCollectionEquality().equals(other.permissions, _permissions)&&(identical(other.client, client) || other.client == client)&&(identical(other.mustChangePassword, mustChangePassword) || other.mustChangePassword == mustChangePassword));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,email,phone,birthDate,type,initials,const DeepCollectionEquality().hash(_roles),const DeepCollectionEquality().hash(_permissions),client);
+    return Object.hash(runtimeType,id,name,email,phone,birthDate,type,initials,const DeepCollectionEquality().hash(_roles),const DeepCollectionEquality().hash(_permissions),client,mustChangePassword);
 }
 
 @override
 String toString() {
-    return 'AppUser(id: $id, name: $name, email: $email, phone: $phone, birthDate: $birthDate, type: $type, initials: $initials, roles: $roles, permissions: $permissions, client: $client)';
+    return 'AppUser(id: $id, name: $name, email: $email, phone: $phone, birthDate: $birthDate, type: $type, initials: $initials, roles: $roles, permissions: $permissions, client: $client, mustChangePassword: $mustChangePassword)';
 }
 
 
@@ -297,7 +301,7 @@ abstract mixin class _$AppUserCopyWith<$Res> implements $AppUserCopyWith<$Res> {
   factory _$AppUserCopyWith(_AppUser value, $Res Function(_AppUser) _then) = __$AppUserCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String email, String? phone, String? birthDate, String type, String? initials, List<String> roles, List<String> permissions, ClientProfile? client
+ String id, String name, String email, String? phone, String? birthDate, String type, String? initials, List<String> roles, List<String> permissions, ClientProfile? client, bool mustChangePassword
 });
 
 
@@ -314,7 +318,7 @@ class __$AppUserCopyWithImpl<$Res>
 
 /// Create a copy of AppUser
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? birthDate = freezed,Object? type = null,Object? initials = freezed,Object? roles = null,Object? permissions = null,Object? client = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? phone = freezed,Object? birthDate = freezed,Object? type = null,Object? initials = freezed,Object? roles = null,Object? permissions = null,Object? client = freezed,Object? mustChangePassword = null,}) {
   return _then(_AppUser(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -326,7 +330,8 @@ as String,initials: freezed == initials ? _self.initials : initials // ignore: c
 as String?,roles: null == roles ? _self._roles : roles // ignore: cast_nullable_to_non_nullable
 as List<String>,permissions: null == permissions ? _self._permissions : permissions // ignore: cast_nullable_to_non_nullable
 as List<String>,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
-as ClientProfile?,
+as ClientProfile?,mustChangePassword: null == mustChangePassword ? _self.mustChangePassword : mustChangePassword // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

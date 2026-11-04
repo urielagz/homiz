@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { useCatalog } from '../components/CatalogProvider';
-import { googleEmbed, googleLink, hasCoords, ZoneMap } from '../components/HouseMap';
+import { hasCoords, ZoneMap } from '../components/HouseMap';
+import { hasRooms, typeLabel } from '../lib/propertyTypes';
 import { HouseVisitForm } from '../components/HouseVisitForm';
 import { Icon } from '../components/Icon';
 import { PropertyCard } from '../components/PropertyCard';
@@ -84,12 +85,12 @@ function HouseDetail({ house: c, similar }: { house: House; similar: House[] }) 
   const facts: [string, string, string][] = [
     ['area', c.m2 ? `${c.m2} m²` : '—', 'Construcción'], ['tree', c.terreno ? `${c.terreno} m²` : '—', 'Terreno'],
     ['bed', String(c.rec), 'Recámaras'], ['bath', String(c.banos), 'Baños'], ['car', String(c.est), 'Estacionamientos'], ['sparkle', age, 'Antigüedad'],
-  ];
+  ].filter(([, , label]) => hasRooms(c.tipo) || !(label === 'Recámaras' || (label === 'Baños' && !c.banos))) as [string, string, string][];
   const sheet: [string, string][] = [
-    ['Tipo de inmueble', c.tipoTexto || (c.tipo === 'casa-condominio' ? 'Casa en condominio' : c.tipo === 'townhouse' ? 'Townhouse' : 'Casa')],
+    ['Tipo de inmueble', c.tipoTexto || typeLabel(c.tipo)],
     ['Operación', rent ? 'Renta' : 'Venta'],
     ['Amueblada', { si: 'Sí', semi: 'Semiamueblada', no: 'No' }[c.amueblada] || 'No'],
-    ['Mascotas', c.pets ? 'Se aceptan' : 'No se aceptan'],
+    ['Mascotas', c.pets ? 'Acepta mascotas' : 'No acepta mascotas'],
     ['Clave del anuncio', c.code || '—'],
   ];
   const slot = (i: number) => (photos[i] ? <img src={photos[i].src} alt={photos[i].label || c.name} loading="lazy" /> : null);
@@ -117,7 +118,7 @@ function HouseDetail({ house: c, similar }: { house: House; similar: House[] }) 
           </div>
         </div>
         <div className="detail-title">
-          <div className="tags"><span className="badge badge--dark">{(c.tipoTexto || 'Casa') + ' en ' + op}</span></div>
+          <div className="tags"><span className="badge badge--dark">{(c.tipoTexto || typeLabel(c.tipo)) + ' en ' + op}</span></div>
           <h1>{c.name}, {place}</h1>
         </div>
         <div className="gallery">
@@ -141,7 +142,7 @@ function HouseDetail({ house: c, similar }: { house: House; similar: House[] }) 
               <span className="eyebrow">{rent ? 'Renta mensual' : 'Venta'} · Precio en pesos mexicanos</span>
               <p className="price-big">{money(c.price)} <small>{unit}</small></p>
               {c.maintenance && <p className="muted">Mantenimiento: {c.maintenance}</p>}
-              <p className="address"><Icon id="pin" />{c.address || place + ', Quintana Roo'}</p>
+              <p className="address"><Icon id="pin" />{place}, Quintana Roo · zona aproximada</p>
               <ul className="facts">
                 {facts.map(([icon, value, label]) => (
                   <li key={label} className="fact"><strong><Icon id={icon} />{value}</strong><span>{label}</span></li>
@@ -170,14 +171,13 @@ function HouseDetail({ house: c, similar }: { house: House; similar: House[] }) 
               <p className="muted" style={{ marginTop: '-0.75rem', marginBottom: '1.25rem' }}>{place} · Una zona para conectar con todo.</p>
               <div className="map map--zone">
                 {hasCoords(c) ? (
-                  <ZoneMap house={c} label={`Mapa con la zona de ${place}`} />
+                  <ZoneMap house={c} label={`Mapa con la zona aproximada de ${place}`} />
                 ) : (
-                  <iframe src={googleEmbed(c.mapa + ', Quintana Roo', 14)} title={`Mapa de Google con la zona de ${place}`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
+                  <div className="map__empty"><Icon id="pin" />{place}, Quintana Roo</div>
                 )}
               </div>
               <p className="map-note">
-                <Icon id="info" size="sm" />Ubicación aproximada para proteger la privacidad del inmueble.{' '}
-                <a href={googleLink(hasCoords(c) ? `${c.lat},${c.lng}` : c.mapa + ', Quintana Roo')} target="_blank" rel="noopener">Abrir en Google Maps</a>
+                <Icon id="info" size="sm" />Zona aproximada (unos 3 km) para proteger la privacidad del inmueble. La ubicación exacta te llega en la app Homiz cuando tu cita queda confirmada.
               </p>
             </section>
 

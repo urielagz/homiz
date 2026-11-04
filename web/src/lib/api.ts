@@ -1,14 +1,17 @@
 import { IMG, type House } from './catalog';
+import { typeKey } from './propertyTypes';
 
 /* ==========================================================================
    Conexión con la API de Homiz.
    Por omisión la API está en el puerto 3000 del mismo servidor que sirve el sitio:
    localhost:5500 → localhost:3000 · 192.168.1.68:5500 → 192.168.1.68:3000 ·
    VS Code https://abc-5500.usw2.devtunnels.ms → https://abc-3000.usw2.devtunnels.ms
+   Túnel público de Cloudflare (https://xxx.trycloudflare.com) → /api/v1 del mismo dominio (Vite la reenvía).
    Otro servidor: VITE_API_URL en .env (vacío = sin API, todo simulado).
    ========================================================================== */
 function defaultApiUrl(): string {
   const host = location.hostname;
+  if (/\.trycloudflare\.com$/i.test(host)) return `${location.origin}/api/v1`;
   if (/^[a-z0-9]+-\d+\./i.test(host) && /\.devtunnels\.ms$/i.test(host)) return `${location.protocol}//${host.replace(/-\d+\./, '-3000.')}/api/v1`;
   return `${location.protocol}//${host}:3000/api/v1`;
 }
@@ -46,7 +49,6 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 }
 
 /* ---------- Catálogo público → formato del sitio ---------- */
-const TYPES: Record<string, House['tipo']> = { 'Casa en condominio': 'casa-condominio', Townhouse: 'townhouse' };
 const FURNISHED: Record<string, House['amueblada']> = { Amueblada: 'si', Semiamueblada: 'semi' };
 const isUrl = (src: string) => /^(https?:|data:|blob:)/.test(src || '');
 
@@ -70,14 +72,14 @@ export function toHouse(p: any): House {
     est: Number(p.est) || 0,
     pets: !!p.pets,
     amueblada: FURNISHED[p.furnished] || 'no',
-    tipo: TYPES[p.tipo] || 'casa',
+    tipo: typeKey(p.tipo),
     tipoTexto: p.tipo,
     asesor: p.asesor || '',
     orden: p.publishedAt ? Date.parse(p.publishedAt) / 864e5 : 0,
     img: cover && !isUrl(cover) ? cover.replace(/\.[a-z]+$/i, '') : undefined,
     foto: cover && isUrl(cover) ? cover : undefined,
     description: p.description || '',
-    address: p.address || '',
+    areaMeters: Number(p.areaMeters) || 1500,
     terreno: Number(p.terreno) || 0,
     age: p.age,
     maintenance: p.maintenance || '',
@@ -109,29 +111,44 @@ export interface LeadInput {
   propertyCode?: string;
   preferredDate?: string;
   preferredTime?: string;
-  /** Resto de respuestas del formulario (ocupación, presupuesto, mascotas…) */
-  payload: Record<string, string>;
+  /** Resto de respuestas del formulario (ocupación, mascotas…). Los montos van como número (presupuesto_min/max). */
+  payload: Record<string, string | number | null>;
 }
 
-export async function sendLead(input: LeadInput): Promise<{ folio: string; cita: string | null }> {
+/** account: la cuenta de la app que se creó sola («created») o que ya existía («existing»). */
+export async function sendLead(input: LeadInput): Promise<{ folio: string; cita: string | null; account: 'created' | 'existing' | null; editToken: string | null }> {
   const body: Record<string, unknown> = {
+    // Solo se envía después de marcar «Acepto el aviso de privacidad» (lo valida cada formulario)
+    consent: true,
+    // Campo trampa (invisible para personas): si un robot lo llena, el servidor ignora la solicitud
+    website: document.querySelector<HTMLInputElement>('input[name="website"]')?.value ?? '',
     reason: input.reason,
     name: input.name,
     email: input.email,
     phone: input.phone || null,
     message: input.message || null,
     payload: Object.fromEntries(
-      Object.entries(input.payload).filter(([, v]) => v && v.trim()).map(([k, v]) => [k.slice(0, 40), v.trim().slice(0, 500)]),
+      Object.entries(input.payload)
+        .filter(([, v]) => (typeof v === 'number' ? Number.isFinite(v) : !!v && v.trim()))
+        .map(([k, v]) => [k.slice(0, 40), typeof v === 'number' ? v : String(v).trim().slice(0, 500)]),
     ),
   };
   if (input.propertyCode) body.propertyCode = input.propertyCode;
   else if (input.propertySlug && input.reason !== 'publicar' && input.reason !== 'otro') body.propertySlug = input.propertySlug;
   if (input.reason === 'visita' && input.preferredDate) body.preferredDate = input.preferredDate;
   if (input.reason === 'visita' && input.preferredTime) body.preferredTime = input.preferredTime;
-  const r = await request<{ folio: string; appointmentCode?: string }>('/public/leads', {
+  const r = await request<{ folio: string; appointmentCode?: string; account?: 'created' | 'existing' | null; editToken?: string | null }>('/public/leads', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  return { folio: r.folio, cita: r.appointmentCode || null };
+  return { folio: r.folio, cita: r.appointmentCode || null, account: r.account ?? null, editToken: r.editToken ?? null };
+}
+
+/** «Cambiar mis datos» (vale 2 horas después de enviar). Si cambia el correo, la cuenta de la app pasa al correo nuevo. */
+export async function correctLead(folio: string, token: string, d: { name: string; email: string; phone: string }) {
+  return request<{ folio: string; name: string; email: string; phone: string | null; account: 'created' | 'existing'; editToken: string; message: string }>(
+    '/public/leads/' + encodeURIComponent(folio),
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, name: d.name, email: d.email, phone: d.phone || null }) },
+  );
 }

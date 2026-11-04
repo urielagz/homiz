@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PropertyDetail {
 
- String get id; String? get code; String get name; String? get description; String? get operation; double get price; int? get rec; double? get banos; double? get m2; int? get est; bool get petsAllowed; String? get furnished; String? get address; String? get city; String? get zone; String? get status; String? get visibility; List<String> get amenities; List<PropertyPhoto> get photos; PersonRef? get broker;
+ String get id; String? get code; String get name;/// Tipo de inmueble: Casa, Departamento, Terreno, Local comercial…
+ String? get type; String? get description; String? get operation; double get price; int? get rec; double? get banos; double? get m2; int? get est; bool get petsAllowed; String? get furnished; String? get address; String? get city; String? get zone; String? get status; String? get visibility; List<String> get amenities; List<PropertyPhoto> get photos; PersonRef? get broker;
 /// Create a copy of PropertyDetail
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $PropertyDetailCopyWith<PropertyDetail> get copyWith => _$PropertyDetailCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as PropertyDetail;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PropertyDetail&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.operation, _this.operation) || other.operation == _this.operation)&&(identical(other.price, _this.price) || other.price == _this.price)&&(identical(other.rec, _this.rec) || other.rec == _this.rec)&&(identical(other.banos, _this.banos) || other.banos == _this.banos)&&(identical(other.m2, _this.m2) || other.m2 == _this.m2)&&(identical(other.est, _this.est) || other.est == _this.est)&&(identical(other.petsAllowed, _this.petsAllowed) || other.petsAllowed == _this.petsAllowed)&&(identical(other.furnished, _this.furnished) || other.furnished == _this.furnished)&&(identical(other.address, _this.address) || other.address == _this.address)&&(identical(other.city, _this.city) || other.city == _this.city)&&(identical(other.zone, _this.zone) || other.zone == _this.zone)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.visibility, _this.visibility) || other.visibility == _this.visibility)&&const DeepCollectionEquality().equals(other.amenities, _this.amenities)&&const DeepCollectionEquality().equals(other.photos, _this.photos)&&(identical(other.broker, _this.broker) || other.broker == _this.broker));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PropertyDetail&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.operation, _this.operation) || other.operation == _this.operation)&&(identical(other.price, _this.price) || other.price == _this.price)&&(identical(other.rec, _this.rec) || other.rec == _this.rec)&&(identical(other.banos, _this.banos) || other.banos == _this.banos)&&(identical(other.m2, _this.m2) || other.m2 == _this.m2)&&(identical(other.est, _this.est) || other.est == _this.est)&&(identical(other.petsAllowed, _this.petsAllowed) || other.petsAllowed == _this.petsAllowed)&&(identical(other.furnished, _this.furnished) || other.furnished == _this.furnished)&&(identical(other.address, _this.address) || other.address == _this.address)&&(identical(other.city, _this.city) || other.city == _this.city)&&(identical(other.zone, _this.zone) || other.zone == _this.zone)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.visibility, _this.visibility) || other.visibility == _this.visibility)&&const DeepCollectionEquality().equals(other.amenities, _this.amenities)&&const DeepCollectionEquality().equals(other.photos, _this.photos)&&(identical(other.broker, _this.broker) || other.broker == _this.broker));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as PropertyDetail;
-  return Object.hashAll([runtimeType,_this.id,_this.code,_this.name,_this.description,_this.operation,_this.price,_this.rec,_this.banos,_this.m2,_this.est,_this.petsAllowed,_this.furnished,_this.address,_this.city,_this.zone,_this.status,_this.visibility,const DeepCollectionEquality().hash(_this.amenities),const DeepCollectionEquality().hash(_this.photos),_this.broker]);
+  return Object.hashAll([runtimeType,_this.id,_this.code,_this.name,_this.type,_this.description,_this.operation,_this.price,_this.rec,_this.banos,_this.m2,_this.est,_this.petsAllowed,_this.furnished,_this.address,_this.city,_this.zone,_this.status,_this.visibility,const DeepCollectionEquality().hash(_this.amenities),const DeepCollectionEquality().hash(_this.photos),_this.broker]);
 }
 
 @override
 String toString() {
   final _this = this as PropertyDetail;
-  return 'PropertyDetail(id: ${_this.id}, code: ${_this.code}, name: ${_this.name}, description: ${_this.description}, operation: ${_this.operation}, price: ${_this.price}, rec: ${_this.rec}, banos: ${_this.banos}, m2: ${_this.m2}, est: ${_this.est}, petsAllowed: ${_this.petsAllowed}, furnished: ${_this.furnished}, address: ${_this.address}, city: ${_this.city}, zone: ${_this.zone}, status: ${_this.status}, visibility: ${_this.visibility}, amenities: ${_this.amenities}, photos: ${_this.photos}, broker: ${_this.broker})';
+  return 'PropertyDetail(id: ${_this.id}, code: ${_this.code}, name: ${_this.name}, type: ${_this.type}, description: ${_this.description}, operation: ${_this.operation}, price: ${_this.price}, rec: ${_this.rec}, banos: ${_this.banos}, m2: ${_this.m2}, est: ${_this.est}, petsAllowed: ${_this.petsAllowed}, furnished: ${_this.furnished}, address: ${_this.address}, city: ${_this.city}, zone: ${_this.zone}, status: ${_this.status}, visibility: ${_this.visibility}, amenities: ${_this.amenities}, photos: ${_this.photos}, broker: ${_this.broker})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $PropertyDetailCopyWith<$Res>  {
   factory $PropertyDetailCopyWith(PropertyDetail value, $Res Function(PropertyDetail) _then) = _$PropertyDetailCopyWithImpl;
 @useResult
 $Res call({
- String id, String? code, String name, String? description, String? operation, double price, int? rec, double? banos, double? m2, int? est, bool petsAllowed, String? furnished, String? address, String? city, String? zone, String? status, String? visibility, List<String> amenities, List<PropertyPhoto> photos, PersonRef? broker
+ String id, String? code, String name, String? type, String? description, String? operation, double price, int? rec, double? banos, double? m2, int? est, bool petsAllowed, String? furnished, String? address, String? city, String? zone, String? status, String? visibility, List<String> amenities, List<PropertyPhoto> photos, PersonRef? broker
 });
 
 
@@ -71,12 +72,13 @@ class _$PropertyDetailCopyWithImpl<$Res>
 
 /// Create a copy of PropertyDetail
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? description = freezed,Object? operation = freezed,Object? price = null,Object? rec = freezed,Object? banos = freezed,Object? m2 = freezed,Object? est = freezed,Object? petsAllowed = null,Object? furnished = freezed,Object? address = freezed,Object? city = freezed,Object? zone = freezed,Object? status = freezed,Object? visibility = freezed,Object? amenities = null,Object? photos = null,Object? broker = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? type = freezed,Object? description = freezed,Object? operation = freezed,Object? price = null,Object? rec = freezed,Object? banos = freezed,Object? m2 = freezed,Object? est = freezed,Object? petsAllowed = null,Object? furnished = freezed,Object? address = freezed,Object? city = freezed,Object? zone = freezed,Object? status = freezed,Object? visibility = freezed,Object? amenities = null,Object? photos = null,Object? broker = freezed,}) {
   return _then(PropertyDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,type: freezed == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,operation: freezed == operation ? _self.operation : operation // ignore: cast_nullable_to_non_nullable
 as String?,price: null == price ? _self.price : price // ignore: cast_nullable_to_non_nullable
 as double,rec: freezed == rec ? _self.rec : rec // ignore: cast_nullable_to_non_nullable
@@ -190,10 +192,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? description,  String? operation,  double price,  int? rec,  double? banos,  double? m2,  int? est,  bool petsAllowed,  String? furnished,  String? address,  String? city,  String? zone,  String? status,  String? visibility,  List<String> amenities,  List<PropertyPhoto> photos,  PersonRef? broker)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? type,  String? description,  String? operation,  double price,  int? rec,  double? banos,  double? m2,  int? est,  bool petsAllowed,  String? furnished,  String? address,  String? city,  String? zone,  String? status,  String? visibility,  List<String> amenities,  List<PropertyPhoto> photos,  PersonRef? broker)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PropertyDetail() when $default != null:
-return $default(_that.id,_that.code,_that.name,_that.description,_that.operation,_that.price,_that.rec,_that.banos,_that.m2,_that.est,_that.petsAllowed,_that.furnished,_that.address,_that.city,_that.zone,_that.status,_that.visibility,_that.amenities,_that.photos,_that.broker);case _:
+return $default(_that.id,_that.code,_that.name,_that.type,_that.description,_that.operation,_that.price,_that.rec,_that.banos,_that.m2,_that.est,_that.petsAllowed,_that.furnished,_that.address,_that.city,_that.zone,_that.status,_that.visibility,_that.amenities,_that.photos,_that.broker);case _:
   return orElse();
 
 }
@@ -211,10 +213,10 @@ return $default(_that.id,_that.code,_that.name,_that.description,_that.operation
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? description,  String? operation,  double price,  int? rec,  double? banos,  double? m2,  int? est,  bool petsAllowed,  String? furnished,  String? address,  String? city,  String? zone,  String? status,  String? visibility,  List<String> amenities,  List<PropertyPhoto> photos,  PersonRef? broker)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? type,  String? description,  String? operation,  double price,  int? rec,  double? banos,  double? m2,  int? est,  bool petsAllowed,  String? furnished,  String? address,  String? city,  String? zone,  String? status,  String? visibility,  List<String> amenities,  List<PropertyPhoto> photos,  PersonRef? broker)  $default,) {final _that = this;
 switch (_that) {
 case _PropertyDetail():
-return $default(_that.id,_that.code,_that.name,_that.description,_that.operation,_that.price,_that.rec,_that.banos,_that.m2,_that.est,_that.petsAllowed,_that.furnished,_that.address,_that.city,_that.zone,_that.status,_that.visibility,_that.amenities,_that.photos,_that.broker);case _:
+return $default(_that.id,_that.code,_that.name,_that.type,_that.description,_that.operation,_that.price,_that.rec,_that.banos,_that.m2,_that.est,_that.petsAllowed,_that.furnished,_that.address,_that.city,_that.zone,_that.status,_that.visibility,_that.amenities,_that.photos,_that.broker);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -231,10 +233,10 @@ return $default(_that.id,_that.code,_that.name,_that.description,_that.operation
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? code,  String name,  String? description,  String? operation,  double price,  int? rec,  double? banos,  double? m2,  int? est,  bool petsAllowed,  String? furnished,  String? address,  String? city,  String? zone,  String? status,  String? visibility,  List<String> amenities,  List<PropertyPhoto> photos,  PersonRef? broker)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? code,  String name,  String? type,  String? description,  String? operation,  double price,  int? rec,  double? banos,  double? m2,  int? est,  bool petsAllowed,  String? furnished,  String? address,  String? city,  String? zone,  String? status,  String? visibility,  List<String> amenities,  List<PropertyPhoto> photos,  PersonRef? broker)?  $default,) {final _that = this;
 switch (_that) {
 case _PropertyDetail() when $default != null:
-return $default(_that.id,_that.code,_that.name,_that.description,_that.operation,_that.price,_that.rec,_that.banos,_that.m2,_that.est,_that.petsAllowed,_that.furnished,_that.address,_that.city,_that.zone,_that.status,_that.visibility,_that.amenities,_that.photos,_that.broker);case _:
+return $default(_that.id,_that.code,_that.name,_that.type,_that.description,_that.operation,_that.price,_that.rec,_that.banos,_that.m2,_that.est,_that.petsAllowed,_that.furnished,_that.address,_that.city,_that.zone,_that.status,_that.visibility,_that.amenities,_that.photos,_that.broker);case _:
   return null;
 
 }
@@ -246,12 +248,14 @@ return $default(_that.id,_that.code,_that.name,_that.description,_that.operation
 @JsonSerializable()
 
 class _PropertyDetail extends PropertyDetail {
-  const _PropertyDetail({required this.id, this.code, required this.name, this.description, this.operation, this.price = 0, this.rec, this.banos, this.m2, this.est, this.petsAllowed = false, this.furnished, this.address, this.city, this.zone, this.status, this.visibility,  List<String> amenities = const <String>[],  List<PropertyPhoto> photos = const <PropertyPhoto>[], this.broker}): _amenities = amenities,_photos = photos,super._();
+  const _PropertyDetail({required this.id, this.code, required this.name, this.type, this.description, this.operation, this.price = 0, this.rec, this.banos, this.m2, this.est, this.petsAllowed = false, this.furnished, this.address, this.city, this.zone, this.status, this.visibility,  List<String> amenities = const <String>[],  List<PropertyPhoto> photos = const <PropertyPhoto>[], this.broker}): _amenities = amenities,_photos = photos,super._();
   factory _PropertyDetail.fromJson(Map<String, dynamic> json) => _$PropertyDetailFromJson(json);
 
 @override final  String id;
 @override final  String? code;
 @override final  String name;
+/// Tipo de inmueble: Casa, Departamento, Terreno, Local comercial…
+@override final  String? type;
 @override final  String? description;
 @override final  String? operation;
 @override@JsonKey() final  double price;
@@ -295,18 +299,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PropertyDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.operation, operation) || other.operation == operation)&&(identical(other.price, price) || other.price == price)&&(identical(other.rec, rec) || other.rec == rec)&&(identical(other.banos, banos) || other.banos == banos)&&(identical(other.m2, m2) || other.m2 == m2)&&(identical(other.est, est) || other.est == est)&&(identical(other.petsAllowed, petsAllowed) || other.petsAllowed == petsAllowed)&&(identical(other.furnished, furnished) || other.furnished == furnished)&&(identical(other.address, address) || other.address == address)&&(identical(other.city, city) || other.city == city)&&(identical(other.zone, zone) || other.zone == zone)&&(identical(other.status, status) || other.status == status)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&const DeepCollectionEquality().equals(other.amenities, _amenities)&&const DeepCollectionEquality().equals(other.photos, _photos)&&(identical(other.broker, broker) || other.broker == broker));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PropertyDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.description, description) || other.description == description)&&(identical(other.operation, operation) || other.operation == operation)&&(identical(other.price, price) || other.price == price)&&(identical(other.rec, rec) || other.rec == rec)&&(identical(other.banos, banos) || other.banos == banos)&&(identical(other.m2, m2) || other.m2 == m2)&&(identical(other.est, est) || other.est == est)&&(identical(other.petsAllowed, petsAllowed) || other.petsAllowed == petsAllowed)&&(identical(other.furnished, furnished) || other.furnished == furnished)&&(identical(other.address, address) || other.address == address)&&(identical(other.city, city) || other.city == city)&&(identical(other.zone, zone) || other.zone == zone)&&(identical(other.status, status) || other.status == status)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&const DeepCollectionEquality().equals(other.amenities, _amenities)&&const DeepCollectionEquality().equals(other.photos, _photos)&&(identical(other.broker, broker) || other.broker == broker));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hashAll([runtimeType,id,code,name,description,operation,price,rec,banos,m2,est,petsAllowed,furnished,address,city,zone,status,visibility,const DeepCollectionEquality().hash(_amenities),const DeepCollectionEquality().hash(_photos),broker]);
+    return Object.hashAll([runtimeType,id,code,name,type,description,operation,price,rec,banos,m2,est,petsAllowed,furnished,address,city,zone,status,visibility,const DeepCollectionEquality().hash(_amenities),const DeepCollectionEquality().hash(_photos),broker]);
 }
 
 @override
 String toString() {
-    return 'PropertyDetail(id: $id, code: $code, name: $name, description: $description, operation: $operation, price: $price, rec: $rec, banos: $banos, m2: $m2, est: $est, petsAllowed: $petsAllowed, furnished: $furnished, address: $address, city: $city, zone: $zone, status: $status, visibility: $visibility, amenities: $amenities, photos: $photos, broker: $broker)';
+    return 'PropertyDetail(id: $id, code: $code, name: $name, type: $type, description: $description, operation: $operation, price: $price, rec: $rec, banos: $banos, m2: $m2, est: $est, petsAllowed: $petsAllowed, furnished: $furnished, address: $address, city: $city, zone: $zone, status: $status, visibility: $visibility, amenities: $amenities, photos: $photos, broker: $broker)';
 }
 
 
@@ -317,7 +321,7 @@ abstract mixin class _$PropertyDetailCopyWith<$Res> implements $PropertyDetailCo
   factory _$PropertyDetailCopyWith(_PropertyDetail value, $Res Function(_PropertyDetail) _then) = __$PropertyDetailCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String? code, String name, String? description, String? operation, double price, int? rec, double? banos, double? m2, int? est, bool petsAllowed, String? furnished, String? address, String? city, String? zone, String? status, String? visibility, List<String> amenities, List<PropertyPhoto> photos, PersonRef? broker
+ String id, String? code, String name, String? type, String? description, String? operation, double price, int? rec, double? banos, double? m2, int? est, bool petsAllowed, String? furnished, String? address, String? city, String? zone, String? status, String? visibility, List<String> amenities, List<PropertyPhoto> photos, PersonRef? broker
 });
 
 
@@ -334,12 +338,13 @@ class __$PropertyDetailCopyWithImpl<$Res>
 
 /// Create a copy of PropertyDetail
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? description = freezed,Object? operation = freezed,Object? price = null,Object? rec = freezed,Object? banos = freezed,Object? m2 = freezed,Object? est = freezed,Object? petsAllowed = null,Object? furnished = freezed,Object? address = freezed,Object? city = freezed,Object? zone = freezed,Object? status = freezed,Object? visibility = freezed,Object? amenities = null,Object? photos = null,Object? broker = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? type = freezed,Object? description = freezed,Object? operation = freezed,Object? price = null,Object? rec = freezed,Object? banos = freezed,Object? m2 = freezed,Object? est = freezed,Object? petsAllowed = null,Object? furnished = freezed,Object? address = freezed,Object? city = freezed,Object? zone = freezed,Object? status = freezed,Object? visibility = freezed,Object? amenities = null,Object? photos = null,Object? broker = freezed,}) {
   return _then(_PropertyDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,type: freezed == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,operation: freezed == operation ? _self.operation : operation // ignore: cast_nullable_to_non_nullable
 as String?,price: null == price ? _self.price : price // ignore: cast_nullable_to_non_nullable
 as double,rec: freezed == rec ? _self.rec : rec // ignore: cast_nullable_to_non_nullable
@@ -655,7 +660,9 @@ as String?,
 /// @nodoc
 mixin _$Dossier {
 
- DossierProperty get property; DossierContract? get contract; List<DossierSection> get sections; List<DossierDocument> get documents; PersonRef? get tenant;
+ DossierProperty get property; DossierContract? get contract; List<DossierSection> get sections; List<DossierDocument> get documents;/// Servicios de agua y luz (números que captura administración)
+ DossierUtilities? get utilities;/// Asesor de la casa (contacto mutuo: también lo ve el inquilino)
+ DossierContact? get broker; PersonRef? get tenant;
 /// Create a copy of Dossier
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -669,20 +676,20 @@ $DossierCopyWith<Dossier> get copyWith => _$DossierCopyWithImpl<Dossier>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as Dossier;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Dossier&&(identical(other.property, _this.property) || other.property == _this.property)&&(identical(other.contract, _this.contract) || other.contract == _this.contract)&&const DeepCollectionEquality().equals(other.sections, _this.sections)&&const DeepCollectionEquality().equals(other.documents, _this.documents)&&(identical(other.tenant, _this.tenant) || other.tenant == _this.tenant));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Dossier&&(identical(other.property, _this.property) || other.property == _this.property)&&(identical(other.contract, _this.contract) || other.contract == _this.contract)&&const DeepCollectionEquality().equals(other.sections, _this.sections)&&const DeepCollectionEquality().equals(other.documents, _this.documents)&&(identical(other.utilities, _this.utilities) || other.utilities == _this.utilities)&&(identical(other.broker, _this.broker) || other.broker == _this.broker)&&(identical(other.tenant, _this.tenant) || other.tenant == _this.tenant));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Dossier;
-  return Object.hash(runtimeType,_this.property,_this.contract,const DeepCollectionEquality().hash(_this.sections),const DeepCollectionEquality().hash(_this.documents),_this.tenant);
+  return Object.hash(runtimeType,_this.property,_this.contract,const DeepCollectionEquality().hash(_this.sections),const DeepCollectionEquality().hash(_this.documents),_this.utilities,_this.broker,_this.tenant);
 }
 
 @override
 String toString() {
   final _this = this as Dossier;
-  return 'Dossier(property: ${_this.property}, contract: ${_this.contract}, sections: ${_this.sections}, documents: ${_this.documents}, tenant: ${_this.tenant})';
+  return 'Dossier(property: ${_this.property}, contract: ${_this.contract}, sections: ${_this.sections}, documents: ${_this.documents}, utilities: ${_this.utilities}, broker: ${_this.broker}, tenant: ${_this.tenant})';
 }
 
 
@@ -693,11 +700,11 @@ abstract mixin class $DossierCopyWith<$Res>  {
   factory $DossierCopyWith(Dossier value, $Res Function(Dossier) _then) = _$DossierCopyWithImpl;
 @useResult
 $Res call({
- DossierProperty property, DossierContract? contract, List<DossierSection> sections, List<DossierDocument> documents, PersonRef? tenant
+ DossierProperty property, DossierContract? contract, List<DossierSection> sections, List<DossierDocument> documents, DossierUtilities? utilities, DossierContact? broker, PersonRef? tenant
 });
 
 
-$DossierPropertyCopyWith<$Res> get property;$DossierContractCopyWith<$Res>? get contract;$PersonRefCopyWith<$Res>? get tenant;
+$DossierPropertyCopyWith<$Res> get property;$DossierContractCopyWith<$Res>? get contract;$DossierUtilitiesCopyWith<$Res>? get utilities;$DossierContactCopyWith<$Res>? get broker;$PersonRefCopyWith<$Res>? get tenant;
 
 }
 /// @nodoc
@@ -710,13 +717,15 @@ class _$DossierCopyWithImpl<$Res>
 
 /// Create a copy of Dossier
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? property = null,Object? contract = freezed,Object? sections = null,Object? documents = null,Object? tenant = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? property = null,Object? contract = freezed,Object? sections = null,Object? documents = null,Object? utilities = freezed,Object? broker = freezed,Object? tenant = freezed,}) {
   return _then(Dossier(
 property: null == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
 as DossierProperty,contract: freezed == contract ? _self.contract : contract // ignore: cast_nullable_to_non_nullable
 as DossierContract?,sections: null == sections ? _self.sections : sections // ignore: cast_nullable_to_non_nullable
 as List<DossierSection>,documents: null == documents ? _self.documents : documents // ignore: cast_nullable_to_non_nullable
-as List<DossierDocument>,tenant: freezed == tenant ? _self.tenant : tenant // ignore: cast_nullable_to_non_nullable
+as List<DossierDocument>,utilities: freezed == utilities ? _self.utilities : utilities // ignore: cast_nullable_to_non_nullable
+as DossierUtilities?,broker: freezed == broker ? _self.broker : broker // ignore: cast_nullable_to_non_nullable
+as DossierContact?,tenant: freezed == tenant ? _self.tenant : tenant // ignore: cast_nullable_to_non_nullable
 as PersonRef?,
   ));
 }
@@ -740,6 +749,30 @@ $DossierContractCopyWith<$Res>? get contract {
 
   return $DossierContractCopyWith<$Res>(_self.contract!, (value) {
     return _then(_self.copyWith(contract: value));
+  });
+}/// Create a copy of Dossier
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DossierUtilitiesCopyWith<$Res>? get utilities {
+    if (_self.utilities == null) {
+    return null;
+  }
+
+  return $DossierUtilitiesCopyWith<$Res>(_self.utilities!, (value) {
+    return _then(_self.copyWith(utilities: value));
+  });
+}/// Create a copy of Dossier
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DossierContactCopyWith<$Res>? get broker {
+    if (_self.broker == null) {
+    return null;
+  }
+
+  return $DossierContactCopyWith<$Res>(_self.broker!, (value) {
+    return _then(_self.copyWith(broker: value));
   });
 }/// Create a copy of Dossier
 /// with the given fields replaced by the non-null parameter values.
@@ -835,10 +868,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DossierProperty property,  DossierContract? contract,  List<DossierSection> sections,  List<DossierDocument> documents,  PersonRef? tenant)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DossierProperty property,  DossierContract? contract,  List<DossierSection> sections,  List<DossierDocument> documents,  DossierUtilities? utilities,  DossierContact? broker,  PersonRef? tenant)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Dossier() when $default != null:
-return $default(_that.property,_that.contract,_that.sections,_that.documents,_that.tenant);case _:
+return $default(_that.property,_that.contract,_that.sections,_that.documents,_that.utilities,_that.broker,_that.tenant);case _:
   return orElse();
 
 }
@@ -856,10 +889,10 @@ return $default(_that.property,_that.contract,_that.sections,_that.documents,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DossierProperty property,  DossierContract? contract,  List<DossierSection> sections,  List<DossierDocument> documents,  PersonRef? tenant)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DossierProperty property,  DossierContract? contract,  List<DossierSection> sections,  List<DossierDocument> documents,  DossierUtilities? utilities,  DossierContact? broker,  PersonRef? tenant)  $default,) {final _that = this;
 switch (_that) {
 case _Dossier():
-return $default(_that.property,_that.contract,_that.sections,_that.documents,_that.tenant);case _:
+return $default(_that.property,_that.contract,_that.sections,_that.documents,_that.utilities,_that.broker,_that.tenant);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -876,10 +909,10 @@ return $default(_that.property,_that.contract,_that.sections,_that.documents,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DossierProperty property,  DossierContract? contract,  List<DossierSection> sections,  List<DossierDocument> documents,  PersonRef? tenant)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DossierProperty property,  DossierContract? contract,  List<DossierSection> sections,  List<DossierDocument> documents,  DossierUtilities? utilities,  DossierContact? broker,  PersonRef? tenant)?  $default,) {final _that = this;
 switch (_that) {
 case _Dossier() when $default != null:
-return $default(_that.property,_that.contract,_that.sections,_that.documents,_that.tenant);case _:
+return $default(_that.property,_that.contract,_that.sections,_that.documents,_that.utilities,_that.broker,_that.tenant);case _:
   return null;
 
 }
@@ -891,7 +924,7 @@ return $default(_that.property,_that.contract,_that.sections,_that.documents,_th
 @JsonSerializable()
 
 class _Dossier implements Dossier {
-  const _Dossier({required this.property, this.contract,  List<DossierSection> sections = const <DossierSection>[],  List<DossierDocument> documents = const <DossierDocument>[], this.tenant}): _sections = sections,_documents = documents;
+  const _Dossier({required this.property, this.contract,  List<DossierSection> sections = const <DossierSection>[],  List<DossierDocument> documents = const <DossierDocument>[], this.utilities, this.broker, this.tenant}): _sections = sections,_documents = documents;
   factory _Dossier.fromJson(Map<String, dynamic> json) => _$DossierFromJson(json);
 
 @override final  DossierProperty property;
@@ -910,6 +943,10 @@ class _Dossier implements Dossier {
   return EqualUnmodifiableListView(_documents);
 }
 
+/// Servicios de agua y luz (números que captura administración)
+@override final  DossierUtilities? utilities;
+/// Asesor de la casa (contacto mutuo: también lo ve el inquilino)
+@override final  DossierContact? broker;
 @override final  PersonRef? tenant;
 
 /// Create a copy of Dossier
@@ -925,18 +962,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Dossier&&(identical(other.property, property) || other.property == property)&&(identical(other.contract, contract) || other.contract == contract)&&const DeepCollectionEquality().equals(other.sections, _sections)&&const DeepCollectionEquality().equals(other.documents, _documents)&&(identical(other.tenant, tenant) || other.tenant == tenant));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Dossier&&(identical(other.property, property) || other.property == property)&&(identical(other.contract, contract) || other.contract == contract)&&const DeepCollectionEquality().equals(other.sections, _sections)&&const DeepCollectionEquality().equals(other.documents, _documents)&&(identical(other.utilities, utilities) || other.utilities == utilities)&&(identical(other.broker, broker) || other.broker == broker)&&(identical(other.tenant, tenant) || other.tenant == tenant));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,property,contract,const DeepCollectionEquality().hash(_sections),const DeepCollectionEquality().hash(_documents),tenant);
+    return Object.hash(runtimeType,property,contract,const DeepCollectionEquality().hash(_sections),const DeepCollectionEquality().hash(_documents),utilities,broker,tenant);
 }
 
 @override
 String toString() {
-    return 'Dossier(property: $property, contract: $contract, sections: $sections, documents: $documents, tenant: $tenant)';
+    return 'Dossier(property: $property, contract: $contract, sections: $sections, documents: $documents, utilities: $utilities, broker: $broker, tenant: $tenant)';
 }
 
 
@@ -947,11 +984,11 @@ abstract mixin class _$DossierCopyWith<$Res> implements $DossierCopyWith<$Res> {
   factory _$DossierCopyWith(_Dossier value, $Res Function(_Dossier) _then) = __$DossierCopyWithImpl;
 @override @useResult
 $Res call({
- DossierProperty property, DossierContract? contract, List<DossierSection> sections, List<DossierDocument> documents, PersonRef? tenant
+ DossierProperty property, DossierContract? contract, List<DossierSection> sections, List<DossierDocument> documents, DossierUtilities? utilities, DossierContact? broker, PersonRef? tenant
 });
 
 
-@override $DossierPropertyCopyWith<$Res> get property;@override $DossierContractCopyWith<$Res>? get contract;@override $PersonRefCopyWith<$Res>? get tenant;
+@override $DossierPropertyCopyWith<$Res> get property;@override $DossierContractCopyWith<$Res>? get contract;@override $DossierUtilitiesCopyWith<$Res>? get utilities;@override $DossierContactCopyWith<$Res>? get broker;@override $PersonRefCopyWith<$Res>? get tenant;
 
 }
 /// @nodoc
@@ -964,13 +1001,15 @@ class __$DossierCopyWithImpl<$Res>
 
 /// Create a copy of Dossier
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? property = null,Object? contract = freezed,Object? sections = null,Object? documents = null,Object? tenant = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? property = null,Object? contract = freezed,Object? sections = null,Object? documents = null,Object? utilities = freezed,Object? broker = freezed,Object? tenant = freezed,}) {
   return _then(_Dossier(
 property: null == property ? _self.property : property // ignore: cast_nullable_to_non_nullable
 as DossierProperty,contract: freezed == contract ? _self.contract : contract // ignore: cast_nullable_to_non_nullable
 as DossierContract?,sections: null == sections ? _self._sections : sections // ignore: cast_nullable_to_non_nullable
 as List<DossierSection>,documents: null == documents ? _self._documents : documents // ignore: cast_nullable_to_non_nullable
-as List<DossierDocument>,tenant: freezed == tenant ? _self.tenant : tenant // ignore: cast_nullable_to_non_nullable
+as List<DossierDocument>,utilities: freezed == utilities ? _self.utilities : utilities // ignore: cast_nullable_to_non_nullable
+as DossierUtilities?,broker: freezed == broker ? _self.broker : broker // ignore: cast_nullable_to_non_nullable
+as DossierContact?,tenant: freezed == tenant ? _self.tenant : tenant // ignore: cast_nullable_to_non_nullable
 as PersonRef?,
   ));
 }
@@ -1000,6 +1039,30 @@ $DossierContractCopyWith<$Res>? get contract {
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
+$DossierUtilitiesCopyWith<$Res>? get utilities {
+    if (_self.utilities == null) {
+    return null;
+  }
+
+  return $DossierUtilitiesCopyWith<$Res>(_self.utilities!, (value) {
+    return _then(_self.copyWith(utilities: value));
+  });
+}/// Create a copy of Dossier
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DossierContactCopyWith<$Res>? get broker {
+    if (_self.broker == null) {
+    return null;
+  }
+
+  return $DossierContactCopyWith<$Res>(_self.broker!, (value) {
+    return _then(_self.copyWith(broker: value));
+  });
+}/// Create a copy of Dossier
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
 $PersonRefCopyWith<$Res>? get tenant {
     if (_self.tenant == null) {
     return null;
@@ -1009,6 +1072,885 @@ $PersonRefCopyWith<$Res>? get tenant {
     return _then(_self.copyWith(tenant: value));
   });
 }
+}
+
+
+/// @nodoc
+mixin _$DossierContact {
+
+ String get name; String? get phone; String? get email;
+/// Create a copy of DossierContact
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DossierContactCopyWith<DossierContact> get copyWith => _$DossierContactCopyWithImpl<DossierContact>(this as DossierContact, _$identity);
+
+  /// Serializes this DossierContact to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as DossierContact;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DossierContact&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.phone, _this.phone) || other.phone == _this.phone)&&(identical(other.email, _this.email) || other.email == _this.email));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as DossierContact;
+  return Object.hash(runtimeType,_this.name,_this.phone,_this.email);
+}
+
+@override
+String toString() {
+  final _this = this as DossierContact;
+  return 'DossierContact(name: ${_this.name}, phone: ${_this.phone}, email: ${_this.email})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DossierContactCopyWith<$Res>  {
+  factory $DossierContactCopyWith(DossierContact value, $Res Function(DossierContact) _then) = _$DossierContactCopyWithImpl;
+@useResult
+$Res call({
+ String name, String? phone, String? email
+});
+
+
+
+
+}
+/// @nodoc
+class _$DossierContactCopyWithImpl<$Res>
+    implements $DossierContactCopyWith<$Res> {
+  _$DossierContactCopyWithImpl(this._self, this._then);
+
+  final DossierContact _self;
+  final $Res Function(DossierContact) _then;
+
+/// Create a copy of DossierContact
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? phone = freezed,Object? email = freezed,}) {
+  return _then(DossierContact(
+name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
+as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [DossierContact].
+extension DossierContactPatterns on DossierContact {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _DossierContact value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _DossierContact() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _DossierContact value)  $default,){
+final _that = this;
+switch (_that) {
+case _DossierContact():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _DossierContact value)?  $default,){
+final _that = this;
+switch (_that) {
+case _DossierContact() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String? phone,  String? email)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _DossierContact() when $default != null:
+return $default(_that.name,_that.phone,_that.email);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String? phone,  String? email)  $default,) {final _that = this;
+switch (_that) {
+case _DossierContact():
+return $default(_that.name,_that.phone,_that.email);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String? phone,  String? email)?  $default,) {final _that = this;
+switch (_that) {
+case _DossierContact() when $default != null:
+return $default(_that.name,_that.phone,_that.email);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _DossierContact implements DossierContact {
+  const _DossierContact({required this.name, this.phone, this.email});
+  factory _DossierContact.fromJson(Map<String, dynamic> json) => _$DossierContactFromJson(json);
+
+@override final  String name;
+@override final  String? phone;
+@override final  String? email;
+
+/// Create a copy of DossierContact
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$DossierContactCopyWith<_DossierContact> get copyWith => __$DossierContactCopyWithImpl<_DossierContact>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$DossierContactToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _DossierContact&&(identical(other.name, name) || other.name == name)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.email, email) || other.email == email));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,name,phone,email);
+}
+
+@override
+String toString() {
+    return 'DossierContact(name: $name, phone: $phone, email: $email)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$DossierContactCopyWith<$Res> implements $DossierContactCopyWith<$Res> {
+  factory _$DossierContactCopyWith(_DossierContact value, $Res Function(_DossierContact) _then) = __$DossierContactCopyWithImpl;
+@override @useResult
+$Res call({
+ String name, String? phone, String? email
+});
+
+
+
+
+}
+/// @nodoc
+class __$DossierContactCopyWithImpl<$Res>
+    implements _$DossierContactCopyWith<$Res> {
+  __$DossierContactCopyWithImpl(this._self, this._then);
+
+  final _DossierContact _self;
+  final $Res Function(_DossierContact) _then;
+
+/// Create a copy of DossierContact
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? phone = freezed,Object? email = freezed,}) {
+  return _then(_DossierContact(
+name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
+as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$DossierUtilities {
+
+ int get reminderDay; UtilityService? get electricity; UtilityService? get water;
+/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DossierUtilitiesCopyWith<DossierUtilities> get copyWith => _$DossierUtilitiesCopyWithImpl<DossierUtilities>(this as DossierUtilities, _$identity);
+
+  /// Serializes this DossierUtilities to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as DossierUtilities;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DossierUtilities&&(identical(other.reminderDay, _this.reminderDay) || other.reminderDay == _this.reminderDay)&&(identical(other.electricity, _this.electricity) || other.electricity == _this.electricity)&&(identical(other.water, _this.water) || other.water == _this.water));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as DossierUtilities;
+  return Object.hash(runtimeType,_this.reminderDay,_this.electricity,_this.water);
+}
+
+@override
+String toString() {
+  final _this = this as DossierUtilities;
+  return 'DossierUtilities(reminderDay: ${_this.reminderDay}, electricity: ${_this.electricity}, water: ${_this.water})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DossierUtilitiesCopyWith<$Res>  {
+  factory $DossierUtilitiesCopyWith(DossierUtilities value, $Res Function(DossierUtilities) _then) = _$DossierUtilitiesCopyWithImpl;
+@useResult
+$Res call({
+ int reminderDay, UtilityService? electricity, UtilityService? water
+});
+
+
+$UtilityServiceCopyWith<$Res>? get electricity;$UtilityServiceCopyWith<$Res>? get water;
+
+}
+/// @nodoc
+class _$DossierUtilitiesCopyWithImpl<$Res>
+    implements $DossierUtilitiesCopyWith<$Res> {
+  _$DossierUtilitiesCopyWithImpl(this._self, this._then);
+
+  final DossierUtilities _self;
+  final $Res Function(DossierUtilities) _then;
+
+/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? reminderDay = null,Object? electricity = freezed,Object? water = freezed,}) {
+  return _then(DossierUtilities(
+reminderDay: null == reminderDay ? _self.reminderDay : reminderDay // ignore: cast_nullable_to_non_nullable
+as int,electricity: freezed == electricity ? _self.electricity : electricity // ignore: cast_nullable_to_non_nullable
+as UtilityService?,water: freezed == water ? _self.water : water // ignore: cast_nullable_to_non_nullable
+as UtilityService?,
+  ));
+}
+/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$UtilityServiceCopyWith<$Res>? get electricity {
+    if (_self.electricity == null) {
+    return null;
+  }
+
+  return $UtilityServiceCopyWith<$Res>(_self.electricity!, (value) {
+    return _then(_self.copyWith(electricity: value));
+  });
+}/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$UtilityServiceCopyWith<$Res>? get water {
+    if (_self.water == null) {
+    return null;
+  }
+
+  return $UtilityServiceCopyWith<$Res>(_self.water!, (value) {
+    return _then(_self.copyWith(water: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [DossierUtilities].
+extension DossierUtilitiesPatterns on DossierUtilities {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _DossierUtilities value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _DossierUtilities() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _DossierUtilities value)  $default,){
+final _that = this;
+switch (_that) {
+case _DossierUtilities():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _DossierUtilities value)?  $default,){
+final _that = this;
+switch (_that) {
+case _DossierUtilities() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int reminderDay,  UtilityService? electricity,  UtilityService? water)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _DossierUtilities() when $default != null:
+return $default(_that.reminderDay,_that.electricity,_that.water);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int reminderDay,  UtilityService? electricity,  UtilityService? water)  $default,) {final _that = this;
+switch (_that) {
+case _DossierUtilities():
+return $default(_that.reminderDay,_that.electricity,_that.water);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int reminderDay,  UtilityService? electricity,  UtilityService? water)?  $default,) {final _that = this;
+switch (_that) {
+case _DossierUtilities() when $default != null:
+return $default(_that.reminderDay,_that.electricity,_that.water);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _DossierUtilities implements DossierUtilities {
+  const _DossierUtilities({this.reminderDay = 1, this.electricity, this.water});
+  factory _DossierUtilities.fromJson(Map<String, dynamic> json) => _$DossierUtilitiesFromJson(json);
+
+@override@JsonKey() final  int reminderDay;
+@override final  UtilityService? electricity;
+@override final  UtilityService? water;
+
+/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$DossierUtilitiesCopyWith<_DossierUtilities> get copyWith => __$DossierUtilitiesCopyWithImpl<_DossierUtilities>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$DossierUtilitiesToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _DossierUtilities&&(identical(other.reminderDay, reminderDay) || other.reminderDay == reminderDay)&&(identical(other.electricity, electricity) || other.electricity == electricity)&&(identical(other.water, water) || other.water == water));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,reminderDay,electricity,water);
+}
+
+@override
+String toString() {
+    return 'DossierUtilities(reminderDay: $reminderDay, electricity: $electricity, water: $water)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$DossierUtilitiesCopyWith<$Res> implements $DossierUtilitiesCopyWith<$Res> {
+  factory _$DossierUtilitiesCopyWith(_DossierUtilities value, $Res Function(_DossierUtilities) _then) = __$DossierUtilitiesCopyWithImpl;
+@override @useResult
+$Res call({
+ int reminderDay, UtilityService? electricity, UtilityService? water
+});
+
+
+@override $UtilityServiceCopyWith<$Res>? get electricity;@override $UtilityServiceCopyWith<$Res>? get water;
+
+}
+/// @nodoc
+class __$DossierUtilitiesCopyWithImpl<$Res>
+    implements _$DossierUtilitiesCopyWith<$Res> {
+  __$DossierUtilitiesCopyWithImpl(this._self, this._then);
+
+  final _DossierUtilities _self;
+  final $Res Function(_DossierUtilities) _then;
+
+/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? reminderDay = null,Object? electricity = freezed,Object? water = freezed,}) {
+  return _then(_DossierUtilities(
+reminderDay: null == reminderDay ? _self.reminderDay : reminderDay // ignore: cast_nullable_to_non_nullable
+as int,electricity: freezed == electricity ? _self.electricity : electricity // ignore: cast_nullable_to_non_nullable
+as UtilityService?,water: freezed == water ? _self.water : water // ignore: cast_nullable_to_non_nullable
+as UtilityService?,
+  ));
+}
+
+/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$UtilityServiceCopyWith<$Res>? get electricity {
+    if (_self.electricity == null) {
+    return null;
+  }
+
+  return $UtilityServiceCopyWith<$Res>(_self.electricity!, (value) {
+    return _then(_self.copyWith(electricity: value));
+  });
+}/// Create a copy of DossierUtilities
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$UtilityServiceCopyWith<$Res>? get water {
+    if (_self.water == null) {
+    return null;
+  }
+
+  return $UtilityServiceCopyWith<$Res>(_self.water!, (value) {
+    return _then(_self.copyWith(water: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$UtilityService {
+
+ String get company; String get serviceNumber; String? get app; String? get url;
+/// Create a copy of UtilityService
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$UtilityServiceCopyWith<UtilityService> get copyWith => _$UtilityServiceCopyWithImpl<UtilityService>(this as UtilityService, _$identity);
+
+  /// Serializes this UtilityService to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as UtilityService;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UtilityService&&(identical(other.company, _this.company) || other.company == _this.company)&&(identical(other.serviceNumber, _this.serviceNumber) || other.serviceNumber == _this.serviceNumber)&&(identical(other.app, _this.app) || other.app == _this.app)&&(identical(other.url, _this.url) || other.url == _this.url));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as UtilityService;
+  return Object.hash(runtimeType,_this.company,_this.serviceNumber,_this.app,_this.url);
+}
+
+@override
+String toString() {
+  final _this = this as UtilityService;
+  return 'UtilityService(company: ${_this.company}, serviceNumber: ${_this.serviceNumber}, app: ${_this.app}, url: ${_this.url})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $UtilityServiceCopyWith<$Res>  {
+  factory $UtilityServiceCopyWith(UtilityService value, $Res Function(UtilityService) _then) = _$UtilityServiceCopyWithImpl;
+@useResult
+$Res call({
+ String company, String serviceNumber, String? app, String? url
+});
+
+
+
+
+}
+/// @nodoc
+class _$UtilityServiceCopyWithImpl<$Res>
+    implements $UtilityServiceCopyWith<$Res> {
+  _$UtilityServiceCopyWithImpl(this._self, this._then);
+
+  final UtilityService _self;
+  final $Res Function(UtilityService) _then;
+
+/// Create a copy of UtilityService
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? company = null,Object? serviceNumber = null,Object? app = freezed,Object? url = freezed,}) {
+  return _then(UtilityService(
+company: null == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
+as String,serviceNumber: null == serviceNumber ? _self.serviceNumber : serviceNumber // ignore: cast_nullable_to_non_nullable
+as String,app: freezed == app ? _self.app : app // ignore: cast_nullable_to_non_nullable
+as String?,url: freezed == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [UtilityService].
+extension UtilityServicePatterns on UtilityService {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UtilityService value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _UtilityService() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UtilityService value)  $default,){
+final _that = this;
+switch (_that) {
+case _UtilityService():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UtilityService value)?  $default,){
+final _that = this;
+switch (_that) {
+case _UtilityService() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String company,  String serviceNumber,  String? app,  String? url)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _UtilityService() when $default != null:
+return $default(_that.company,_that.serviceNumber,_that.app,_that.url);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String company,  String serviceNumber,  String? app,  String? url)  $default,) {final _that = this;
+switch (_that) {
+case _UtilityService():
+return $default(_that.company,_that.serviceNumber,_that.app,_that.url);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String company,  String serviceNumber,  String? app,  String? url)?  $default,) {final _that = this;
+switch (_that) {
+case _UtilityService() when $default != null:
+return $default(_that.company,_that.serviceNumber,_that.app,_that.url);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _UtilityService implements UtilityService {
+  const _UtilityService({required this.company, required this.serviceNumber, this.app, this.url});
+  factory _UtilityService.fromJson(Map<String, dynamic> json) => _$UtilityServiceFromJson(json);
+
+@override final  String company;
+@override final  String serviceNumber;
+@override final  String? app;
+@override final  String? url;
+
+/// Create a copy of UtilityService
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$UtilityServiceCopyWith<_UtilityService> get copyWith => __$UtilityServiceCopyWithImpl<_UtilityService>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$UtilityServiceToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _UtilityService&&(identical(other.company, company) || other.company == company)&&(identical(other.serviceNumber, serviceNumber) || other.serviceNumber == serviceNumber)&&(identical(other.app, app) || other.app == app)&&(identical(other.url, url) || other.url == url));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,company,serviceNumber,app,url);
+}
+
+@override
+String toString() {
+    return 'UtilityService(company: $company, serviceNumber: $serviceNumber, app: $app, url: $url)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$UtilityServiceCopyWith<$Res> implements $UtilityServiceCopyWith<$Res> {
+  factory _$UtilityServiceCopyWith(_UtilityService value, $Res Function(_UtilityService) _then) = __$UtilityServiceCopyWithImpl;
+@override @useResult
+$Res call({
+ String company, String serviceNumber, String? app, String? url
+});
+
+
+
+
+}
+/// @nodoc
+class __$UtilityServiceCopyWithImpl<$Res>
+    implements _$UtilityServiceCopyWith<$Res> {
+  __$UtilityServiceCopyWithImpl(this._self, this._then);
+
+  final _UtilityService _self;
+  final $Res Function(_UtilityService) _then;
+
+/// Create a copy of UtilityService
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? company = null,Object? serviceNumber = null,Object? app = freezed,Object? url = freezed,}) {
+  return _then(_UtilityService(
+company: null == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
+as String,serviceNumber: null == serviceNumber ? _self.serviceNumber : serviceNumber // ignore: cast_nullable_to_non_nullable
+as String,app: freezed == app ? _self.app : app // ignore: cast_nullable_to_non_nullable
+as String?,url: freezed == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
 }
 
 
@@ -2191,7 +3133,7 @@ as List<String>,
 /// @nodoc
 mixin _$DossierDocument {
 
- String get id; String get type; String get name; String? get description; String? get mime;@LocalDateOrNull() DateTime? get createdAt;
+ String get id; String get type; String get name; String? get description; String? get mime; int? get size;@LocalDateOrNull() DateTime? get createdAt; bool? get visibleToClient;
 /// Create a copy of DossierDocument
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2205,20 +3147,20 @@ $DossierDocumentCopyWith<DossierDocument> get copyWith => _$DossierDocumentCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as DossierDocument;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DossierDocument&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.mime, _this.mime) || other.mime == _this.mime)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DossierDocument&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.mime, _this.mime) || other.mime == _this.mime)&&(identical(other.size, _this.size) || other.size == _this.size)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.visibleToClient, _this.visibleToClient) || other.visibleToClient == _this.visibleToClient));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as DossierDocument;
-  return Object.hash(runtimeType,_this.id,_this.type,_this.name,_this.description,_this.mime,_this.createdAt);
+  return Object.hash(runtimeType,_this.id,_this.type,_this.name,_this.description,_this.mime,_this.size,_this.createdAt,_this.visibleToClient);
 }
 
 @override
 String toString() {
   final _this = this as DossierDocument;
-  return 'DossierDocument(id: ${_this.id}, type: ${_this.type}, name: ${_this.name}, description: ${_this.description}, mime: ${_this.mime}, createdAt: ${_this.createdAt})';
+  return 'DossierDocument(id: ${_this.id}, type: ${_this.type}, name: ${_this.name}, description: ${_this.description}, mime: ${_this.mime}, size: ${_this.size}, createdAt: ${_this.createdAt}, visibleToClient: ${_this.visibleToClient})';
 }
 
 
@@ -2229,7 +3171,7 @@ abstract mixin class $DossierDocumentCopyWith<$Res>  {
   factory $DossierDocumentCopyWith(DossierDocument value, $Res Function(DossierDocument) _then) = _$DossierDocumentCopyWithImpl;
 @useResult
 $Res call({
- String id, String type, String name, String? description, String? mime,@LocalDateOrNull() DateTime? createdAt
+ String id, String type, String name, String? description, String? mime, int? size,@LocalDateOrNull() DateTime? createdAt, bool? visibleToClient
 });
 
 
@@ -2246,15 +3188,17 @@ class _$DossierDocumentCopyWithImpl<$Res>
 
 /// Create a copy of DossierDocument
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? name = null,Object? description = freezed,Object? mime = freezed,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? name = null,Object? description = freezed,Object? mime = freezed,Object? size = freezed,Object? createdAt = freezed,Object? visibleToClient = freezed,}) {
   return _then(DossierDocument(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,mime: freezed == mime ? _self.mime : mime // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as String?,size: freezed == size ? _self.size : size // ignore: cast_nullable_to_non_nullable
+as int?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,visibleToClient: freezed == visibleToClient ? _self.visibleToClient : visibleToClient // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
@@ -2339,10 +3283,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String name,  String? description,  String? mime, @LocalDateOrNull()  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String name,  String? description,  String? mime,  int? size, @LocalDateOrNull()  DateTime? createdAt,  bool? visibleToClient)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DossierDocument() when $default != null:
-return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_that.createdAt);case _:
+return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_that.size,_that.createdAt,_that.visibleToClient);case _:
   return orElse();
 
 }
@@ -2360,10 +3304,10 @@ return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String name,  String? description,  String? mime, @LocalDateOrNull()  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String name,  String? description,  String? mime,  int? size, @LocalDateOrNull()  DateTime? createdAt,  bool? visibleToClient)  $default,) {final _that = this;
 switch (_that) {
 case _DossierDocument():
-return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_that.createdAt);case _:
+return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_that.size,_that.createdAt,_that.visibleToClient);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2380,10 +3324,10 @@ return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String name,  String? description,  String? mime, @LocalDateOrNull()  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String name,  String? description,  String? mime,  int? size, @LocalDateOrNull()  DateTime? createdAt,  bool? visibleToClient)?  $default,) {final _that = this;
 switch (_that) {
 case _DossierDocument() when $default != null:
-return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_that.createdAt);case _:
+return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_that.size,_that.createdAt,_that.visibleToClient);case _:
   return null;
 
 }
@@ -2395,7 +3339,7 @@ return $default(_that.id,_that.type,_that.name,_that.description,_that.mime,_tha
 @JsonSerializable()
 
 class _DossierDocument implements DossierDocument {
-  const _DossierDocument({required this.id, required this.type, required this.name, this.description, this.mime, @LocalDateOrNull() this.createdAt});
+  const _DossierDocument({required this.id, required this.type, required this.name, this.description, this.mime, this.size, @LocalDateOrNull() this.createdAt, this.visibleToClient});
   factory _DossierDocument.fromJson(Map<String, dynamic> json) => _$DossierDocumentFromJson(json);
 
 @override final  String id;
@@ -2403,7 +3347,9 @@ class _DossierDocument implements DossierDocument {
 @override final  String name;
 @override final  String? description;
 @override final  String? mime;
+@override final  int? size;
 @override@LocalDateOrNull() final  DateTime? createdAt;
+@override final  bool? visibleToClient;
 
 /// Create a copy of DossierDocument
 /// with the given fields replaced by the non-null parameter values.
@@ -2418,18 +3364,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _DossierDocument&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.mime, mime) || other.mime == mime)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _DossierDocument&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.mime, mime) || other.mime == mime)&&(identical(other.size, size) || other.size == size)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.visibleToClient, visibleToClient) || other.visibleToClient == visibleToClient));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,type,name,description,mime,createdAt);
+    return Object.hash(runtimeType,id,type,name,description,mime,size,createdAt,visibleToClient);
 }
 
 @override
 String toString() {
-    return 'DossierDocument(id: $id, type: $type, name: $name, description: $description, mime: $mime, createdAt: $createdAt)';
+    return 'DossierDocument(id: $id, type: $type, name: $name, description: $description, mime: $mime, size: $size, createdAt: $createdAt, visibleToClient: $visibleToClient)';
 }
 
 
@@ -2440,7 +3386,7 @@ abstract mixin class _$DossierDocumentCopyWith<$Res> implements $DossierDocument
   factory _$DossierDocumentCopyWith(_DossierDocument value, $Res Function(_DossierDocument) _then) = __$DossierDocumentCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String type, String name, String? description, String? mime,@LocalDateOrNull() DateTime? createdAt
+ String id, String type, String name, String? description, String? mime, int? size,@LocalDateOrNull() DateTime? createdAt, bool? visibleToClient
 });
 
 
@@ -2457,15 +3403,17 @@ class __$DossierDocumentCopyWithImpl<$Res>
 
 /// Create a copy of DossierDocument
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? name = null,Object? description = freezed,Object? mime = freezed,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? name = null,Object? description = freezed,Object? mime = freezed,Object? size = freezed,Object? createdAt = freezed,Object? visibleToClient = freezed,}) {
   return _then(_DossierDocument(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String?,mime: freezed == mime ? _self.mime : mime // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as String?,size: freezed == size ? _self.size : size // ignore: cast_nullable_to_non_nullable
+as int?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,visibleToClient: freezed == visibleToClient ? _self.visibleToClient : visibleToClient // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 

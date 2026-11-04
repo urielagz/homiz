@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router';
 import { useOverlay } from '../components/Overlay';
 import { ApptBadge, Cover, Crumbs, Icon, Metric, PageHead } from '../components/ui';
-import { broker, dateShort, downloadCSV, opLabel, person, plural, priceLabel, prop, upcoming, useStore, Z } from '../store';
+import { broker, dateShort, downloadCSV, opLabel, person, plural, priceLabel, prop, upcoming, useStore, Z, t12 } from '../store';
 
 /** Módulo 1 · Resumen */
 export function Summary() {
@@ -15,7 +15,8 @@ export function Summary() {
   const clients = count(D.people, (p) => p.type === 'cliente');
   const aStatus = (s: string) => count(appts, (a) => a.status === s);
   const next = upcoming().slice(0, 3);
-  const drafts = props.filter((p) => p.status === 'borrador');
+  // Disponibles pero sin publicar (antes «borradores»): falta completar o publicarlas
+  const drafts = props.filter((p) => p.status === 'disponible' && p.visibility === 'pausada');
   const pending = upcoming((a) => a.status === 'por-confirmar');
   const featured = prop('ZUG-001') || props.find((p) => p.status === 'disponible') || props[0];
   const fb = featured ? broker(featured.broker) : null;
@@ -25,7 +26,7 @@ export function Summary() {
     const rows: (string | number)[][] = [
       ['Indicador', 'Valor', 'Detalle'],
       ['Propiedades en cartera', props.length, `${rent} en renta · ${props.length - rent} en venta`],
-      ['Casas disponibles', st('disponible'), `${st('reservada')} reservadas · ${st('rentada')} rentadas · ${st('borrador')} borradores`],
+      ['Casas disponibles', st('disponible'), `${st('reservada')} reservadas · ${st('rentada')} rentadas · ${drafts.length} sin publicar`],
       ['Clientes e inquilinos', D.people.length, `${clients} clientes · ${D.people.length - clients} inquilinos`],
       ['Citas esta semana', appts.length, `${aStatus('confirmada')} confirmadas · ${aStatus('por-confirmar')} por confirmar`],
       [], ['Fecha', 'Hora', 'Cliente', 'Propiedad', 'Broker', 'Estado'],
@@ -44,7 +45,7 @@ export function Summary() {
 
       <div className="metrics">
         <Metric label="Propiedades en cartera" value={props.length} note={`${rent} en renta · ${props.length - rent} en venta`} />
-        <Metric label="Casas disponibles" value={st('disponible')} note={`${st('reservada')} ${plural(st('reservada'), 'reservada', 'reservadas')} · ${st('rentada')} ${plural(st('rentada'), 'rentada', 'rentadas')} · ${st('borrador')} ${plural(st('borrador'), 'borrador', 'borradores')}`} />
+        <Metric label="Casas disponibles" value={st('disponible')} note={`${st('reservada')} ${plural(st('reservada'), 'reservada', 'reservadas')} · ${st('rentada')} ${plural(st('rentada'), 'rentada', 'rentadas')} · ${drafts.length} sin publicar`} />
         <Metric label="Clientes e inquilinos" value={D.people.length} note={`${clients} clientes · ${D.people.length - clients} inquilinos`} />
         <Metric label="Citas esta semana" value={appts.length} note={`${aStatus('confirmada')} confirmadas · ${aStatus('por-confirmar')} por confirmar`} />
       </div>
@@ -62,7 +63,7 @@ export function Summary() {
                     const to = '/citas?cita=' + a.id;
                     return (
                       <tr key={a.id} data-row-select onClick={(e) => !(e.target as HTMLElement).closest('a') && navigate(to)}>
-                        <td><span className="strong">{dateShort(a.date)}</span><span className="sub">{a.start} h</span></td>
+                        <td><span className="strong">{dateShort(a.date)}</span><span className="sub">{t12(a.start)}</span></td>
                         <td>
                           <Link className="strong" to={to}>{person(a.person).name}</Link>
                           <span className="sub">{p ? p.name + ' · ' + p.zone.replace('Residencial ', '').replace(' Residencial', '') : 'Propiedad eliminada'}</span>
@@ -82,11 +83,11 @@ export function Summary() {
             {drafts.length || pending.length ? (
               <ul className="attention">
                 {drafts.map((p) => (
-                  <li key={p.id}><Icon id="file-edit" /><div><strong>{p.name} está en borrador</strong><p>{p.photos.length ? 'Revisa la información antes de publicar.' : 'Completa las fotografías antes de publicar.'}</p></div>
+                  <li key={p.id}><Icon id="file-edit" /><div><strong>{p.name} está disponible pero sin publicar</strong><p>{p.photos.length ? 'Revisa la información antes de publicar.' : 'Completa las fotografías antes de publicar.'}</p></div>
                     <Link className="link" to={`/propiedades/${p.id}/editar`}>Completar <Icon id="arrow" className="icon--sm" /></Link></li>
                 ))}
                 {pending.map((a) => (
-                  <li key={a.id}><Icon id="cal-clock" /><div><strong>Una visita pendiente de confirmación</strong><p>{person(a.person).name} · {dateShort(a.date)}, {a.start} h</p></div>
+                  <li key={a.id}><Icon id="cal-clock" /><div><strong>Una visita pendiente de confirmación</strong><p>{person(a.person).name} · {dateShort(a.date)}, {t12(a.start)}</p></div>
                     <Link className="link" to={'/citas?cita=' + a.id}>Revisar <Icon id="arrow" className="icon--sm" /></Link></li>
                 ))}
               </ul>

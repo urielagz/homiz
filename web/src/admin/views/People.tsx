@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { apiActive, ZApi } from '../api';
+import { apiActive, load, request, ZApi } from '../api';
+import { can } from '../auth';
+import { suggestHouse, TenantForm } from './Appointments';
+import { openRental } from './Rentals';
+import { useApiData } from './Payments';
 import { useOverlay } from '../components/Overlay';
-import { Badge, brokerOptions, Crumbs, err, FieldError, FollowBadge, Icon, Metric, Options, PageHead, Pager, Tabs, useErrors, useUrlParams } from '../components/ui';
-import { broker, D as Data, dateShort, downloadCSV, log, norm, plural, prop, rerender, upcoming, useStore, viewState, Z, type Person } from '../store';
+import { ApptBadge, Badge, brokerOptions, Crumbs, err, FieldError, FollowBadge, Icon, Metric, Options, PageHead, Pager, Tabs, useErrors, useUrlParams } from '../components/ui';
+import { broker, D as Data, dateShort, downloadCSV, log, money, norm, plural, prop, rerender, upcoming, useStore, viewState, Z, type Person, t12 } from '../store';
 
 const typeLabel = (p: Person) => (p.type === 'cliente' ? 'Cliente' : p.label || 'Inquilino');
 const nextFor = (p: Person) => upcoming((a) => a.person === p.id)[0];
@@ -63,8 +67,9 @@ function PersonForm({ person, close }: { person: Person | null; close: () => voi
           {input('pf-name', 'Nombre completo *', { required: true, defaultValue: p.name, autoComplete: 'off' }, true)}
           {input('pf-email', 'Correo electrónico *', { type: 'email', required: true, defaultValue: p.email })}
           {input('pf-phone', 'Teléfono *', { type: 'tel', required: true, defaultValue: p.phone, placeholder: '998 000 0000' })}
-          {select('pf-type', 'Tipo *', <Options list={[['cliente', 'Cliente'], ['inquilino', 'Inquilino o inquilina']]} />, { required: true, defaultValue: p.type })}
-          {select('pf-follow', 'Seguimiento *', <Options list={Object.keys(Z.FOLLOW)} />, { required: true, defaultValue: p.follow })}
+          {/* Inquilino solo con contrato: se hace con «Rentarle esta casa» (genera pagarés y pausa la casa) */}
+          {select('pf-type', 'Tipo *', <Options list={[['cliente', 'Cliente'], ['inquilino', p.type === 'inquilino' ? 'Inquilino o inquilina' : 'Inquilino (con «Rentarle esta casa»)', p.type !== 'inquilino']]} />, { required: true, defaultValue: p.type })}
+          {select('pf-follow', 'Seguimiento *', <Options list={Object.keys(Z.FOLLOW).map((f): [string, string, boolean] => [f, f, f === 'Contrato vigente' && p.follow !== f])} />, { required: true, defaultValue: p.follow })}
           {select('pf-prop', 'Propiedad de interés *', <Options list={D.properties.map((x): [string, string] => [x.id, x.name + ' · ' + x.id])} placeholder="Elige una casa" />, {
             required: true, defaultValue: p.property,
             // La casa elegida trae a su broker
@@ -125,11 +130,11 @@ export function People() {
       item: (
         <div className="dialog__item">
           <span className="avatar" aria-hidden="true">{p.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</span>
-          <div><strong>{p.name}</strong><span>{typeLabel(p)} · {pr ? pr.name : 'Sin propiedad'}</span><span>{p.email}</span></div>
+          <div><strong>{p.name}</strong><span>{p.code ? p.code + ' · ' : ''}{typeLabel(p)} ·{pr ? pr.name : 'Sin propiedad'}</span><span>{p.email}</span></div>
         </div>
       ),
       callout: linked.length ? (
-        <div className="callout"><strong>Tiene {linked.length === 1 ? 'una visita próxima' : linked.length + ' visitas próximas'}</strong>{prop(linked[0].property)?.name ?? ''} · {dateShort(linked[0].date)}, {linked[0].start} h. Se {plural(linked.length, 'cancelará', 'cancelarán')} y {plural(linked.length, 'quedará', 'quedarán')} en el historial.</div>
+        <div className="callout"><strong>Tiene {linked.length === 1 ? 'una visita próxima' : linked.length + ' visitas próximas'}</strong>{prop(linked[0].property)?.name ?? ''} · {dateShort(linked[0].date)}, {t12(linked[0].start)}. Se {plural(linked.length, 'cancelará', 'cancelarán')} y {plural(linked.length, 'quedará', 'quedarán')} en el historial.</div>
       ) : null,
       check: linked.length ? 'Entiendo que se eliminará el expediente y se cancelarán sus visitas.' : null,
       cancel: 'Conservar expediente', confirm: 'Sí, eliminar',
@@ -187,7 +192,7 @@ export function People() {
               const view = () => { S.selected = p.id; focusDetail.current = true; rerender(); };
               return (
                 <tr key={p.id} className={p.id === S.selected ? 'is-selected' : ''}>
-                  <td><button className="link strong" type="button" style={{ color: 'var(--marino)' }} onClick={view}>{p.name}</button><span className="sub">{p.email} · {p.phone}</span></td>
+                  <td><button className="link strong" type="button" style={{ color: 'var(--marino)' }} onClick={view}>{p.name}</button><span className="sub">{p.code ? p.code + ' · ' : ''}{p.email} · {p.phone}</span></td>
                   <td><Badge label={typeLabel(p)} tone={p.type === 'cliente' ? 'info' : 'ok'} /></td>
                   <td>{ppr ? <Link to={'/propiedades/' + ppr.id}>{ppr.name}</Link> : <span className="muted">Propiedad eliminada</span>}</td>
                   <td>{broker(p.broker).name}</td>
@@ -221,9 +226,18 @@ export function People() {
                   </div>
                 </div>
                 <div>
-                  {a ? (
+                  {sel.type === 'cliente' && can('contracts.manage') && apiActive() && (
+                    // Cliente que ya decidió: un clic para hacerlo inquilino (casa elegida si la que tiene asignada está en renta)
+                    <button className="btn btn--sm" type="button" style={{ marginBottom: '1rem' }} onClick={() => openRental(open, (m) => toast(m), { person: sel.id })}>
+                      <Icon id="user-key" />Rentar casa{suggestHouse(sel.id) ? ` · ${prop(suggestHouse(sel.id)!.id)!.name}` : ''}
+                    </button>
+                  )}
+                  {sel.type === 'inquilino' ? (
+                    // Inquilino: lo que importa es su casa (expediente, pagos y pagarés, reportes); otra visita es opcional
+                    <TenantLinks p={sel} />
+                  ) : a ? (
                     <>
-                      <p className="strong" style={{ fontWeight: 600, color: 'var(--marino)' }}>{pr ? pr.name : ''} · {dateShort(a.date)}, {a.start} h</p>
+                      <p className="strong" style={{ fontWeight: 600, color: 'var(--marino)' }}>{pr ? pr.name : ''} · {dateShort(a.date)}, {t12(a.start)}</p>
                       <p className="small muted" style={{ marginTop: '.375rem' }}>{broker(a.broker).name} · Visita {a.kind.toLowerCase()} {Z.APPT_STATUS[a.status].label.toLowerCase()}</p>
                       {a.note && <p className="quote">“{a.note}”</p>}
                       <Link className="btn btn--secondary" to={'/citas?cita=' + a.id}>Ver cita</Link>
@@ -247,7 +261,100 @@ export function People() {
             </section>
           </div>
         )}
+        {sel && apiActive() && <PersonOverview id={sel.id} />}
       </div>
     </>
+  );
+}
+
+/**
+ * Inquilino: su casa con accesos directos al expediente (documentos, mantenimiento, agua y luz), a los pagos y pagarés.
+ * Si quedó como inquilino sin contrato (la casa no está rentada), avisa y ofrece «Rentarle esta casa».
+ */
+function TenantLinks({ p }: { p: Person }) {
+  const { open, toast } = useOverlay();
+  const house = prop(p.property);
+  if (!house) return <p className="muted">Sin casa asignada.</p>;
+  const rented = house.status === 'rentada';
+  const rent = () => open((close) => <TenantForm a={{ property: house.id, person: p.id }} close={close} onDone={(m) => { toast(m); load().then(rerender, () => {}); }} />, { wide: true });
+  return (
+    <>
+      <p className="strong" style={{ fontWeight: 600, color: 'var(--marino)' }}><Link to={'/propiedades/' + house.id} style={{ color: 'inherit' }}>{house.name} · {house.id}</Link></p>
+      {rented ? (
+        <>
+          <p className="small muted" style={{ marginBlock: '.375rem 1rem' }}>Inquilino con contrato vigente.</p>
+          <div className="choice-row">
+            <Link className="btn btn--sm" to={`/propiedades/${house.id}?seccion=expediente`}><Icon id="folder" />Expediente y reportes</Link>
+            <Link className="btn btn--sm btn--secondary" to={`/propiedades/${house.id}?seccion=pagos`}><Icon id="cash" />Pagos y pagarés</Link>
+          </div>
+        </>
+      ) : (
+        <div className="callout" style={{ marginTop: '.5rem' }}>
+          <strong>Falta registrar su contrato</strong>
+          Sin contrato no hay pagarés y {house.name} sigue publicada en el sitio. Regístralo y la casa se pausa sola.
+          {can('contracts.manage') && house.op === 'renta' && apiActive() && (
+            <button className="btn btn--sm" type="button" style={{ marginTop: '.75rem' }} onClick={rent}><Icon id="user-key" />Rentarle {house.name}</button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ---------- Todo de la persona (solicitudes, citas, contrato y pagarés, bitácora) ---------- */
+interface Overview {
+  leads: { id: string; folio: string; reason: string; status: string; createdAt: string; propertyName: string | null; proposals: number }[];
+  appointments: { id: string; code: string; status: string; scheduledAt: string; propertyCode: string; propertyName: string; broker: string | null }[];
+  contracts: { id: string; status: string; startDate: string; endDate: string; monthlyRent: number; paymentDay: number; propertyCode: string; propertyName: string;
+    notesTotal: number; notesPaid: number; notesOverdue: number; nextDue: string | null; stamps: number }[];
+  activity: { action: string; description: string; createdAt: string; user: string | null; byClient: boolean }[];
+}
+const REASON: Record<string, string> = { visita: 'Visita', rentar: 'Rentar', comprar: 'Comprar', publicar: 'Publicar', otro: 'Otro' };
+const LEAD_STATUS: Record<string, string> = { nuevo: 'Nueva', en_seguimiento: 'En seguimiento', cerrado: 'Cerrada' };
+const when = (iso: string) => new Date(iso).toLocaleString('es-MX', { timeZone: 'America/Cancun', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h12' });
+
+function PersonOverview({ id }: { id: string }) {
+  const data = useApiData(() => request<Overview>('GET', `/clients/${id}/overview`), [id]);
+  if (data.error) return <div className="notice notice--error" role="alert" style={{ marginTop: '1rem' }}><Icon id="alert" /><span>{data.error}</span></div>;
+  if (!data.data) return <p className="muted" role="status" style={{ marginTop: '1rem' }}>Cargando su historial…</p>;
+  const o = data.data;
+  return (
+    <div className="stack" style={{ marginTop: '1.5rem' }}>
+      {o.contracts.map((c) => (
+        <section key={c.id} className="card card--pad" aria-label={'Contrato de ' + c.propertyName}>
+          <div className="card__head"><h3 className="card__title card__title--sm">Contrato · {c.propertyName}</h3><Badge label={c.status === 'active' ? 'Vigente' : 'Finalizado'} tone={c.status === 'active' ? 'ok' : 'gris'} /></div>
+          <div className="metrics" style={{ marginBottom: '1rem' }}>
+            <dl className="card metric"><dt>Pagarés pagados</dt><dd>{c.notesPaid} de {c.notesTotal}</dd><p>{c.notesOverdue ? `${c.notesOverdue} vencido${c.notesOverdue === 1 ? '' : 's'}` : 'Sin vencidos'}</p></dl>
+            <dl className="card metric"><dt>Renta</dt><dd>{money(Number(c.monthlyRent))}</dd><p>Día {c.paymentDay} de cada mes</p></dl>
+            <dl className="card metric"><dt>Próximo pago</dt><dd>{c.nextDue ? dateShort(c.nextDue) : '—'}</dd><p>{c.stamps} {c.stamps === 1 ? 'foto de sello' : 'fotos de sellos'}</p></dl>
+          </div>
+          <p className="small muted">Del {dateShort(c.startDate)} {c.startDate.slice(0, 4)} al {dateShort(c.endDate)} {c.endDate.slice(0, 4)} · <Link to={`/propiedades/${c.propertyCode}?seccion=expediente`}>Ver expediente y estado de la propiedad</Link> · <Link to={`/propiedades/${c.propertyCode}?seccion=pagos`}>Ver pagarés</Link></p>
+        </section>
+      ))}
+      <div className="grid-2">
+        <section className="card card--pad" aria-labelledby="ov-ap">
+          <h3 className="card__title card__title--sm" id="ov-ap" style={{ marginBottom: '.75rem' }}>Citas · {o.appointments.length}</h3>
+          {o.appointments.length ? (
+            <ul className="ov-list">{o.appointments.map((a) => (
+              <li key={a.id}><Link className="strong" to={'/citas?cita=' + a.code}>{a.code}</Link><span>{a.propertyName} · {when(a.scheduledAt)}{a.broker ? ' · ' + a.broker : ''}</span><ApptBadge s={a.status} /></li>
+            ))}</ul>
+          ) : <p className="muted">Sin citas.</p>}
+          <h3 className="card__title card__title--sm" style={{ margin: '1.25rem 0 .75rem' }}>Solicitudes · {o.leads.length}</h3>
+          {o.leads.length ? (
+            <ul className="ov-list">{o.leads.map((l) => (
+              <li key={l.id}><Link className="strong" to={'/solicitudes?id=' + l.id}>{l.folio}</Link><span>{REASON[l.reason] ?? l.reason}{l.propertyName ? ' · ' + l.propertyName : ''} · {when(l.createdAt)}{l.proposals ? ` · ${l.proposals} propuesta${l.proposals === 1 ? '' : 's'}` : ''}</span><Badge label={LEAD_STATUS[l.status] ?? l.status} tone={l.status === 'nuevo' ? 'info' : l.status === 'cerrado' ? 'gris' : 'warn'} /></li>
+            ))}</ul>
+          ) : <p className="muted">Sin solicitudes.</p>}
+        </section>
+        <section className="card card--pad" aria-labelledby="ov-act">
+          <h3 className="card__title card__title--sm" id="ov-act" style={{ marginBottom: '.75rem' }}>Movimientos</h3>
+          {o.activity.length ? (
+            <ul className="activity">{o.activity.map((a, i) => (
+              <li key={i}><strong>{a.byClient ? 'En la app' : a.user ?? 'Sistema'}</strong> {a.description}<br /><span className="small muted">{when(a.createdAt)}</span></li>
+            ))}</ul>
+          ) : <p className="muted">Sin movimientos.</p>}
+        </section>
+      </div>
+    </div>
   );
 }

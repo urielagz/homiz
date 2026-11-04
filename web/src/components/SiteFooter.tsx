@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { appLink } from '../lib/appLink';
 import { Icon } from './Icon';
+import { PrivacyLink } from './PrivacyNotice';
 
 export function SiteFooter() {
   return (
@@ -8,7 +9,7 @@ export function SiteFooter() {
       <div className="wrap">
         <div className="site-footer__brand">
           <p className="footer-logo">
-            Zugar<span>.</span>
+            <img src="/assets/img/logo-zugar-blanco-1200.png" alt="Inmobiliaria Zugar" width="1200" height="492" loading="lazy" />
           </p>
           <p className="site-footer__claim">Casas para vivir Cancún.</p>
         </div>
@@ -56,8 +57,8 @@ export function SiteFooter() {
         <div className="site-footer__bottom">
           <p>© 2026 Zugar Inmobiliaria. Todos los derechos reservados.</p>
           <ul>
-            <li><Link to="/contacto#aviso-privacidad">Aviso de privacidad</Link></li>
-            <li><Link to="/contacto#aviso-privacidad">Términos de uso</Link></li>
+            <li><PrivacyLink /></li>
+            <li><Link to="/eliminar-cuenta">Eliminar mi cuenta</Link></li>
           </ul>
         </div>
       </div>

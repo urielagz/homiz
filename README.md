@@ -25,6 +25,9 @@ src/
 - **Contacto:** reemplaza el teléfono `+52 998 555 0142`, el correo `hola@zugar.mx` y las redes sociales.
 - **Versión final:** `cd web && npm run build` genera `web/dist/` (sitio en `/` y panel en `/admin/`). El servidor que
   la publique debe responder `index.html` para las rutas del sitio (`/propiedades`, `/propiedad/…`).
+- **Token de R2:** el token actual (Access Key ID `d3a58e0b…`, «All R2 buckets») quedó expuesto en un chat. Crea uno
+  nuevo «Object Read & Write» solo para `homiz-archivos`, ponlo en `backend/.env`, reinicia el backend y borra el viejo.
+- **CORS de R2:** agrega el dominio final (y quita las IP locales) en `CORS_ORIGINS` y en R2 → bucket → *CORS Policy*.
 
 ---
 
@@ -121,11 +124,27 @@ El sitio, el panel y la app web buscan la API en el **puerto 3000 del mismo serv
 
 | Perfil | Correo |
 |---|---|
-| Administradora | `lucia@zugar.example` |
+| Propietaria y administradora | `lucia@zugar.example` |
 | Broker | `mariana@zugar.example`, `diego@zugar.example`, `valeria@zugar.example` |
 | Cliente (inquilina de Casa Las Palmas) | `lau.mendez@correo.com` |
 
 Las diferencias entre el prompt del monorepo y el sitio existente están en `docs/decisiones.md`.
+
+### Roles: qué puede hacer cada quien
+
+El **propietario** decide si cada persona del personal es *solo broker*, *solo administración* o *ambos*
+(panel → Brokers → «Equipo y roles»). Con una base existente, aplica antes las migraciones nuevas:
+`npx tsx src/config/run-sql.ts db/005_propietario.sql db/006_pagare_pdf.sql`.
+
+| Acción (panel y app) | Broker (sus casas) | Administración | Propietario | Cliente |
+|---|:-:|:-:|:-:|:-:|
+| Ver pagos y expediente | ✓ | ✓ | ✓ | solo lo suyo |
+| Registrar pago en efectivo (folio automático `REC-ZUG-012-05`) · editar pagaré pendiente | ✓ | ✓ | ✓ | |
+| Subir el PDF del pagaré firmado | ✓ | ✓ | ✓ | lo ve y lo abre |
+| Corregir o anular un pago | | ✓ | ✓ | |
+| Subir, renombrar y mostrar/ocultar documentos | ✓ | ✓ | ✓ | |
+| Eliminar documentos | | ✓ | ✓ | |
+| Dar de alta personal y asignar roles | | | ✓ | |
 ### Mapas (Leaflet + enlace de Google Maps)
 
 - **Sitio:** el listado y la ficha muestran un mapa de Leaflet con OpenStreetMap cuando la casa tiene coordenadas
@@ -162,3 +181,20 @@ Proyecto de Firebase: **homiz-413ff**. Un solo sistema para la app (Android, iOS
    clave APNs (`.p8`, cuenta de Apple Developer) en Firebase → *Cloud Messaging*. Se compila en una Mac.
 
 Sin Firebase configurado (`PUSH_DRIVER=mock`) todo funciona igual: los avisos quedan en la bandeja de la app.
+
+### Documentos y fotos en Cloudflare R2
+
+1. Cloudflare → **R2** → *Create bucket* (privado, sin acceso público), p. ej. `homiz-archivos`.
+2. R2 → *Manage R2 API Tokens* → *Create API token* con permiso **Object Read & Write** solo para ese bucket.
+3. En `backend/.env` (nunca en el repositorio ni en el chat):
+   ```
+   STORAGE_DRIVER=r2
+   R2_ACCOUNT_ID=<Account ID de Cloudflare>
+   R2_ACCESS_KEY_ID=<Access Key ID del token>
+   R2_SECRET_ACCESS_KEY=<Secret Access Key del token>
+   R2_BUCKET=homiz-archivos
+   ```
+4. `cd backend` → `npm run r2:setup -- --migrar`: prueba la conexión, configura CORS del bucket con `CORS_ORIGINS`
+   y copia lo que había en `uploads/`. Un token «Object Read & Write» no puede cambiar el CORS: el comando imprime
+   la regla para pegarla en R2 → bucket → *Settings* → *CORS Policy*. Si cambias `CORS_ORIGINS`, actualízala.
+5. Reinicia el backend. Para volver a la carpeta local: `STORAGE_DRIVER=local`.

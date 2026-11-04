@@ -7,6 +7,8 @@ import { toPublicUser } from '../services/auth.service.js';
 import { currentUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { nameField, phoneField } from '../middlewares/validate.js';
+import { deleteClientAccount } from '../services/account-deletion.service.js';
+import { verifyPassword } from '../services/password.service.js';
 
 export const updateMeDto = z
   .object({
@@ -74,4 +76,15 @@ export const updateMe: RequestHandler = async (_req, res) => {
     newValues: data,
   });
   res.json(await profile(user.id));
+};
+
+/** DELETE /users/me — «Eliminar mi cuenta» desde la app. Pide la contraseña para confirmar. */
+export const deleteMeDto = z.object({ password: z.string().min(1, 'Escribe tu contraseña para confirmar.').max(128) });
+export const deleteMe: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  const row = await Users.findById(user.id);
+  const { password } = res.locals.body as z.infer<typeof deleteMeDto>;
+  if (!row || !(await verifyPassword(row.password_hash, password))) throw new AppError(401, 'INVALID_CREDENTIALS', 'La contraseña no es correcta.');
+  await deleteClientAccount(user.id);
+  res.status(204).end();
 };

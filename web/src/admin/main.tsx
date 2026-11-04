@@ -7,9 +7,12 @@ import { Sprite } from './components/Sprite';
 import { Appointments } from './views/Appointments';
 import { Brokers } from './views/Brokers';
 import { Login } from './views/Login';
+import { PaymentsPage } from './views/Payments';
+import { RentalsPage } from './views/Rentals';
 import { People } from './views/People';
 import { PropertiesList, PropertyDetail } from './views/Properties';
 import { PropertyForm } from './views/PropertyForm';
+import { RequestsPage } from './views/Requests';
 import { Summary } from './views/Summary';
 import './styles.css';
 
@@ -31,6 +34,9 @@ createRoot(document.getElementById('root')!).render(
             <Route path="personas" element={<People />} />
             <Route path="brokers" element={<Brokers />} />
             <Route path="citas" element={<Appointments />} />
+            <Route path="rentas" element={<RentalsPage />} />
+            <Route path="pagos" element={<PaymentsPage />} />
+            <Route path="solicitudes" element={<RequestsPage />} />
             <Route path="*" element={<Navigate to="/resumen" replace />} />
           </Route>
         </Routes>

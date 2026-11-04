@@ -59,10 +59,11 @@ documentsRouter.get('/', validate({ query: Documents.listQueryDto }), Documents.
 documentsRouter.post('/', requirePermission('documents.manage'), validate({ body: Documents.confirmDto }), Documents.confirm);
 documentsRouter.get('/:id/download-url', validate({ params: idParam }), Documents.downloadUrl);
 documentsRouter.patch('/:id', requirePermission('documents.manage'), validate({ params: idParam, body: Documents.updateDto }), Documents.update);
+documentsRouter.delete('/:id', requirePermission('documents.delete'), validate({ params: idParam }), Documents.remove);
 
 /* Archivos del almacenamiento local (destino de las URL firmadas; la firma es la autorización) */
 export const filesRouter = Router();
-filesRouter.put('/:token', express.raw({ type: () => true, limit: '16mb' }), Documents.putFile);
+filesRouter.put('/:token', express.raw({ type: () => true, limit: '51mb' }), Documents.putFile);
 filesRouter.get('/:token', Documents.getFile);
 
 /* Notificaciones y dispositivos */

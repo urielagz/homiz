@@ -4,7 +4,10 @@ import * as Leads from '../models/lead.model.js';
 import * as Properties from '../models/property.model.js';
 import { insertActivity } from '../models/activity.model.js';
 import { AppError } from '../middlewares/error-handler.js';
-import { nextCode, nextFolio } from './codes.service.js';
+import { ensureClientAccount } from './auth.service.js';
+import { nextFolio } from './codes.service.js';
+import { placeVisit } from './appointment.service.js';
+import { correctionToken } from './lead-correction.service.js';
 import { notify, staffWithPermission } from './notification.service.js';
 
 export interface LeadInput {
@@ -18,6 +21,10 @@ export interface LeadInput {
   preferredDate?: string;
   preferredTime?: string;
   payload?: Record<string, unknown>;
+  /** Solicitud hecha desde la app: queda ligada al expediente del cliente con sesión. */
+  clientId?: string | null;
+  /** La registró un broker en el panel: queda con él (si no, administración la asigna). */
+  brokerId?: string | null;
 }
 
 const REASON_TEXT: Record<Leads.LeadRow['reason'], string> = {
@@ -46,35 +53,56 @@ async function findOrCreateClient(db: Db, l: LeadInput, propertyId: string | nul
   return rows[0].id;
 }
 
+/** Expediente de la persona de la solicitud (para agendarle cita): el ligado, uno con su correo o uno nuevo. */
+export async function clientForLead(lead: Leads.LeadRow): Promise<string> {
+  if (lead.client_id) return lead.client_id;
+  return withTransaction(async (db) => {
+    const clientId = await findOrCreateClient(
+      db,
+      { reason: lead.reason, name: lead.name, email: lead.email, phone: lead.phone, payload: lead.payload },
+      lead.property_id,
+      null,
+    );
+    await db.query('UPDATE leads SET client_id = $2 WHERE id = $1', [lead.id, clientId]);
+    return clientId;
+  });
+}
+
 /**
  * Registra una solicitud del sitio (Contáctanos, «¿Te imaginas viviendo aquí?», bloque de contacto del inicio).
- * Una solicitud de visita con fecha y hora crea además la cita «por confirmar» para el broker de la casa.
+ * Una solicitud de visita con fecha y hora crea además la cita «por confirmar», sin broker hasta que administración lo asigne.
  */
-export async function createLead(l: LeadInput): Promise<{ folio: string; appointmentCode: string | null }> {
+export async function createLead(l: LeadInput): Promise<{ folio: string; appointmentCode: string | null; account: 'created' | 'existing' | null; editToken: string | null }> {
   const property = l.propertySlug ? await Properties.findBySlug(l.propertySlug) : l.propertyCode ? await Properties.findByCode(l.propertyCode) : null;
   if ((l.propertySlug || l.propertyCode) && !property) throw new AppError(404, 'NOT_FOUND', 'La casa indicada no existe.');
   if (l.reason === 'visita' && !property) throw new AppError(400, 'VALIDATION_ERROR', 'Indica la casa que quieres visitar.', { propertySlug: ['Indica la casa que quieres visitar.'] });
 
   return withTransaction(async (db) => {
     const folio = await nextFolio(db);
-    const clientId = l.reason === 'publicar' || l.reason === 'otro' ? null : await findOrCreateClient(db, l, property?.id ?? null, property?.broker_id ?? null);
+    let clientId = l.clientId ?? (l.reason === 'publicar' || l.reason === 'otro' ? null : await findOrCreateClient(db, l, property?.id ?? null, l.brokerId ?? null));
+    // Formularios del sitio: se crea sola la cuenta de la app (la persona solo crea su contraseña con el correo).
+    let account: 'created' | 'existing' | null = null;
+    let accountUser: string | null = null;
+    if (!l.clientId) {
+      const acc = await ensureClientAccount({ name: l.name, email: l.email, phone: l.phone ?? null }, db);
+      account = acc.created ? 'created' : 'existing';
+      accountUser = acc.userId;
+      clientId ??= acc.clientId || null;
+    }
     const leadId = await Leads.insert(db, {
       folio, reason: l.reason, name: l.name, email: l.email, phone: l.phone ?? null, message: l.message ?? null,
       propertyId: property?.id ?? null, preferredDate: l.preferredDate ?? null, preferredTime: l.preferredTime ?? null,
-      payload: l.payload ?? {}, clientId,
+      payload: l.payload ?? {}, clientId, brokerId: l.brokerId ?? null,
     });
 
     let appointmentCode: string | null = null;
     if (l.reason === 'visita' && property && clientId && l.preferredDate && l.preferredTime) {
-      const code = await nextCode(db, 'appointments', 'CIT');
       await db.query('SAVEPOINT cita');
       try {
-        await db.query(
-          `INSERT INTO appointments (code, property_id, client_id, broker_id, scheduled_at, status, note, lead_id)
-           VALUES ($1, $2, $3, $4, ($5::date + $6::time) AT TIME ZONE $7, 'por-confirmar', $8, $9)`,
-          [code, property.id, clientId, property.broker_id, l.preferredDate, l.preferredTime, env.TZ_APP, l.message ?? null, leadId],
-        );
-        appointmentCode = code;
+        const { rows: [t] } = await db.query<{ at: Date }>(`SELECT ($1::date + $2::time) AT TIME ZONE $3 AS at`, [l.preferredDate, l.preferredTime, env.TZ_APP]);
+        // Una cita vigente por persona: si ya tenía una, se cambia a esta casa, fecha y hora
+        const placed = await placeVisit(db, { clientId, propertyId: property.id, brokerId: l.brokerId ?? null, scheduledAt: t.at, note: l.message ?? null, leadId });
+        appointmentCode = placed.code;
       } catch (err) {
         // Si el broker ya tiene una cita a esa hora, la solicitud se guarda igual y él propondrá otro horario.
         if ((err as { code?: string }).code !== '23505') throw err;
@@ -87,7 +115,8 @@ export async function createLead(l: LeadInput): Promise<{ folio: string; appoint
       description: `${l.name} ${REASON_TEXT[l.reason]}${property ? ` ${property.name}` : ''} (folio ${folio}).`,
     }, db);
 
-    const recipients = property?.broker_id ? [property.broker_id] : await staffWithPermission('leads.manage', db);
+    // Llega sin broker: administración la asigna (y la cita se va con ese broker)
+    const recipients = l.brokerId ? [] : await staffWithPermission('properties.reassign', db);
     await notify(recipients, {
       type: l.reason === 'visita' ? 'appointment_requested' : 'lead_received',
       title: l.reason === 'visita' ? 'Nueva solicitud de visita' : 'Nueva solicitud del sitio',
@@ -95,6 +124,8 @@ export async function createLead(l: LeadInput): Promise<{ folio: string; appoint
       entity: 'lead',
       entityId: leadId,
     }, db);
-    return { folio, appointmentCode };
+    // Permiso de 2 horas para «Cambiar mis datos» desde el sitio (solo formularios del sitio)
+    const editToken = l.clientId ? null : correctionToken(leadId, account === 'created', accountUser);
+    return { folio, appointmentCode, account, editToken };
   });
 }

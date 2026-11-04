@@ -5,10 +5,11 @@ import type { Db } from '../config/database.js';
  * Siguiente clave legible (ZUG-013, CIT-027...). Usa un candado de transacción para que dos altas
  * simultáneas no obtengan la misma clave: llamar dentro de withTransaction.
  */
-export async function nextCode(db: Db, table: 'properties' | 'appointments', prefix: string): Promise<string> {
+export async function nextCode(db: Db, table: 'properties' | 'appointments' | 'sales', prefix: string): Promise<string> {
   await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`code:${table}`]);
+  const column = table === 'sales' ? 'folio' : 'code';
   const { rows } = await db.query<{ n: number | null }>(
-    `SELECT max(substring(code FROM $1)::int) AS n FROM ${table} WHERE code ~ $2`,
+    `SELECT max(substring(${column} FROM $1)::int) AS n FROM ${table} WHERE ${column} ~ $2`,
     [`^${prefix}-(\\d+)$`, `^${prefix}-\\d+$`],
   );
   return `${prefix}-${String((rows[0].n ?? 0) + 1).padStart(3, '0')}`;

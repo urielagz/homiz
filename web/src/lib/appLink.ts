@@ -9,4 +9,11 @@ function defaultAppUrl(): string {
 
 export const APP_URL: string = (import.meta.env.VITE_APP_URL as string | undefined) || defaultAppUrl();
 
-export const appLink = (slug?: string | null) => (slug ? APP_URL + '?casa=' + encodeURIComponent(slug) : APP_URL);
+/**
+ * QR sin datos (una casa o «Cómo trabajamos»): la app pide crear cuenta o entrar y, al entrar, pregunta
+ * «¿Qué quieres hacer?» (con esa casa como de interés y la opción de agendar la cita).
+ */
+export const appLink = (slug?: string | null) => APP_URL + '?empezar=1' + (slug ? '&casa=' + encodeURIComponent(slug) : '');
+
+/** Después de enviar un formulario: la app abre el acceso con su correo ya escrito y al entrar muestra sus solicitudes. */
+export const appAccountLink = (email: string) => APP_URL + '?email=' + encodeURIComponent(email.trim().toLowerCase());

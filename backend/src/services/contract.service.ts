@@ -1,9 +1,10 @@
 import { pool, withTransaction } from '../config/database.js';
+import { env } from '../config/env.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { AuthUser } from '../middlewares/authenticate.js';
 import { insertActivity } from '../models/activity.model.js';
 import { assertPropertyAccess } from './access.service.js';
-import { notify, userOfClient } from './notification.service.js';
+import { notify, staffWithPermission, userOfClient } from './notification.service.js';
 
 export interface ContractInput {
   propertyId: string;
@@ -22,7 +23,7 @@ export interface ContractInput {
  */
 export async function createContract(user: AuthUser, c: ContractInput): Promise<string> {
   await assertPropertyAccess(user, c.propertyId);
-  const prop = await pool.query<{ name: string; operation: string }>('SELECT name, operation FROM properties WHERE id = $1', [c.propertyId]);
+  const prop = await pool.query<{ name: string; operation: string; broker_id: string | null }>('SELECT name, operation, broker_id FROM properties WHERE id = $1', [c.propertyId]);
   if (prop.rows[0].operation !== 'renta') throw new AppError(409, 'NOT_FOR_RENT', 'Solo se registran contratos de renta en casas en renta.');
   const client = await pool.query<{ name: string }>('SELECT name FROM clients WHERE id = $1 AND active', [c.clientId]);
   if (!client.rows[0]) throw new AppError(404, 'NOT_FOUND', 'El cliente no existe.');
@@ -63,6 +64,13 @@ export async function createContract(user: AuthUser, c: ContractInput): Promise<
         type: 'contract_created', title: 'Tu contrato está listo', message: `Ya puedes consultar tu contrato y tus ${notes.rowCount} pagarés de ${prop.rows[0].name} en la app.`,
         entity: 'contract', entityId: id,
       }, db);
+      // Nuevo inquilino: administración y el broker de la casa se enteran (la casa ya quedó rentada y pausada)
+      const staff = [...(await staffWithPermission('properties.reassign', db)), prop.rows[0].broker_id].filter((u) => u && u !== user.id);
+      await notify(staff, {
+        type: 'tenant_created', title: 'Nuevo inquilino',
+        message: `${client.rows[0].name} es inquilino de ${prop.rows[0].name}. La casa quedó rentada y se quitó del sitio (pausada).`,
+        entity: 'contract', entityId: id,
+      }, db);
       return id;
     });
   } catch (err) {
@@ -73,8 +81,8 @@ export async function createContract(user: AuthUser, c: ContractInput): Promise<
 
 /** Finaliza el contrato. Los pagarés sin pagar posteriores a la fecha de término quedan cancelados (no se borran). */
 export async function finishContract(user: AuthUser, id: string, data: { endDate?: string; reason?: string }): Promise<void> {
-  const { rows } = await pool.query<{ property_id: string; client_id: string; status: string; client_name: string; property_name: string }>(
-    `SELECT ct.property_id, ct.client_id, ct.status, c.name AS client_name, p.name AS property_name
+  const { rows } = await pool.query<{ property_id: string; client_id: string; status: string; client_name: string; property_name: string; start_date: string }>(
+    `SELECT ct.property_id, ct.client_id, ct.status, c.name AS client_name, p.name AS property_name, to_char(ct.start_date, 'YYYY-MM-DD') AS start_date
        FROM contracts ct JOIN clients c ON c.id = ct.client_id JOIN properties p ON p.id = ct.property_id WHERE ct.id = $1`,
     [id],
   );
@@ -82,19 +90,24 @@ export async function finishContract(user: AuthUser, id: string, data: { endDate
   if (!ct) throw new AppError(404, 'NOT_FOUND', 'El contrato no existe.');
   await assertPropertyAccess(user, ct.property_id);
   if (ct.status !== 'active') throw new AppError(409, 'CONTRACT_NOT_ACTIVE', 'El contrato ya no está vigente.');
-  const endDate = data.endDate ?? new Date().toISOString().slice(0, 10);
+  const endDate = data.endDate ?? new Date().toLocaleDateString('en-CA', { timeZone: env.TZ_APP });
+  // Termina el mismo día que empezó (o antes): no llegó a correr, así que queda CANCELADO con todos sus pagarés
+  // (la fecha de fin debe ser posterior al inicio y no se puede «finalizar» un contrato de cero días)
+  const cancelledContract = endDate <= ct.start_date;
 
   await withTransaction(async (db) => {
-    await db.query(`UPDATE contracts SET status = 'finished', end_date = LEAST(end_date, $2::date) WHERE id = $1`, [id, endDate]);
+    if (cancelledContract) await db.query(`UPDATE contracts SET status = 'cancelled' WHERE id = $1`, [id]);
+    else await db.query(`UPDATE contracts SET status = 'finished', end_date = LEAST(end_date, $2::date) WHERE id = $1`, [id, endDate]);
     const cancelled = await db.query(
-      `UPDATE promissory_notes SET status = 'cancelled' WHERE contract_id = $1 AND status IN ('pending', 'overdue') AND due_date > $2::date`,
-      [id, endDate],
+      `UPDATE promissory_notes SET status = 'cancelled' WHERE contract_id = $1 AND status IN ('pending', 'overdue') AND (due_date > $2::date OR $3)`,
+      [id, endDate, cancelledContract],
     );
     await db.query(`UPDATE properties SET status = 'disponible', updated_at = now() WHERE id = $1`, [ct.property_id]);
-    await db.query(`UPDATE clients SET follow_status = 'Contrato finalizado' WHERE id = $1`, [ct.client_id]);
+    // Deja de ser inquilino: ya no ve la casa ni lo del siguiente inquilino (su historial se conserva)
+    await db.query(`UPDATE clients SET kind = 'cliente', follow_status = 'Contrato finalizado' WHERE id = $1`, [ct.client_id]);
     await insertActivity({
       userId: user.id, propertyId: ct.property_id, entity: 'contract', entityId: id, action: 'finish',
-      description: `${user.name} finalizó el contrato de ${ct.client_name} en ${ct.property_name}${data.reason ? ` (${data.reason})` : ''}; ${cancelled.rowCount} pagarés quedaron cancelados.`,
+      description: `${user.name} ${cancelledContract ? 'canceló (el mismo día que empezaba)' : 'finalizó'} el contrato de ${ct.client_name} en ${ct.property_name}${data.reason ? ` (${data.reason})` : ''}; ${cancelled.rowCount} pagarés quedaron cancelados.`,
     }, db);
   });
 }

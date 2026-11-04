@@ -17,6 +17,8 @@ abstract class AppUser with _$AppUser {
     @Default(<String>[]) List<String> roles,
     @Default(<String>[]) List<String> permissions,
     ClientProfile? client,
+    /// Entró con la contraseña temporal del correo: antes de seguir crea la suya.
+    @Default(false) bool mustChangePassword,
   }) = _AppUser;
 
   const AppUser._();
@@ -25,7 +27,8 @@ abstract class AppUser with _$AppUser {
 
   bool get isClient => type == 'client';
   bool get isStaff => type == 'staff';
-  bool get isAdmin => roles.contains('admin');
+  /// Administración o propietario (el propietario decide quién es broker, administración o ambos).
+  bool get isAdmin => roles.contains('admin') || roles.contains('owner');
   bool get isBroker => roles.contains('broker');
 
   /// ¿Tiene el permiso? (las opciones del personal se ocultan si no; la API vuelve a validar).

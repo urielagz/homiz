@@ -138,4 +138,18 @@ describe('POST /properties/locate', () => {
     expect(ceiba).toHaveProperty('lat');
     expect(ceiba).toHaveProperty('lng');
   });
+
+  test('el sitio público recibe una ubicación aproximada (300 m a 1 km del punto real) y sin dirección', async () => {
+    const real = { lat: 21.0964, lng: -86.8698 }; // db/004_coordenadas.sql
+    const pub = (await api().get('/api/v1/public/properties/casa-ceiba')).body;
+    expect(pub.address).toBeUndefined();
+    expect(pub.areaMeters).toBe(1500);
+    const r = (d: number) => (d * Math.PI) / 180;
+    const h = Math.sin(r(pub.lat - real.lat) / 2) ** 2 + Math.cos(r(real.lat)) * Math.cos(r(pub.lat)) * Math.sin(r(pub.lng - real.lng) / 2) ** 2;
+    const meters = 12_742_000 * Math.asin(Math.sqrt(h));
+    expect(meters).toBeGreaterThan(200);
+    expect(meters).toBeLessThan(1100);
+    // Siempre el mismo punto (no se puede promediar pidiendo muchas veces)
+    expect((await api().get('/api/v1/public/properties/casa-ceiba')).body.lat).toBe(pub.lat);
+  });
 });

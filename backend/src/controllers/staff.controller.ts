@@ -9,10 +9,11 @@ import { AppError } from '../middlewares/error-handler.js';
 import { emailField, nameField, pagination, paged } from '../middlewares/validate.js';
 import { hashPassword, passwordSchema } from '../services/password.service.js';
 
+/* Roles que el propietario asigna: broker, administrador o ambos. El rol «owner» (propietario) no se asigna por la API. */
 const ROLE = z.enum(['broker', 'admin']);
 
 export const listQueryDto = pagination.extend({
-  role: ROLE.optional(),
+  role: z.enum(['broker', 'admin', 'owner']).optional(),
   active: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   q: z.string().trim().max(80).optional(),
 });
@@ -71,8 +72,9 @@ async function findStaff(id: string): Promise<StaffRow | null> {
   return rows[0] ?? null;
 }
 
+/** Cambia broker/administrador; el rol de propietario se conserva. */
 async function setRoles(db: Db, userId: string, roles: string[]) {
-  await db.query('DELETE FROM user_roles WHERE user_id = $1', [userId]);
+  await db.query(`DELETE FROM user_roles WHERE user_id = $1 AND role_id IN (SELECT id FROM roles WHERE code IN ('broker', 'admin'))`, [userId]);
   await db.query('INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE code = ANY($2::text[])', [userId, roles]);
 }
 
@@ -110,8 +112,8 @@ export const update: RequestHandler = async (_req, res) => {
   const d = res.locals.body as z.infer<typeof updateDto>;
   const before = await findStaff(id);
   if (!before) throw new AppError(404, 'NOT_FOUND', 'El usuario no existe o no es del personal.');
-  if (id === admin.id && (d.active === false || (d.roles && !d.roles.includes('admin')))) {
-    throw new AppError(409, 'SELF_LOCKOUT', 'No puedes quitarte el rol de administrador ni desactivar tu propia cuenta.');
+  if (d.active === false && (id === admin.id || before.roles.includes('owner'))) {
+    throw new AppError(409, 'SELF_LOCKOUT', 'No se puede desactivar la cuenta del propietario.');
   }
   if (d.roles && !d.roles.includes('broker') && before.roles.includes('broker') && before.properties > 0) {
     throw new AppError(409, 'HAS_PROPERTIES', `Tiene ${before.properties} casas asignadas. Reasígnalas antes de quitarle el rol de broker.`);
@@ -146,13 +148,13 @@ export const listRoles: RequestHandler = async (_req, res) => {
   res.json({ roles: rows, permissions: perms.rows });
 };
 
-/** Permisos configurables del rol. El rol admin siempre conserva users.manage para no quedar sin acceso. */
+/** Permisos configurables de broker y administrador. Gestionar al personal (users.manage) es solo del propietario. */
 export const setRolePermissions: RequestHandler = async (_req, res) => {
   const admin = currentUser(res);
   const { code } = res.locals.params as { code: string };
   const { permissions } = res.locals.body as z.infer<typeof rolePermissionsDto>;
   const wanted = new Set(permissions);
-  if (code === 'admin') wanted.add('users.manage');
+  wanted.delete('users.manage');
   const known = await pool.query<{ code: string }>('SELECT code FROM permissions WHERE code = ANY($1::text[])', [[...wanted]]);
   const unknown = [...wanted].filter((p) => !known.rows.some((k) => k.code === p));
   if (unknown.length) throw new AppError(400, 'VALIDATION_ERROR', 'Hay permisos que no existen.', { permissions: unknown });

@@ -18,4 +18,11 @@ export function longDate(iso: string): string {
 }
 
 /** Folio simulado cuando no hay servidor */
-export const fakeFolio = () => 'Z-' + String(Date.now()).slice(-5);
+/** «15:30» → «3:30 p.m.» (las horas se muestran de 1 a 12 con a.m./p.m.) */
+export function t12(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  if (Number.isNaN(h)) return hhmm;
+  return `${h % 12 || 12}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}`;
+}
+
+export const fakeFolio =() => 'Z-' + String(Date.now()).slice(-5);

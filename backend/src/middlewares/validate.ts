@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import { AppError } from './error-handler.js';
+import { logger } from '../config/logger.js';
 
 interface Schemas {
   body?: z.ZodType;
@@ -30,7 +31,12 @@ export function validate(schemas: Schemas): RequestHandler {
       }
     }
     if (Object.keys(details).length) {
-      throw new AppError(400, 'VALIDATION_ERROR', 'Revisa los datos enviados.', details);
+      // Quien no ve los campos marcados (una app vieja, un aviso suelto) igual sabe qué corregir: va el primer motivo
+      const first = Object.values(details)[0][0];
+      const technical = /^(Invalid|Expected|Required|Unrecognized|Too )/i.test(first);
+      // Se registra la ruta y QUÉ campos fallaron (nunca los valores, que pueden ser datos personales)
+      logger.warn({ path: req.originalUrl.split('?')[0], method: req.method, fields: Object.keys(details) }, 'Datos rechazados por validación');
+      throw new AppError(400, 'VALIDATION_ERROR', technical ? 'Revisa los datos enviados.' : `Revisa los datos: ${first}`, details);
     }
     next();
   };

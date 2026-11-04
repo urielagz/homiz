@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { apiActive, ZApi } from '../api';
+import { isAdminSession } from '../auth';
 import { useOverlay } from '../components/Overlay';
-import { ApptBadge, Avatar, Badge, brokerOptions, Cover, Crumbs, Icon, Options, PageHead, Pager, Photo, StatusBadge, Tabs } from '../components/ui';
+import { ApptBadge, Avatar, Badge, brokerOptions, Cover, Crumbs, Icon, Options, PageHead, Pager, Photo, StatusBadge, Tabs, useUrlParams } from '../components/ui';
 import {
-  broker, D as Data, dateFull, dateShort, downloadCSV, log, money, norm, opLabel, person, plural, priceLabel, prop, rerender, sortAppts, upcoming, useStore, viewState, Z, type Property,
-} from '../store';
+  broker, D as Data, dateFull, dateShort, downloadCSV, log, money, norm, opLabel, person, plural, priceLabel, prop, rerender, sortAppts, upcoming, useStore, viewState, Z, type Property, t12 } from '../store';
+import { PropertyDossier } from './Dossier';
+import { PropertyPayments } from './Payments';
 
 const S = viewState.props;
 const specsLine = (p: Property) => `${p.rec} rec. · ${p.banos} baño${p.banos == 1 ? '' : 's'} · ${p.m2} m²`;
@@ -31,7 +33,7 @@ export function useDeleteProperty() {
       callout: a ? (
         <div className="callout">
           <strong>{linked.length === 1 ? `Hay una cita ${a.status === 'confirmada' ? 'confirmada' : 'por confirmar'} vinculada` : `Hay ${linked.length} citas vinculadas`}</strong>
-          {person(a.person).name} · {dateShort(a.date)}, {a.start} h{linked.length > 1 ? ` y ${linked.length - 1} más` : ''}. {plural(linked.length, 'La cita se cancelará', 'Las citas se cancelarán')} y {plural(linked.length, 'quedará', 'quedarán')} en el historial. El cliente y {b.name} no se eliminarán.
+          {person(a.person).name} · {dateShort(a.date)}, {t12(a.start)}{linked.length > 1 ? ` y ${linked.length - 1} más` : ''}. {plural(linked.length, 'La cita se cancelará', 'Las citas se cancelarán')} y {plural(linked.length, 'quedará', 'quedarán')} en el historial. El cliente y {b.name} no se eliminarán.
         </div>
       ) : null,
       check: linked.length ? `Entiendo que se eliminará la propiedad y se cancelará${linked.length === 1 ? ' su próxima cita.' : 'n sus próximas citas.'}` : 'Entiendo que se eliminará la propiedad del inventario.',
@@ -54,6 +56,17 @@ export function PropertiesList() {
   const D = useStore();
   const { toast } = useOverlay();
   const deleteProperty = useDeleteProperty();
+  /** Pausar (quitar del sitio) o volver a publicar desde la lista, en un clic */
+  const quickVisibility = (p: Property) => {
+    const pause = p.visibility === 'publicada';
+    if (!pause && (p.status === 'rentada' || p.status === 'vendida')) return toast(`${p.name} está ${p.status}: se vuelve a publicar cuando finalices el contrato en Rentas.`);
+    p.visibility = pause ? 'pausada' : 'publicada';
+    if (!pause && !p.published) p.published = Z.TODAY;
+    if (apiActive()) ZApi.propertyVisibility(p);
+    log(`Lucía ${pause ? 'pausó' : 'reanudó'} la publicación de ${p.name}.`, p.id);
+    toast(pause ? `${p.name} ya no aparece en el sitio.` : `${p.name} vuelve a estar en el sitio.`);
+    rerender();
+  };
   const counts = (s?: string) => D.properties.filter((p) => !s || p.status === s).length;
   const q = norm(S.q);
   const list = D.properties
@@ -76,7 +89,7 @@ export function PropertiesList() {
         actions={<><button className="btn btn--secondary" type="button" onClick={exportCsv}><Icon id="download" />Exportar</button><Link className="btn" to="/propiedades/nueva"><Icon id="plus" />Nueva propiedad</Link></>} />
       <div id="prop-tabs">
         <Tabs name="prop" label="Filtrar por disponibilidad" selected={S.tab} onSelect={(v) => { S.tab = v; rerender(); }}
-          items={[['todas', 'Todas las propiedades · ' + counts()], ['disponible', 'Disponibles · ' + counts('disponible')], ['reservada', 'Reservadas · ' + counts('reservada')], ['rentada', 'Rentadas · ' + counts('rentada')], ['borrador', 'Borradores · ' + counts('borrador')]]} />
+          items={[['todas', 'Todas las propiedades · ' + counts()], ['disponible', 'Disponibles · ' + counts('disponible')], ['reservada', 'Reservadas · ' + counts('reservada')], ['rentada', 'Rentadas · ' + counts('rentada')]]} />
       </div>
       <div className="filters" role="search" aria-label="Filtrar propiedades">
         <div className="field"><label className="field__label" htmlFor="f-q">Buscar propiedad</label><input className="input input-search" id="f-q" type="search" placeholder="Nombre, clave o dirección" defaultValue={S.q} onChange={(e) => set('q', e.target.value)} /></div>
@@ -117,6 +130,11 @@ export function PropertiesList() {
                 <td><div className="actions">
                   <Link className="icon-btn" to={'/propiedades/' + p.id} aria-label={'Ver ' + p.name} title="Ver"><Icon id="eye" /></Link>
                   <Link className="icon-btn" to={`/propiedades/${p.id}/editar`} aria-label={'Editar ' + p.name} title="Editar"><Icon id="pencil" /></Link>
+                  {/* Bajarla o subirla del sitio sin entrar a la ficha */}
+                  {(
+                    <button className="icon-btn" type="button" aria-label={(p.visibility === 'publicada' ? 'Pausar ' : 'Publicar ') + p.name} title={p.visibility === 'publicada' ? 'Quitar del sitio (pausar)' : 'Volver a publicar'}
+                      onClick={() => quickVisibility(p)}><Icon id={p.visibility === 'publicada' ? 'eye-off' : 'eye'} /></button>
+                  )}
                   <button className="icon-btn icon-btn--danger" type="button" aria-label={'Eliminar ' + p.name} title="Eliminar" onClick={() => deleteProperty(p.id)}><Icon id="trash" /></button>
                 </div></td>
               </tr>
@@ -142,6 +160,8 @@ export function PropertyDetail() {
   useEffect(() => {
     if (visFocus.current) { document.querySelector<HTMLElement>(`[data-action="${visFocus.current}"]`)?.focus(); visFocus.current = null; }
   });
+  // #/propiedades/ZUG-001?seccion=pagos abre directo esa pestaña (desde la sección Pagos)
+  useUrlParams((q) => { const s = q.get('seccion'); if (s && ['expediente', 'pagos'].includes(s)) { S.detailId = id; S.detailTab = s; } });
   const p = prop(id);
   if (!p) {
     return (
@@ -155,12 +175,14 @@ export function PropertyDetail() {
   const b = broker(p.broker);
   const appts = sortAppts(D.appointments.filter((a) => a.property === p.id));
   const next = upcoming((a) => a.property === p.id)[0];
+  const tenants = D.people.filter((x) => x.type === 'inquilino' && x.property === p.id);
   const hist = D.history[p.id] || [];
   const g = p.photos;
   const visText = {
     publicada: `Visible en el catálogo público desde el ${p.published ? dateFull(p.published).replace(' de 2026', '') : 'día de hoy'}.`,
-    pausada: 'Oculta del catálogo público. Las citas y el historial se conservan.',
-    borrador: 'Aún no se publica. Completa la información y las fotografías para mostrarla en el catálogo.',
+    pausada: p.status === 'rentada' || p.status === 'vendida'
+      ? `Fuera del catálogo porque está ${p.status}. Las citas y el historial se conservan.`
+      : 'Oculta del catálogo público. Las citas y el historial se conservan.',
   }[p.visibility];
   const toggleVisibility = (pause: boolean) => {
     p.visibility = pause ? 'pausada' : 'publicada';
@@ -194,15 +216,40 @@ export function PropertyDetail() {
             <div className="card__head"><h2 className="card__title" id="am-title">Amenidades</h2><Link className="link" to={`/propiedades/${p.id}/editar?seccion=amenidades`}>Editar amenidades <Icon id="arrow" className="icon--sm" /></Link></div>
             {p.amenities.length ? <ul className="amenity-list">{p.amenities.map((a) => <li key={a}><Icon id="check" />{a}</li>)}</ul> : <p className="muted">Esta casa todavía no tiene amenidades registradas.</p>}
           </section>
-          <section className="card card--pad" aria-labelledby="nc-title">
-            <div className="card__head"><h2 className="card__title" id="nc-title">Próxima cita</h2><Link className="link" to={'/citas' + (next ? '?cita=' + next.id : '')}>Ver agenda <Icon id="arrow" className="icon--sm" /></Link></div>
-            {next ? (
-              <div className="next-appt">
-                <p className="next-appt__date">{dateShort(next.date)}<small>{next.start}–{next.end} h</small></p>
-                <div><strong className="strong" style={{ color: 'var(--marino)' }}>{person(next.person).name}</strong><p className="small muted">Visita {next.kind.toLowerCase()} · {broker(next.broker).name}</p><div style={{ marginTop: '.5rem' }}><ApptBadge s={next.status} /></div></div>
+          {p.status === 'rentada' ? (
+            // Rentada: ya no hay visitas; lo que sigue es su expediente (documentos, reportes, agua y luz) y sus pagos
+            <section className="card card--pad" aria-labelledby="tn-title">
+              <h2 className="card__title" id="tn-title" style={{ marginBottom: '.75rem' }}>Inquilino y expediente</h2>
+              {tenants.length ? tenants.map((t) => (
+                <p key={t.id} className="strong" style={{ color: 'var(--marino)' }}><Link to={'/personas?persona=' + t.id} style={{ color: 'inherit' }}>{t.code ? t.code + ' · ' : ''}{t.name}</Link></p>
+              )) : <p className="muted">Sin inquilino registrado.</p>}
+              <div className="choice-row" style={{ marginTop: '.75rem' }}>
+                <button className="btn btn--sm" type="button" onClick={() => { S.detailTab = 'expediente'; rerender(); }}><Icon id="folder" />Ver expediente</button>
+                <button className="btn btn--sm btn--secondary" type="button" onClick={() => { S.detailTab = 'pagos'; rerender(); }}><Icon id="cash" />Pagos y pagarés</button>
               </div>
-            ) : <p className="muted">No hay visitas programadas para esta casa.</p>}
-          </section>
+            </section>
+          ) : (
+            <section className="card card--pad" aria-labelledby="nc-title">
+              <div className="card__head"><h2 className="card__title" id="nc-title">Próxima cita</h2><Link className="link" to={'/citas' + (next ? '?cita=' + next.id : '')}>Ver agenda <Icon id="arrow" className="icon--sm" /></Link></div>
+              {next ? (
+                <div className="next-appt">
+                  <p className="next-appt__date">{dateShort(next.date)}<small>{t12(next.start)}–{t12(next.end)}</small></p>
+                  <div><strong className="strong" style={{ color: 'var(--marino)' }}>{person(next.person).name}</strong><p className="small muted">Visita {next.kind.toLowerCase()} · {broker(next.broker).name}</p><div style={{ marginTop: '.5rem' }}><ApptBadge s={next.status} /></div></div>
+                </div>
+              ) : <p className="muted">No hay visitas programadas para esta casa.</p>}
+            </section>
+          )}
+          {isAdminSession() && p.op === 'renta' && (
+            <section className="card card--pad" aria-labelledby="ut-title">
+              <div className="card__head"><h2 className="card__title" id="ut-title">Agua, luz y mantenimiento</h2><Link className="link" to={`/propiedades/${p.id}/editar?seccion=servicios`}>{p.utilities?.electricity || p.utilities?.water ? 'Editar' : 'Capturar números'} <Icon id="arrow" className="icon--sm" /></Link></div>
+              <dl className="facts-list">
+                <div><dt>Luz · CFE</dt><dd>{p.utilities?.electricity || 'Sin capturar'}</dd></div>
+                <div><dt>Agua · Aguakan</dt><dd>{p.utilities?.water || 'Sin capturar'}</dd></div>
+                <div><dt>Recordatorio al inquilino</dt><dd>Día {p.utilities?.day ?? 1} de cada mes</dd></div>
+                <div><dt>Cuota de mantenimiento</dt><dd>{p.fee?.amount ? `${money(p.fee.amount)} · día ${p.fee.day} de cada mes` : 'Sin cuota'}</dd></div>
+              </dl>
+            </section>
+          )}
         </div>
         <div className="stack">
           <section className="card card--pad" aria-labelledby="br-title">
@@ -217,6 +264,7 @@ export function PropertyDetail() {
             <p style={{ margin: '.5rem 0 .75rem' }}><StatusBadge s={p.status} />{p.visibility === 'pausada' && <> <Badge label="Pausada" tone="warn" /></>}</p>
             <p className="small" style={{ marginBottom: '1rem' }}>{visText}</p>
             {p.visibility === 'publicada' ? <button className="btn btn--secondary btn--block" type="button" data-action="pause" onClick={() => toggleVisibility(true)}>Pausar publicación</button>
+              : p.status === 'rentada' ? <p className="small muted">Se vuelve a publicar cuando finalices el contrato en Rentas.</p>
               : p.visibility === 'pausada' ? <button className="btn btn--secondary btn--block" type="button" data-action="resume" onClick={() => toggleVisibility(false)}>Reanudar publicación</button>
               : <Link className="btn btn--secondary btn--block" to={`/propiedades/${p.id}/editar`}>Completar y publicar</Link>}
           </section>
@@ -243,7 +291,7 @@ export function PropertyDetail() {
           <thead><tr><th scope="col">Fecha / Hora</th><th scope="col">Cliente</th><th scope="col">Broker</th><th scope="col">Estado</th></tr></thead>
           <tbody>
             {appts.length ? appts.map((a) => (
-              <tr key={a.id}><td><span className="strong">{dateShort(a.date)}</span><span className="sub">{a.start}–{a.end} h</span></td>
+              <tr key={a.id}><td><span className="strong">{dateShort(a.date)}</span><span className="sub">{t12(a.start)}–{t12(a.end)}</span></td>
                 <td><Link className="strong" to={'/citas?cita=' + a.id}>{person(a.person).name}</Link><span className="sub">{a.id}</span></td>
                 <td>{broker(a.broker).name}</td><td><ApptBadge s={a.status} /></td></tr>
             )) : <tr><td colSpan={4} className="table-empty">Sin citas registradas.</td></tr>}
@@ -251,6 +299,8 @@ export function PropertyDetail() {
         </table>
       </div>
     ),
+    expediente: p._id ? <PropertyDossier propertyId={p._id} /> : <p className="muted">El expediente se consulta con el servidor de Zugar.</p>,
+    pagos: p._id ? <PropertyPayments propertyId={p._id} /> : <p className="muted">Los pagos se consultan con el servidor de Zugar.</p>,
     historial: (
       <section className="card card--pad" aria-label="Historial">
         {hist.length ? <ul className="history">{hist.map((h, i) => <li key={i}><time>{h.when}</time><span>{h.text}</span></li>)}</ul> : <p className="muted">Sin movimientos registrados.</p>}
@@ -269,7 +319,7 @@ export function PropertyDetail() {
       </div>
       <div className="gallery">{[0, 1, 2].map((i) => <Photo key={i} src={g[i]?.src ?? ''} alt={g[i] ? g[i].label + ' de ' + p.name : ''} />)}</div>
       <Tabs name="det" label="Secciones de la propiedad" controls="det-panel" selected={S.detailTab} onSelect={(v) => { S.detailTab = v; rerender(); }}
-        items={[['general', 'Información general'], ['fotos', 'Fotografías · ' + g.length], ['citas', 'Citas · ' + appts.length], ['historial', 'Historial']]} />
+        items={[['general', 'Información general'], ['fotos', 'Fotografías · ' + g.length], ['citas', 'Citas · ' + appts.length], ['expediente', 'Expediente'], ['pagos', 'Pagos'], ['historial', 'Historial']]} />
       <div id="det-panel" role="tabpanel" aria-labelledby={'tab-det-' + S.detailTab}>{panels[S.detailTab]}</div>
     </>
   );

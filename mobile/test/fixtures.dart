@@ -40,7 +40,9 @@ Map<String, Object?> get dashboardJson => {
 Map<String, Object?> get appointmentJson => {
       'id': appointmentId,
       'code': 'CIT-019',
-      'property': {'id': propertyId, 'code': 'ZUG-012', 'name': 'Casa Las Palmas', 'zone': 'Isla Dorada', 'address': 'Av. Isla Dorada 12', 'photo': 'casa-palmas.jpg'},
+      'property': {'id': propertyId, 'code': 'ZUG-012', 'name': 'Casa Las Palmas', 'zone': 'Isla Dorada', 'address': 'Av. Isla Dorada 12', 'photo': 'casa-palmas.jpg', 'lat': 21.1, 'lng': -86.85, 'exactLocation': true},
+      // Contacto mutuo: el cliente ve a su asesor
+      'broker': {'id': 'u-mariana', 'name': 'Mariana Solís', 'phone': '998 555 0142', 'email': 'mariana@zugar.example'},
       'scheduledAt': _future.toUtc().toIso8601String(),
       'durationMin': 60,
       'kind': 'visita',
@@ -140,6 +142,36 @@ final notificationsJson = {
   'unreadCount': 2,
 };
 
+/// Solicitud de Laura con la respuesta del asesor y una casa propuesta.
+final requestJson = {
+  'id': 'lead-1',
+  'folio': 'Z-10001',
+  'reason': 'rentar',
+  'status': 'en_seguimiento',
+  'statusLabel': 'En seguimiento',
+  'message': 'Cerca de la playa',
+  'property': null,
+  'payload': {'presupuesto': r'$15,000', 'recamaras': '3', 'zona': 'Puerto Morelos', 'origen': 'app'},
+  'response': 'Te propongo Casa Ceiba; si no te convence, te conseguimos otra.',
+  'respondedBy': 'Mariana Solís',
+  'proposalCount': 1,
+  'proposals': [
+    {
+      'id': 'prop-1',
+      'leadId': 'lead-1',
+      'note': 'Tiene jardín',
+      'createdAt': '2026-10-20T16:00:00.000Z',
+      'property': {'id': 'p-ceiba', 'code': 'ZUG-001', 'slug': 'casa-ceiba', 'name': 'Casa Ceiba', 'zone': 'Arbolada', 'city': 'Cancún, Quintana Roo', 'operation': 'renta', 'price': 28000, 'rec': 3, 'banos': 2, 'photo': null},
+    },
+  ],
+  'createdAt': '2026-10-19T16:00:00.000Z',
+};
+
+/// Mensajes de la solicitud: para el cliente, el personal aparece como «Zugar».
+final requestMessages = [
+  {'id': 'rm1', 'body': '¿Qué días puedes visitar?', 'fromStaff': true, 'mine': false, 'sender': 'Zugar', 'createdAt': '2026-10-20T16:00:00.000Z'},
+];
+
 /// Backend simulado de Laura. [log] guarda los cuerpos enviados por ruta.
 FakeReply lauraBackend(RequestOptions o, {Map<String, Object?>? log}) {
   log?['${o.method} ${o.path}'] = o.data;
@@ -171,6 +203,16 @@ FakeReply lauraBackend(RequestOptions o, {Map<String, Object?>? log}) {
     ('POST', '/maintenance-reports') => (201, {...reportDetail(reportOpenId), 'title': (o.data as Map)['title']}),
     ('GET', '/properties/$propertyId') => (200, {'id': propertyId, 'name': 'Casa Las Palmas', 'price': 12000, 'photos': <Object>[]}),
     ('GET', '/properties/$propertyId/dossier') => (200, dossierJson),
+    ('GET', '/requests') => (200, {'data': [requestJson]}),
+    ('GET', '/requests/lead-1') => (200, requestJson),
+    ('GET', '/requests/lead-1/messages') => (200, {'data': requestMessages}),
+    ('POST', '/requests/lead-1/messages') => (201, {
+        'data': [
+          ...requestMessages,
+          {'id': 'rm2', 'body': (o.data as Map)['body'], 'fromStaff': false, 'mine': true, 'sender': 'Laura Mendez', 'createdAt': '2026-10-20T17:00:00.000Z'},
+        ],
+      }),
+    ('POST', '/requests') => (201, {...requestJson, 'id': 'lead-1', 'folio': 'Z-10002', 'status': 'nuevo', 'statusLabel': 'Recibida', 'proposals': <Object>[], 'response': null}),
     _ => (404, apiError('NOT_FOUND', 'No encontrado: ${o.method} ${o.path}')),
   };
 }

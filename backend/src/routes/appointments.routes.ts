@@ -12,6 +12,7 @@ appointmentsRouter.use(authenticate);
 
 appointmentsRouter.get('/', validate({ query: C.listQueryDto }), C.list);
 appointmentsRouter.post('/', validate({ body: C.createDto }), C.create);
+appointmentsRouter.get('/active', C.active);
 appointmentsRouter.get('/:id', validate({ params: idParam }), C.getOne);
 appointmentsRouter.post('/:id/confirm', validate({ params: idParam }), C.confirm);
 appointmentsRouter.post('/:id/reject', validate({ params: idParam, body: C.reasonDto }), C.reject);

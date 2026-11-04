@@ -1,92 +1,76 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import { sendLead, type ApiError, type LeadReason } from '../lib/api';
-import { appLink } from '../lib/appLink';
-import { photoOf, priceUnit, type House } from '../lib/catalog';
-import { fakeFolio, longDate, money, todayISO } from '../lib/format';
-import { clean, email, futureDate, phone, required, type Errors } from '../lib/validation';
+import { Honeypot } from './Honeypot';
+import { useMemo, useState, type FormEvent } from 'react';
+import { sendLead, type ApiError } from '../lib/api';
+import { fakeFolio, longDate, t12 } from '../lib/format';
+import { clean, emailRepeat, emailStrict, futureDate, phone, required, type Errors } from '../lib/validation';
+import { BudgetRange, budgetError, budgetLabel, toAmount } from './BudgetRange';
 import { useCatalog } from './CatalogProvider';
 import { Dialog } from './Dialog';
+import { EmailFields } from './EmailFields';
+import { PrivacyLink } from './PrivacyNotice';
+import { ReviewAccountNote } from './ReviewAccountNote';
+import { VisitSlotPicker } from './VisitSlotPicker';
 import { Field, invalid, Opt } from './Field';
 import { Icon } from './Icon';
+import { LeadDone } from './LeadDone';
 import { useToast } from './Toasts';
 
 /* ==========================================================================
-   Solicitud de visita (sección «Contáctanos» del inicio).
-   A la izquierda, el resumen que se actualiza con lo que elige la persona;
-   a la derecha, el formulario. Antes de enviar se muestra un resumen para revisar.
+   Solicitud (sección «Contáctanos» del inicio): qué busca la persona, zona de preferencia
+   (opcional) y presupuesto mínimo y máximo. Antes de enviar se muestra un resumen.
+   Al enviar se crea sola su cuenta de la app Homiz, donde su asesor le contesta y le propone casas.
    Envía a POST /public/leads; sin servidor, simula el envío como el sitio original.
    ========================================================================== */
-const HOURS = ['10:00', '11:30', '13:00', '16:00', '17:30'];
 
 const EMPTY = {
-  nombre: '', correo: '', telefono: '', nacionalidad: '', ocupacion: '',
-  operacion: 'renta' as 'renta' | 'compra', casa: '', presupuesto: '',
+  nombre: '', correo: '', correo2: '', telefono: '', nacionalidad: '', ocupacion: '',
+  operacion: 'renta' as 'renta' | 'compra', zona: '', presupuesto_min: '', presupuesto_max: '',
   recamaras: '3', banos: '2', personas: '2', mascotas: '' as '' | 'si' | 'no', mascotas_detalle: '',
   fecha: '', horario: '', comentarios: '',
 };
 type Form = typeof EMPTY;
 
-const LABELS: [keyof Form, string][] = [
-  ['nombre', 'Nombre completo'], ['correo', 'Correo electrónico'], ['telefono', 'Teléfono'], ['nacionalidad', 'Nacionalidad'],
-  ['ocupacion', '¿En qué trabajas?'], ['operacion', 'Operación'], ['casa', 'Casa de interés'], ['presupuesto', 'Presupuesto aproximado'],
-  ['recamaras', 'Número de recámaras'], ['banos', 'Número de baños'], ['personas', 'Personas que vivirán en la casa'],
-  ['mascotas', '¿Tienes mascotas?'], ['mascotas_detalle', '¿Cuáles y cuántas mascotas?'], ['fecha', 'Fecha preferida'],
-  ['horario', 'Horario'], ['comentarios', 'Comentarios'],
-];
-
 export function VisitRequest() {
-  const { houses, bySlug, loading } = useCatalog();
-  const [params] = useSearchParams();
+  const { houses, loading } = useCatalog();
   const toast = useToast();
   const [f, setF] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
   const [showErrors, setShowErrors] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [sending, setSending] = useState(false);
-  const [done, setDone] = useState<{ folio: string; text: string } | null>(null);
-  const successRef = useRef<HTMLDivElement>(null);
-
-  // ?casa=casa-ceiba en el enlace: la casa llega elegida
-  useEffect(() => {
-    const c = bySlug[params.get('casa') || ''];
-    if (c) setF((x) => ({ ...x, casa: c.slug, operacion: c.op === 'venta' ? 'compra' : 'renta' }));
-  }, [params, bySlug]);
-
-  const house: House | undefined = bySlug[f.casa];
-  const options = useMemo(() => houses.filter((h) => (f.operacion === 'compra' ? h.op === 'venta' : h.op === 'renta')), [houses, f.operacion]);
+  const [done, setDone] = useState<{ folio: string; text: string; account: 'created' | 'existing' | null; editToken?: string | null } | null>(null);
+  // Sugerencias para «Zona de preferencia»: las zonas de las casas publicadas (se puede escribir cualquier otra)
+  const places = useMemo(() => [...new Set(houses.map((h) => h.zona))].sort(), [houses]);
+  const budget = budgetLabel(f.presupuesto_min, f.presupuesto_max, f.operacion);
 
   const validate = (x: Form): Errors =>
     clean({
       nombre: required(x.nombre),
-      correo: email(x.correo),
+      correo: emailStrict(x.correo),
+      correo2: emailRepeat(x.correo, x.correo2),
       telefono: phone(x.telefono),
       nacionalidad: required(x.nacionalidad),
       ocupacion: required(x.ocupacion),
-      casa: required(x.casa, true),
-      presupuesto: required(x.presupuesto),
+      presupuesto_max: budgetError(x.presupuesto_min, x.presupuesto_max),
       mascotas: x.mascotas ? '' : 'Elige una opción.',
       mascotas_detalle: x.mascotas === 'si' ? required(x.mascotas_detalle) : '',
-      fecha: futureDate(x.fecha),
-      horario: required(x.horario, true),
+      fecha: futureDate(x.fecha) && 'Elige el día de tu cita en el calendario.',
+      horario: x.horario ? '' : 'Elige la hora de tu cita.',
     });
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setF((x) => {
       const next = { ...x, [k]: v };
-      if (k === 'operacion') {
-        // La lista de casas solo muestra las de la operación elegida
-        const c = bySlug[next.casa];
-        if (c && (c.op === 'venta') !== (v === 'compra')) next.casa = '';
-      }
-      if (k === 'casa') {
-        const c = bySlug[v as string];
-        if (c) next.operacion = c.op === 'venta' ? 'compra' : 'renta';
-      }
       if (showErrors) setErrors(validate(next));
       return next;
     });
   };
+  const setBudget = (min: string, max: string) =>
+    setF((x) => {
+      const next = { ...x, presupuesto_min: min, presupuesto_max: max };
+      if (showErrors) setErrors(validate(next));
+      return next;
+    });
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -96,7 +80,7 @@ export function VisitRequest() {
     setShowErrors(true);
     const first = Object.keys(errs)[0];
     if (first) {
-      document.getElementById(first === 'mascotas' ? 'mascotas-si' : `b-${first}`)?.focus();
+      document.getElementById(first === 'mascotas' ? 'mascotas-si' : first === 'presupuesto_max' ? 'b-pres-max' : `b-${first}`)?.focus();
       return;
     }
     setReviewing(true);
@@ -105,25 +89,23 @@ export function VisitRequest() {
   const send = async () => {
     setReviewing(false);
     setSending(true);
-    const reason: LeadReason = house ? 'visita' : f.operacion === 'compra' ? 'comprar' : 'rentar';
     try {
-      const { nombre, correo, telefono, comentarios, casa, fecha, horario, ...rest } = f;
+      const { nombre, correo, correo2: _c2, telefono, comentarios, fecha, horario, presupuesto_min, presupuesto_max, ...rest } = f;
       const r = await sendLead({
-        reason, name: nombre.trim(), email: correo.trim(), phone: telefono, message: comentarios,
-        propertySlug: casa !== 'sin-definir' ? casa : undefined, preferredDate: fecha, preferredTime: horario,
-        payload: rest as Record<string, string>,
+        reason: f.operacion === 'compra' ? 'comprar' : 'rentar', name: nombre.trim(), email: correo.trim(), phone: telefono, message: comentarios,
+        // Montos como número; «presupuesto» es el texto legible para el asesor
+        payload: { ...rest, presupuesto: budget, presupuesto_min: toAmount(presupuesto_min), presupuesto_max: toAmount(presupuesto_max), fecha_preferida: fecha, horario },
       }).catch((err: ApiError) => {
-        if (err?.sinConexion) return new Promise<{ folio: string }>((ok) => setTimeout(() => ok({ folio: fakeFolio() }), 700));
+        if (err?.sinConexion) return new Promise<{ folio: string; account: null }>((ok) => setTimeout(() => ok({ folio: fakeFolio(), account: null }), 700));
         throw err;
       });
       const first = nombre.trim().split(' ')[0];
       setDone({
         folio: r.folio,
-        text: house
-          ? `¡Listo, ${first}! Recibimos tu solicitud de visita.|${house.asesor || 'Tu asesora'} te escribirá en menos de 24 horas para confirmar ${longDate(fecha).toLowerCase()} · ${horario} h.`
-          : `¡Gracias, ${first}! Recibimos tu solicitud.|En un día hábil te enviaremos a ${correo.trim()} casas ${f.operacion === 'compra' ? 'en venta' : 'en renta'} que encajan contigo.`,
+        account: r.account,
+        editToken: 'editToken' in r ? r.editToken : null,
+        text: `¡Gracias, ${first}! Recibimos tu solicitud.|Tu asesor te propondrá casas ${f.operacion === 'compra' ? 'en venta' : 'en renta'} y te contactará para visitarlas el ${longDate(fecha).toLowerCase()} a las ${t12(horario)}.`,
       });
-      setTimeout(() => successRef.current?.focus(), 0);
     } catch (err) {
       const e = err as ApiError;
       if (!e?.mensaje) console.error(err);
@@ -138,19 +120,14 @@ export function VisitRequest() {
     setTimeout(() => document.getElementById('b-nombre')?.focus(), 0);
   };
 
-  const reviewRows = LABELS.map(([k, label]): [string, string] => {
-    const v = f[k];
-    if (!v || (k === 'mascotas_detalle' && f.mascotas !== 'si')) return [label, ''];
-    if (k === 'operacion') return [label, v === 'compra' ? 'Compra' : 'Renta'];
-    if (k === 'casa') return [label, v === 'sin-definir' ? 'Aún no lo sé, quiero recomendaciones' : bySlug[v] ? `${bySlug[v].name} · ${bySlug[v].zona}` : v];
-    if (k === 'mascotas') return [label, v === 'si' ? 'Sí' : 'No'];
-    if (k === 'fecha') return [label, longDate(v)];
-    if (k === 'horario') return [label, v + ' h'];
-    if (k === 'recamaras' && v === '4') return [label, '4 o más'];
-    if (k === 'banos' && v === '3') return [label, '3 o más'];
-    if (k === 'personas' && v === '5') return [label, '5 o más'];
-    return [label, v.trim()];
-  }).filter(([, v]) => v);
+  const reviewRows = ([
+    ['Nombre completo', f.nombre], ['Correo electrónico (tu cuenta de la app)', f.correo], ['Teléfono', f.telefono], ['Nacionalidad', f.nacionalidad],
+    ['¿En qué trabajas?', f.ocupacion], ['Operación', f.operacion === 'compra' ? 'Compra' : 'Renta'], ['Zona de preferencia', f.zona || 'Sin preferencia'],
+    ['Presupuesto', budget], ['Número de recámaras', f.recamaras === '4' ? '4 o más' : f.recamaras], ['Número de baños', f.banos === '3' ? '3 o más' : f.banos],
+    ['Personas que vivirán en la casa', f.personas === '5' ? '5 o más' : f.personas], ['¿Tienes mascotas?', f.mascotas === 'si' ? 'Sí' : f.mascotas === 'no' ? 'No' : ''],
+    ['¿Cuáles y cuántas mascotas?', f.mascotas === 'si' ? f.mascotas_detalle : ''], ['Fecha de la cita', f.fecha ? longDate(f.fecha) : ''],
+    ['Hora', f.horario ? f.horario + ' h (15 minutos)' : ''], ['Comentarios', f.comentarios],
+  ] as [string, string][]).filter(([, v]) => v.trim());
 
   const err = (k: keyof Form) => (showErrors ? errors[k] : undefined);
   const hasErrors = showErrors && Object.keys(errors).length > 0;
@@ -160,37 +137,21 @@ export function VisitRequest() {
       <aside className="booking__aside" aria-label="Resumen de tu solicitud">
         <section className="summary" id="resumen" aria-labelledby="resumen-titulo" aria-live="polite">
           <span className="eyebrow">Tu solicitud</span>
-          {house && (
-            <div className="photo">
-              <img src={photoOf(house)} alt={`${house.name} en ${house.zona}, Cancún`} loading="lazy" />
-            </div>
-          )}
-          <h3 id="resumen-titulo">{house ? house.name : f.casa === 'sin-definir' ? 'Te recomendamos opciones' : 'Elige una casa'}</h3>
-          <p className="summary__loc">
-            {house ? `${house.zona}, Cancún` : f.casa === 'sin-definir' ? 'Te propondremos casas según lo que buscas.' : 'Aquí verás los datos de la casa que elijas.'}
-          </p>
-          {house && (
-            <p className="summary__price">
-              <strong>{money(house.price)}</strong> {priceUnit(house)}
-            </p>
-          )}
-          <p className="summary__specs">
-            {house && `${house.rec} recámaras · ${house.banos} baños · ${house.m2} m² · ${house.pets ? 'Acepta mascotas' : 'No acepta mascotas'}`}
-          </p>
+          <h3 id="resumen-titulo">{f.operacion === 'compra' ? 'Quieres comprar' : 'Quieres rentar'}</h3>
+          <p className="summary__loc">{f.zona ? `Zona de preferencia: ${f.zona}` : 'Te propondremos casas según lo que buscas.'}</p>
+          {budget && <p className="summary__price"><strong>{budget}</strong></p>}
+          <p className="summary__specs">{`${f.recamaras === '4' ? '4 o más' : f.recamaras} recámaras · ${f.banos === '3' ? '3 o más' : f.banos} baños`}{f.mascotas === 'si' ? ' · Con mascotas' : ''}</p>
           <dl>
             <div><dt>Operación</dt><dd>{f.operacion === 'compra' ? 'Compra' : 'Renta'}</dd></div>
-            <div><dt>Tu visita</dt><dd>{f.fecha ? longDate(f.fecha) + (f.horario ? ` · ${f.horario} h` : '') : 'Elige fecha y horario'}</dd></div>
-            <div><dt>Duración de la visita</dt><dd>45 minutos aproximadamente</dd></div>
-            <div><dt>Te acompaña</dt><dd>{house?.asesor || 'Tu asesora o asesor de Zugar'}</dd></div>
-            <div><dt>Punto de encuentro</dt><dd>{house ? 'En la casa · ' + house.zona.replace(/^Residencial /, '') : 'En la casa que elijas'}</dd></div>
-            <div><dt>Confirmación</dt><dd>Por WhatsApp en menos de 24 horas</dd></div>
+            <div><dt>Para visitar</dt><dd>{f.fecha ? longDate(f.fecha) + (f.horario ? ` · ${t12(f.horario)}` : '') : 'Elige fecha y horario'}</dd></div>
+            <div><dt>Te acompaña</dt><dd>Tu asesora o asesor de Zugar</dd></div>
+            <div><dt>Seguimiento</dt><dd>En la app Homiz: tu cuenta se crea al enviar</dd></div>
           </dl>
-          <p className="summary__foot">Tu visita queda confirmada cuando te escribamos con el día y la hora acordados.</p>
+          <p className="summary__foot">Tu asesor te propondrá casas y confirmará la visita contigo en la app.</p>
         </section>
         <section className="side-card" aria-labelledby="hablar-titulo">
           <h3 id="hablar-titulo">¿Prefieres hablar?</h3>
           <ul className="side-card__list">
-            <li><a href={appLink(house?.slug)} target="_blank" rel="noopener"><Icon id="phone" />App Homiz</a></li>
             <li><a href="tel:+529985550142"><Icon id="phone" />+52 998 555 0142</a></li>
             <li><a href="mailto:hola@zugar.mx"><Icon id="mail" />hola@zugar.mx</a></li>
             <li><span><Icon id="clock" />Lun–vie 9:00–18:00 · Sáb 10:00–14:00</span></li>
@@ -200,17 +161,13 @@ export function VisitRequest() {
       </aside>
 
       <form className="booking-form" noValidate onSubmit={onSubmit}>
+        <Honeypot />
         {done ? (
-          <>
-            <div className="alert alert-success" role="status" tabIndex={-1} ref={successRef}>
-              <Icon id="check-c" />
-              <div>
-                <strong>{done.text.split('|')[0]}</strong>
-                {done.text.split('|')[1]} Tu folio es <b>{done.folio}</b>.
-              </div>
-            </div>
-            <button className="btn btn--secondary" type="button" onClick={reset}>Enviar otra solicitud</button>
-          </>
+          <LeadDone
+            title={done.text.split('|')[0]} text={done.text.split('|')[1]} folio={done.folio} houses={houses} onReset={reset}
+            email={f.correo.trim()} account={done.account} editToken={done.editToken} name={f.nombre.trim()} phone={f.telefono.trim()}
+            wish={{ op: f.operacion === 'compra' ? 'venta' : 'renta', min: toAmount(f.presupuesto_min), max: toAmount(f.presupuesto_max), rec: f.recamaras, pets: f.mascotas === 'si', zone: f.zona }}
+          />
         ) : (
           <>
             {hasErrors && (
@@ -226,9 +183,8 @@ export function VisitRequest() {
                 <Field id="b-nombre" label="Nombre completo *" error={err('nombre')}>
                   <input className="input" id="b-nombre" type="text" autoComplete="name" placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
                 </Field>
-                <Field id="b-correo" label="Correo electrónico *" error={err('correo')}>
-                  <input className="input" id="b-correo" type="email" autoComplete="email" placeholder="tu@correo.com" value={f.correo} onChange={(e) => set('correo', e.target.value)} {...invalid('b-correo', err('correo'))} />
-                </Field>
+                <EmailFields prefix="b" value={f.correo} repeat={f.correo2} error={err('correo')} repeatError={err('correo2')}
+                  onChange={(v, r) => setF((x) => { const next = { ...x, correo: v, correo2: r }; if (showErrors) setErrors(validate(next)); return next; })} />
                 <Field id="b-telefono" label={<>Teléfono <Opt>(opcional)</Opt></>} error={err('telefono')} help={err('telefono') ? undefined : 'Para confirmar tu visita por WhatsApp.'}>
                   <input className="input" id="b-telefono" type="tel" autoComplete="tel" placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} {...invalid('b-telefono', err('telefono'))} />
                 </Field>
@@ -250,20 +206,11 @@ export function VisitRequest() {
                     <option value="compra">Compra</option>
                   </select>
                 </Field>
-                <Field id="b-casa" label="Casa de interés *" error={err('casa')}>
-                  <select className="select" id="b-casa" value={f.casa} onChange={(e) => set('casa', e.target.value)} {...invalid('b-casa', err('casa'))}>
-                    <option value="">Elige una casa</option>
-                    <optgroup label={f.operacion === 'compra' ? 'En venta' : 'En renta'}>
-                      {options.map((h) => (
-                        <option key={h.slug} value={h.slug}>{h.name} · {h.zona}</option>
-                      ))}
-                    </optgroup>
-                    <option value="sin-definir">Aún no lo sé, quiero recomendaciones</option>
-                  </select>
+                <Field id="b-zona" label={<>Zona de preferencia <Opt>(opcional)</Opt></>} help="Colonia, ciudad o país.">
+                  <input className="input" id="b-zona" type="text" list="b-zonas" maxLength={80} placeholder="Por ejemplo: Arbolada" value={f.zona} onChange={(e) => set('zona', e.target.value)} />
+                  <datalist id="b-zonas">{places.map((z) => <option key={z} value={z} />)}</datalist>
                 </Field>
-                <Field id="b-presupuesto" label="Presupuesto aproximado *" error={err('presupuesto')}>
-                  <input className="input" id="b-presupuesto" type="text" inputMode="numeric" placeholder={f.operacion === 'compra' ? '$4,000,000 MXN' : '$30,000 MXN / mes'} value={f.presupuesto} onChange={(e) => set('presupuesto', e.target.value)} {...invalid('b-presupuesto', err('presupuesto'))} />
-                </Field>
+                <BudgetRange idPrefix="b-pres" op={f.operacion} min={f.presupuesto_min} max={f.presupuesto_max} error={err('presupuesto_max')} onChange={setBudget} />
                 <Field id="b-recamaras" label="Número de recámaras *">
                   <select className="select" id="b-recamaras" value={f.recamaras} onChange={(e) => set('recamaras', e.target.value)}>
                     <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4 o más</option>
@@ -298,17 +245,10 @@ export function VisitRequest() {
             </fieldset>
 
             <fieldset>
-              <legend>3. Elige un momento</legend>
+              <legend>3. ¿Te gustaría agendar una cita?</legend>
+              <VisitSlotPicker id="b" date={f.fecha} time={f.horario} dateError={err('fecha')} timeError={err('horario')}
+                onChange={(fecha, horario) => setF((x) => { const next = { ...x, fecha, horario }; if (showErrors) setErrors(validate(next)); return next; })} />
               <div className="form-grid">
-                <Field id="b-fecha" label="Fecha preferida *" error={err('fecha')}>
-                  <input className="input" id="b-fecha" type="date" min={todayISO()} value={f.fecha} onChange={(e) => set('fecha', e.target.value)} {...invalid('b-fecha', err('fecha'))} />
-                </Field>
-                <Field id="b-horario" label="Horario *" error={err('horario')}>
-                  <select className="select" id="b-horario" value={f.horario} onChange={(e) => set('horario', e.target.value)} {...invalid('b-horario', err('horario'))}>
-                    <option value="">Elige un horario</option>
-                    {HOURS.map((h) => <option key={h} value={h}>{h} h</option>)}
-                  </select>
-                </Field>
                 <Field id="b-comentarios" label={<>Comentarios <Opt>(opcional)</Opt></>} className="span-2">
                   <textarea className="textarea" id="b-comentarios" placeholder="Por ejemplo: nos gustaría conocer el patio y la iluminación de la casa por la mañana." value={f.comentarios} onChange={(e) => set('comentarios', e.target.value)} />
                 </Field>
@@ -320,7 +260,7 @@ export function VisitRequest() {
                 {sending ? 'Enviando…' : <>Revisar solicitud<Icon id="arrow-ur" /></>}
               </button>
               <p className="form-note">
-                Te mostraremos un resumen antes de enviar. Al continuar aceptas nuestro <Link to="/contacto#aviso-privacidad">Aviso de privacidad</Link>.
+                Te mostraremos un resumen antes de enviar. Al continuar aceptas nuestro <PrivacyLink />.
               </p>
             </div>
           </>
@@ -329,7 +269,8 @@ export function VisitRequest() {
 
       <Dialog open={reviewing} onClose={() => setReviewing(false)} labelledBy="dlg-title">
         <h2 id="dlg-title">Revisa tu solicitud</h2>
-        <p className="dlg-lead">Confirma que tus datos estén bien antes de enviarlos.</p>
+        <p className="dlg-lead">Estos son tus datos. Confirma que estén correctos antes de enviarlos.</p>
+        <ReviewAccountNote email={f.correo} />
         <dl className="review">
           {reviewRows.map(([k, v]) => (
             <div key={k}><dt>{k}</dt><dd>{v}</dd></div>

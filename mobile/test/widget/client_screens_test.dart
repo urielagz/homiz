@@ -37,12 +37,77 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('Mis solicitudes: respuesta del asesor y casas propuestas; «Busco casa» envía lo que busca', (tester) async {
+    await startSignedIn(tester);
+    await tester.dragUntilVisible(find.text('Mis solicitudes...'), find.byType(ListView).first, const Offset(0, -250));
+    await tester.tap(find.text('Mis solicitudes...'));
+    await settle(tester);
+    expect(find.text('Quiero rentar · Z-10001'), findsOneWidget);
+    expect(find.text('En seguimiento'), findsOneWidget);
+
+    await tester.tap(find.text('Quiero rentar · Z-10001'));
+    await settle(tester);
+    // Todo lo que llenó, por secciones (el cliente no ve la sección de contacto)
+    expect(find.text('Puerto Morelos'), findsOneWidget);
+    expect(find.text('QUÉ BUSCA'), findsOneWidget);
+    expect(find.text('CONTACTO'), findsNothing);
+    final page = find.byType(ListView).first;
+    // Mensajes con su asesor (en lugar del correo)
+    await tester.dragUntilVisible(find.text('¿Qué días puedes visitar?'), page, const Offset(0, -250));
+    await tester.dragUntilVisible(find.byTooltip('Enviar mensaje'), page, const Offset(0, -250));
+    await tester.enterText(find.widgetWithText(TextField, 'Escribe a tu asesor'), 'El sábado en la mañana');
+    await tester.tap(find.byTooltip('Enviar mensaje'));
+    await settle(tester);
+    expect((sent['POST /requests/lead-1/messages']! as Map)['body'], 'El sábado en la mañana');
+    expect(find.textContaining('te conseguimos otra'), findsOneWidget);
+    // Menú desplegable para elegir cuál visitar
+    await tester.dragUntilVisible(find.text('¿Cuál quieres visitar?'), page, const Offset(0, -250));
+    expect(find.text('Casa Ceiba'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    await tester.tap(find.text('Nueva solicitud'));
+    await settle(tester);
+    // «¿Qué quieres hacer?»: el mismo formulario de Contáctanos
+    expect(find.text('¿Qué quieres hacer?'), findsOneWidget);
+    final form = find.byType(SingleChildScrollView).first;
+    await tester.dragUntilVisible(find.text('Enviar solicitud'), form, const Offset(0, -300));
+    await tester.ensureVisible(find.text('Enviar solicitud'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enviar solicitud'));
+    await tester.pump();
+    await tester.dragUntilVisible(find.text('Escribe la zona que buscas.'), form, const Offset(0, 300));
+    await tester.enterText(find.widgetWithText(TextFormField, 'Zona de preferencia'), 'Mérida, Yucatán');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Mínimo'), '10000');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Máximo (tu límite)'), '15000');
+    await tester.dragUntilVisible(find.widgetWithText(TextFormField, 'Nacionalidad'), form, const Offset(0, -300));
+    await tester.enterText(find.widgetWithText(TextFormField, 'Nacionalidad'), 'Mexicana');
+    await tester.enterText(find.widgetWithText(TextFormField, '¿En qué trabajas?'), 'Diseño');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.drag(form, const Offset(0, -6000)); // hasta el botón, al final del formulario
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enviar solicitud'));
+    await settle(tester);
+    final body = sent['POST /requests']! as Map;
+    expect(body['reason'], 'rentar');
+    final payload = body['payload'] as Map;
+    expect(payload['zona'], 'Mérida, Yucatán');
+    // Los montos viajan como número
+    expect(payload['presupuesto_min'], 10000);
+    expect(payload['presupuesto_max'], 15000);
+    expect(payload['presupuesto'], r'$10,000 – $15,000 MXN / mes');
+    expect(payload['nacionalidad'], 'Mexicana');
+    expect(payload['ocupacion'], 'Diseño');
+    expect(payload['banos'], '2');
+  });
+
   testWidgets('Inicio muestra próximo pago, próxima cita y reportes abiertos', (tester) async {
     await startSignedIn(tester);
 
     expect(find.text('Información'), findsOneWidget);
     expect(find.text('Próximo pago...'), findsOneWidget);
-    expect(find.text('5 de noviembre'), findsOneWidget);
+    expect(find.text('5 de noviembre'), findsWidgets); // la cita de prueba cae a 2 días y puede coincidir con el pago
     expect(find.textContaining(r'$12,000 · Pagaré 05'), findsOneWidget);
     expect(find.text('Próxima cita...'), findsOneWidget);
     expect(find.text('Reportes abiertos...'), findsOneWidget);
@@ -162,11 +227,15 @@ void main() {
 
     expect(find.text('Cita - Casa Las Palmas'), findsOneWidget);
     expect(find.text('Confirmada'), findsOneWidget);
-    expect(find.text('Isla Dorada'), findsOneWidget);
-    expect(find.widgetWithText(KeyValueRow, r'$12,000/mes'), findsOneWidget);
+    expect(find.text('Isla Dorada'), findsWidgets);
+    final page = find.byType(ListView).first;
+    // Cita confirmada: la dirección exacta y el contacto de su asesor
+    await tester.dragUntilVisible(find.text('Tu asesor'), page, const Offset(0, -200));
+    await tester.dragUntilVisible(find.widgetWithText(KeyValueRow, r'$12,000/mes'), page, const Offset(0, -200));
     expect(find.widgetWithText(KeyValueRow, 'Sí, 1'), findsOneWidget);
     expect(find.widgetWithText(KeyValueRow, '3'), findsOneWidget);
-    expect(find.text('Sí, ahí estaré. Gracias'), findsOneWidget);
+    await tester.dragUntilVisible(find.text('Sí, ahí estaré. Gracias'), page, const Offset(0, -200));
+    await tester.dragUntilVisible(find.widgetWithText(TextField, 'Escribe un mensaje...'), page, const Offset(0, -200));
 
     await tester.enterText(find.widgetWithText(TextField, 'Escribe un mensaje...'), '¿Puedo llegar 10 minutos antes?');
     await tester.ensureVisible(find.byTooltip('Enviar mensaje'));
@@ -176,7 +245,9 @@ void main() {
     expect(sent['POST /appointments/$appointmentId/messages'], {'body': '¿Puedo llegar 10 minutos antes?'});
     expect(find.text('¿Puedo llegar 10 minutos antes?'), findsOneWidget);
 
+    await tester.dragUntilVisible(find.text('Cancelar cita'), page, const Offset(0, -200));
     await tester.ensureVisible(find.text('Cancelar cita'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Cancelar cita'));
     await settle(tester);
     await tester.tap(find.widgetWithText(TextButton, 'Cancelar cita'));
@@ -191,7 +262,9 @@ void main() {
     await tester.tap(find.text('Casa Las Palmas'));
     await settle(tester);
 
+    await tester.dragUntilVisible(find.text('Editar mis datos'), find.byType(ListView).first, const Offset(0, -200));
     await tester.ensureVisible(find.text('Editar mis datos'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Editar mis datos'));
     await settle(tester);
     await tester.enterText(find.widgetWithText(TextFormField, 'Presupuesto mensual'), '15000');

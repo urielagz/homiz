@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/formatters.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../home/presentation/providers/dashboard_provider.dart';
 import '../../data/models/appointment.dart';
@@ -9,13 +10,19 @@ import '../../data/repositories/appointments_repository.dart';
 final appointmentsProvider = FutureProvider<List<Appointment>>((ref) async {
   ref.watch(sessionProvider.select((s) => s.value?.id));
   final all = await ref.watch(appointmentsRepositoryProvider).list();
-  final now = DateTime.now();
+  final now = Fmt.now();
   final upcoming = all.where((a) => a.scheduledAt.isAfter(now)).toList()..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
   final past = all.where((a) => !a.scheduledAt.isAfter(now)).toList()..sort((a, b) => b.scheduledAt.compareTo(a.scheduledAt));
   return [...upcoming, ...past];
 });
 
 final appointmentProvider = FutureProvider.family<Appointment, String>((ref, id) => ref.watch(appointmentsRepositoryProvider).get(id));
+
+/// La cita vigente del cliente (una a la vez). Se vuelve a leer cuando cambia la lista de citas.
+final activeAppointmentProvider = FutureProvider<Appointment?>((ref) async {
+  ref.watch(appointmentsProvider);
+  return ref.watch(appointmentsRepositoryProvider).active();
+});
 
 /// Chat de una cita.
 final appointmentMessagesProvider = AsyncNotifierProvider.family<AppointmentMessagesController, List<AppointmentMessage>, String>(AppointmentMessagesController.new);

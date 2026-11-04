@@ -35,8 +35,18 @@ export const getOne: RequestHandler = async (_req, res) => {
 
 export const create: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
-  const id = await Svc.create(user, res.locals.body as z.infer<typeof createDto>);
-  res.status(201).json(Svc.present((await Svc.findById(id))!, user));
+  // Si la persona ya tenía una cita vigente, se cambia esa (moved: true) en lugar de crear otra
+  const placed = await Svc.createOrMove(user, res.locals.body as z.infer<typeof createDto>);
+  res.status(placed.moved ? 200 : 201).json({ ...Svc.present((await Svc.findById(placed.id))!, user), moved: placed.moved });
+};
+
+/** GET /appointments/active — la cita vigente del cliente (para que la app ofrezca «Cambiar mi cita» en lugar de pedir otra). */
+export const active: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  if (user.type !== 'client') return void res.json({ appointment: null }); // es del cliente, no de quien atiende
+  const { rows } = await Svc.list(user, { status: ['por-confirmar', 'confirmada'], page: 1, limit: 50 });
+  const next = rows.filter((a) => a.scheduled_at.getTime() > Date.now()).at(-1) ?? null;
+  res.json({ appointment: next ? Svc.present(next, user) : null });
 };
 
 const act =

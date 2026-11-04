@@ -12,6 +12,7 @@ import '../../../../core/widgets/confirm_dialog.dart';
 import '../../../../core/widgets/initials_avatar.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../auth/data/repositories/auth_repository.dart';
+import '../../../auth/presentation/legal_links.dart';
 import '../../../auth/presentation/providers/session_provider.dart';
 
 /// Perfil: datos de la cuenta, editar, cambiar contraseña y cerrar sesión.
@@ -61,6 +62,24 @@ class ProfilePage extends ConsumerWidget {
           PrimaryButton(label: 'Cambiar contraseña', icon: Icons.lock_outline_rounded, variant: ButtonVariant.outline, onPressed: () => _openSheet(context, const _ChangePasswordSheet())),
           const SizedBox(height: AppSpacing.md),
           PrimaryButton(label: 'Cerrar sesión', icon: Icons.logout_rounded, variant: ButtonVariant.danger, onPressed: () => _logout(context, ref)),
+          const SizedBox(height: AppSpacing.xl),
+          // Tus datos: aviso de privacidad y derecho de cancelación (eliminar la cuenta)
+          Text('Tus datos', style: AppTextStyles.sectionTitle),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Aviso de privacidad'),
+            trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+            onTap: () => openPrivacyNotice(context, ref),
+          ),
+          if (user.isClient)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.delete_forever_outlined, color: Theme.of(context).colorScheme.error),
+              title: Text('Eliminar mi cuenta', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              subtitle: const Text('Borra tus datos de contacto, solicitudes y mensajes.'),
+              onTap: () => _openSheet(context, const _DeleteAccountSheet()),
+            ),
         ],
       ),
     );
@@ -176,6 +195,76 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
           PrimaryButton(label: 'Guardar', loading: _loading, onPressed: _save),
         ],
       ),
+    );
+  }
+}
+
+/// «Eliminar mi cuenta»: explica qué se borra, pide la contraseña y confirma. Con contrato vigente la API no lo permite.
+class _DeleteAccountSheet extends ConsumerStatefulWidget {
+  const _DeleteAccountSheet();
+
+  @override
+  ConsumerState<_DeleteAccountSheet> createState() => _DeleteAccountSheetState();
+}
+
+class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
+  final _password = TextEditingController();
+  bool _sure = false;
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _delete() async {
+    if (_password.text.isEmpty) return setState(() => _error = 'Escribe tu contraseña para confirmar.');
+    if (!_sure) return setState(() => _error = 'Confirma que entiendes que no se puede deshacer.');
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+    try {
+      await ref.read(sessionProvider.notifier).deleteAccount(_password.text);
+      nav.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('Tu cuenta se eliminó y borramos tus datos de este teléfono.')));
+    } catch (e) {
+      if (mounted) setState(() => _error = ApiException.from(e).message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Eliminar mi cuenta', style: AppTextStyles.pageTitle),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Borramos tus datos de contacto, tus solicitudes, mensajes y avisos, y cancelamos tus citas pendientes. '
+          'Si tienes un contrato de renta vigente, conservamos tus datos hasta que termine. Lo que la ley obliga a guardar '
+          '(contratos y pagos terminados) queda sin tus datos de contacto.',
+          style: AppTextStyles.secondary.copyWith(fontSize: 13),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        TextField(controller: _password, obscureText: true, decoration: const InputDecoration(labelText: 'Tu contraseña'), enabled: !_loading),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _sure,
+          onChanged: _loading ? null : (v) => setState(() => _sure = v ?? false),
+          title: const Text('Entiendo que no se puede deshacer.'),
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+        if (_error != null) _ErrorText(_error!),
+        PrimaryButton(label: 'Eliminar mi cuenta', variant: ButtonVariant.danger, loading: _loading, onPressed: _delete),
+      ],
     );
   }
 }

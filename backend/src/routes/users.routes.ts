@@ -11,6 +11,8 @@ usersRouter.use(authenticate);
 /* Perfil propio (cualquier usuario). */
 usersRouter.get('/me', C.getMe);
 usersRouter.patch('/me', validate({ body: C.updateMeDto }), C.updateMe);
+// «Eliminar mi cuenta» (derecho de cancelación): solo clientes, con su contraseña
+usersRouter.delete('/me', validate({ body: C.deleteMeDto }), C.deleteMe);
 
 /* Personal, roles y permisos (administración). */
 usersRouter.get('/', requirePermission('users.manage'), validate({ query: Staff.listQueryDto }), Staff.list);

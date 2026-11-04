@@ -39,7 +39,19 @@ class AuthBackground extends StatelessWidget {
   }
 }
 
-/// Logo de Zugar (marcador en assets/images/logo_zugar.png).
+/// Ícono «K» de Inmobiliaria Zugar (encabezados y chat sobre fondo claro).
+class ZugarIcon extends StatelessWidget {
+  const ZugarIcon({super.key, this.size = 32});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset('assets/images/zugar_icono.png', width: size, height: size, excludeFromSemantics: true, errorBuilder: (_, _, _) => SizedBox(width: size, height: size));
+  }
+}
+
+/// Logo de Inmobiliaria Zugar en blanco (assets/images/logo_zugar.png), para el degradado azul del acceso.
 class ZugarLogo extends StatelessWidget {
   const ZugarLogo({super.key, this.height = 56});
 

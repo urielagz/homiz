@@ -22,7 +22,7 @@ interface ConfirmOptions {
 
 interface OverlayApi {
   toast: (msg: string) => void;
-  open: (render: (close: () => void) => ReactNode, opts?: { wide?: boolean }) => void;
+  open: (render: (close: () => void) => ReactNode, opts?: { wide?: boolean; confirm?: boolean }) => void;
   close: () => void;
   confirm: (o: ConfirmOptions) => void;
 }
@@ -58,7 +58,7 @@ function ConfirmBody({ o, close }: { o: ConfirmOptions; close: () => void }) {
 
 export function OverlayProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
-  const [dlg, setDlg] = useState<{ render: (close: () => void) => ReactNode; wide?: boolean; key: number } | null>(null);
+  const [dlg, setDlg] = useState<{ render: (close: () => void) => ReactNode; wide?: boolean; confirm?: boolean; key: number } | null>(null);
   const ref = useRef<HTMLDialogElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
 
@@ -72,9 +72,9 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
   const close = useCallback(() => ref.current?.open && ref.current.close(), []);
   const open = useCallback<OverlayApi['open']>((render, opts) => {
     lastFocus.current = document.activeElement as HTMLElement;
-    setDlg({ render, wide: opts?.wide, key: Date.now() });
+    setDlg({ render, wide: opts?.wide, confirm: opts?.confirm, key: Date.now() });
   }, []);
-  const confirm = useCallback((o: ConfirmOptions) => open((c) => <ConfirmBody o={o} close={c} />), [open]);
+  const confirm = useCallback((o: ConfirmOptions) => open((c) => <ConfirmBody o={o} close={c} />, { confirm: true }), [open]);
 
   useEffect(() => {
     const d = ref.current;
@@ -89,7 +89,7 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
       {children}
       <dialog
         ref={ref}
-        className={dlg?.wide ? 'dialog--wide' : ''}
+        className={[dlg?.wide && 'dialog--wide', dlg?.confirm && 'dialog--confirm'].filter(Boolean).join(' ')}
         aria-labelledby="dialog-title"
         onClose={() => {
           setDlg(null);

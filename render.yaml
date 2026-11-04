@@ -1,0 +1,103 @@
+# Plano de Render (Blueprint): API, sitio + panel y base de datos PostgreSQL administrada (con respaldos diarios).
+# Antes de usarlo, lee docs/produccion.md. Los secretos (sync: false) se capturan en el panel de Render,
+# nunca aquí. Los dominios (zugar.mx, api.zugar.mx, app.zugar.mx) son de ejemplo: cámbialos por los tuyos.
+databases:
+  - name: homiz-db
+    databaseName: homiz
+    plan: basic-256mb
+    region: oregon
+    postgresMajorVersion: "16"
+    ipAllowList: [] # solo conexiones privadas desde los servicios de Render
+
+services:
+  - type: web
+    name: homiz-api
+    runtime: node
+    region: oregon
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL # usa el usuario homiz_app (db/produccion/usuario_app.sql), no el administrador
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://zugar.mx,https://www.zugar.mx,https://app.zugar.mx
+      - key: API_PUBLIC_URL
+        value: https://api.zugar.mx
+      - key: SITE_URL
+        value: https://zugar.mx
+      - key: APP_RESET_URL
+        value: https://zugar.mx/admin/#/login
+      - key: APP_CLIENT_URL
+        value: https://app.zugar.mx/
+      - key: STORAGE_DRIVER
+        value: r2
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: MAIL_DRIVER
+        value: smtp
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: PUSH_DRIVER
+        value: fcm
+      - key: FCM_PROJECT_ID
+        sync: false
+      - key: FCM_CLIENT_EMAIL
+        sync: false
+      - key: FCM_PRIVATE_KEY
+        sync: false
+
+  - type: web
+    name: homiz-sitio
+    runtime: static
+    rootDir: web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://api.zugar.mx/api/v1
+      - key: VITE_APP_URL
+        value: https://app.zugar.mx/
+    routes:
+      - type: rewrite
+        source: /admin/*
+        destination: /admin/index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://api.zugar.mx wss://api.zugar.mx https:; frame-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(self), microphone=(), geolocation=(self), payment=()

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router';
-import { apiForgot, apiReset, type ApiFailure } from '../api';
-import { currentSession, lockState, loggedOut, login } from '../auth';
+import { apiChangePassword, apiForgot, apiReset, type ApiFailure } from '../api';
+import { clearSession, currentSession, lockState, loggedOut, login, passwordChanged } from '../auth';
 import { Icon } from '../components/ui';
 
 const emailError = (v: string) =>
@@ -15,7 +15,10 @@ export function Login() {
   const navigate = useNavigate();
   const back = /^\/[\w/-]*(\?[\w=&-]*)?$/.test(params.get('volver') || '') ? params.get('volver')! : '/resumen';
   const resetToken = params.get('token') || '';
-  const [view, setView] = useState<'login' | 'forgot' | 'reset'>(resetToken ? 'reset' : 'login');
+  // reset = enlace de correos anteriores; change = entró con la contraseña temporal y crea la suya
+  const [view, setView] = useState<'login' | 'forgot' | 'reset' | 'change'>(resetToken ? 'reset' : currentSession()?.mustChange ? 'change' : 'login');
+  // La contraseña temporal con la que entró (para no pedirla otra vez)
+  const [tempPw, setTempPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [newPw2, setNewPw2] = useState('');
   const [email, setEmail] = useState('');
@@ -32,7 +35,6 @@ export function Login() {
   useEffect(() => setInfo(noticeFor(params)), [params.toString()]); // al cerrar sesión llega ?salida=1 con el acceso ya abierto
   const [error, setError] = useState<Notice>(null);
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotOk, setForgotOk] = useState('');
   const pwRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
@@ -43,10 +45,10 @@ export function Login() {
   }, []);
   const prevView = useRef(view);
   useEffect(() => {
-    document.title = ({ forgot: 'Recuperar contraseña', reset: 'Nueva contraseña', login: 'Iniciar sesión' }[view]) + ' | Panel administrativo de Zugar';
+    document.title = ({ forgot: 'Recuperar contraseña', reset: 'Nueva contraseña', change: 'Crea tu contraseña', login: 'Iniciar sesión' }[view]) + ' | Panel administrativo de Zugar';
     if (prevView.current === view) return; // solo al cambiar de vista, no al abrir la página
     prevView.current = view;
-    (view === 'forgot' ? document.getElementById('forgot-title') : emailRef.current)?.focus();
+    (view === 'forgot' ? document.getElementById('forgot-title') : view === 'change' ? document.getElementById(tempPw ? 'new-password' : 'temp-password') : emailRef.current)?.focus();
   }, [view]);
 
   // Bloqueo temporal tras varios intentos: cuenta regresiva
@@ -56,7 +58,7 @@ export function Login() {
     return () => clearTimeout(t);
   }, [locked]);
 
-  if (currentSession()) return <Navigate to={back} replace />;
+  if (currentSession() && view !== 'change') return <Navigate to={back} replace />;
 
   const onLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,6 +76,11 @@ export function Login() {
     setBusy(true);
     const r = await login(email, password, remember);
     setBusy(false);
+    if (r.ok && r.user.mustChange) {
+      // Entró con la contraseña temporal del correo: antes de seguir crea la suya
+      setTempPw(password); setPassword(''); setNewPw(''); setNewPw2(''); setErrors({});
+      return setView('change');
+    }
     if (r.ok) return navigate(back, { replace: true });
     if (r.error === 'locked') return setLocked(r.lockedFor);
     if (r.error === 'noaccess') {
@@ -95,30 +102,42 @@ export function Login() {
     setErrors(em ? { 'forgot-email': em } : {});
     if (em) return;
     apiForgot(forgotEmail);
-    setForgotOk(forgotEmail.trim());
+    // De vuelta al acceso con el correo ya escrito: entra con la contraseña temporal
+    setEmail(forgotEmail.trim()); setPassword(''); setError(null);
+    setInfo({ tone: 'info', icon: 'check-c', text: `Si ${forgotEmail.trim()} está registrado, te enviamos una contraseña temporal (revisa también el correo no deseado). Escríbela aquí: al entrar te pediremos crear la tuya.` });
+    setView('login');
+    setTimeout(() => pwRef.current?.focus(), 0);
   };
 
-  /* Nueva contraseña desde el enlace del correo (…/admin/#/login?token=…) */
+  /* Nueva contraseña: tras entrar con la temporal (change) o desde el enlace de correos anteriores (reset) */
   const onReset = async (e: FormEvent) => {
     e.preventDefault();
     const rules = !newPw ? 'Escribe tu nueva contraseña.' : newPw.length < 8 ? 'La contraseña debe tener al menos 8 caracteres.'
       : !/[A-ZÁÉÍÓÚÑ]/.test(newPw) ? 'La contraseña debe incluir al menos una mayúscula.' : !/[a-záéíóúñ]/.test(newPw) ? 'La contraseña debe incluir al menos una minúscula.'
       : !/\d/.test(newPw) ? 'La contraseña debe incluir al menos un número.' : '';
     const errs: Record<string, string> = {};
+    if (view === 'change' && !tempPw) errs['temp-password'] = 'Escribe la contraseña temporal del correo.';
     if (rules) errs['new-password'] = rules;
     else if (newPw2 !== newPw) errs['new-password2'] = 'Las contraseñas no coinciden.';
     setErrors(errs);
     if (Object.keys(errs).length) return document.getElementById(Object.keys(errs)[0])?.focus();
     setBusy(true);
     try {
+      if (view === 'change') {
+        const r = await apiChangePassword(tempPw, newPw);
+        passwordChanged(r.accessToken, r.refreshToken);
+        setTempPw(''); setNewPw(''); setNewPw2('');
+        return navigate(back, { replace: true });
+      }
       const r = await apiReset(resetToken, newPw);
       setInfo({ tone: 'info', icon: 'check-c', text: r.message });
       setError(null);
+      setNewPw(''); setNewPw2('');
       setView('login');
       navigate('/login', { replace: true });
     } catch (err) {
       const x = err as ApiFailure;
-      setError({ tone: 'error', icon: 'alert', title: 'No pudimos cambiar tu contraseña', text: x?.sinConexion ? 'No hay conexión con el servidor de Zugar.' : x?.mensaje || 'El enlace ya no es válido. Pide uno nuevo con «¿Olvidaste tu contraseña?».' });
+      setError({ tone: 'error', icon: 'alert', title: 'No pudimos cambiar tu contraseña', text: x?.sinConexion ? 'No hay conexión con el servidor de Zugar.' : x?.mensaje || (view === 'change' ? 'Inténtalo de nuevo.' : 'El enlace ya no es válido. Pide uno nuevo con «¿Olvidaste tu contraseña?».') });
     } finally {
       setBusy(false);
     }
@@ -132,8 +151,8 @@ export function Login() {
   return (
     <div className="login">
       <aside className="login__side" aria-label="Zugar administración">
-        <a className="brand login__brand" href="/">
-          <span className="brand__name">Zugar<span>.</span></span>
+        <a className="brand login__brand" href="/" aria-label="Inmobiliaria Zugar, ir al sitio">
+          <img className="brand__logo" src="/assets/img/logo-zugar-blanco-1200.png" alt="Inmobiliaria Zugar" width="1200" height="492" />
           <span className="brand__tag">Administración · Cancún</span>
         </a>
         <div className="login__quote">
@@ -141,18 +160,26 @@ export function Login() {
           <p className="login__title">Todo en su lugar.</p>
           <p>Propiedades, personas, brokers y citas en un mismo espacio, para que cada visita llegue bien acompañada.</p>
         </div>
-        <div className="photo login__photo"><img src="/assets/img/login-panel.jpg" alt="Terraza de una casa en Cancún al atardecer" loading="lazy" /></div>
+        <div className="photo login__photo"><img src="/assets/img/login-panel.jpg" alt="Torres residenciales al atardecer" loading="lazy" /></div>
         <p className="login__foot">Casas para vivir Cancún.</p>
       </aside>
 
       <main className="login__main" id="contenido">
         <div className="login__card">
-          {view === 'reset' ? (
+          {view === 'reset' || view === 'change' ? (
             <section id="view-reset" aria-labelledby="reset-title">
-              <h1 id="reset-title">Crea tu nueva contraseña</h1>
-              <p className="login__lead">Usa al menos 8 caracteres, con una mayúscula, una minúscula y un número.</p>
+              <h1 id="reset-title" tabIndex={-1}>{view === 'change' ? 'Crea tu contraseña' : 'Crea tu nueva contraseña'}</h1>
+              <p className="login__lead">{view === 'change' ? 'Entraste con una contraseña temporal. Antes de continuar, crea la tuya: ' : ''}Usa al menos 8 caracteres, con una mayúscula, una minúscula y un número.</p>
               {error && <div className="notice notice--error" role="alert"><Icon id={error.icon} /><div><strong>{error.title}</strong>{error.text}</div></div>}
               <form id="reset-form" noValidate onSubmit={onReset}>
+                {view === 'change' && !tempPw && (
+                  // Volvió a abrir el panel sin haberla creado: se pide la temporal otra vez
+                  <div className="field">
+                    <label className="field__label" htmlFor="temp-password">Contraseña temporal del correo</label>
+                    <input className="input" id="temp-password" type="password" autoComplete="current-password" onChange={(e) => setTempPw(e.target.value)} {...inv('temp-password')} />
+                    {fieldErr('temp-password')}
+                  </div>
+                )}
                 <div className="field">
                   <label className="field__label" htmlFor="new-password">Nueva contraseña</label>
                   <input className="input" id="new-password" type="password" autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} {...inv('new-password')} />
@@ -163,9 +190,9 @@ export function Login() {
                   <input className="input" id="new-password2" type="password" autoComplete="new-password" value={newPw2} onChange={(e) => setNewPw2(e.target.value)} {...inv('new-password2')} />
                   {fieldErr('new-password2')}
                 </div>
-                <button className="btn btn--block" type="submit" disabled={busy}><Icon id="lock" />{busy ? 'Guardando…' : 'Guardar contraseña'}</button>
+                <button className="btn btn--block" type="submit" disabled={busy}><Icon id="lock" />{busy ? 'Guardando…' : view === 'change' ? 'Guardar y entrar al panel' : 'Guardar contraseña'}</button>
               </form>
-              <button className="link link--muted login__back" type="button" style={{ marginTop: '1rem' }} onClick={() => { setErrors({}); setError(null); setView('login'); navigate('/login', { replace: true }); }}>
+              <button className="link link--muted login__back" type="button" style={{ marginTop: '1rem' }} onClick={() => { if (view === 'change') clearSession(); setTempPw(''); setErrors({}); setError(null); setView('login'); navigate('/login', { replace: true }); }}>
                 <Icon id="left" className="icon--sm" />Volver a iniciar sesión
               </button>
             </section>
@@ -203,7 +230,7 @@ export function Login() {
                 </div>
                 <div className="login__row">
                   <label className="check"><input type="checkbox" id="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Mantener la sesión iniciada</label>
-                  <button className="link" type="button" onClick={() => { setForgotEmail(email); setForgotOk(''); setErrors({}); setView('forgot'); }}>¿Olvidaste tu contraseña?</button>
+                  <button className="link" type="button" onClick={() => { setForgotEmail(email); setErrors({}); setView('forgot'); }}>¿Olvidaste tu contraseña?</button>
                 </div>
                 <button className="btn btn--block" type="submit" id="login-submit" disabled={busy || !!locked}><Icon id="lock" />{busy ? 'Entrando…' : 'Entrar al panel'}</button>
               </form>
@@ -212,20 +239,14 @@ export function Login() {
             <section id="view-forgot" aria-labelledby="forgot-title">
               <button className="link link--muted login__back" type="button" onClick={() => { setErrors({}); setView('login'); }}><Icon id="left" className="icon--sm" />Volver a iniciar sesión</button>
               <h1 id="forgot-title" tabIndex={-1}>Recupera tu acceso</h1>
-              <p className="login__lead">Escribe tu correo y te enviaremos un enlace para crear una nueva contraseña.</p>
-              {forgotOk && (
-                <div className="notice notice--info" id="forgot-ok" role="status">
-                  <Icon id="check-c" />
-                  <div><strong>Revisa tu bandeja de entrada</strong>Si {forgotOk} está registrado, recibirás un enlace para crear una nueva contraseña en unos minutos.</div>
-                </div>
-              )}
+              <p className="login__lead">Escribe tu correo y te enviaremos una contraseña temporal. Entra con ella y te pediremos crear la tuya.</p>
               <form id="forgot-form" noValidate onSubmit={onForgot}>
                 <div className="field">
                   <label className="field__label" htmlFor="forgot-email">Correo electrónico</label>
                   <input className="input" id="forgot-email" type="email" autoComplete="email" placeholder="nombre@zugar.example" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} {...inv('forgot-email')} />
                   {fieldErr('forgot-email')}
                 </div>
-                <button className="btn btn--block" type="submit">Enviar instrucciones</button>
+                <button className="btn btn--block" type="submit">Enviarme una contraseña temporal</button>
               </form>
             </section>
           )}

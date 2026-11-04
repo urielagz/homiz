@@ -4,14 +4,14 @@ import * as Access from '../models/property-access.model.js';
 
 /*
  * Pertenencia de recursos. Regla general:
- * - Administrador: acceso a todo (sus permisos se validan aparte con requirePermission).
- * - Broker: solo a las propiedades donde es el responsable.
+ * - Administrador o propietario: acceso a todo (sus permisos se validan aparte con requirePermission).
+ * - Broker: solo a las propiedades donde es el responsable. Quien es broker y administrador ve todo.
  * - Cliente: solo a la propiedad con la que está vinculado (contrato vigente o inquilino registrado).
  */
 export type PropertyAccess = 'ok' | 'not_found' | 'forbidden';
 
 export function isAdmin(user: AuthUser): boolean {
-  return user.type === 'staff' && user.roles.includes('admin');
+  return user.type === 'staff' && (user.roles.includes('admin') || user.roles.includes('owner'));
 }
 
 export function isBroker(user: AuthUser): boolean {

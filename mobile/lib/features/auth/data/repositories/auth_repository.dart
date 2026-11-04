@@ -44,6 +44,8 @@ class AuthRepository {
           'email': email.trim(),
           'phone': phone.trim(),
           'password': password,
+          // Solo se llama después de marcar «Acepto el aviso de privacidad»
+          'consent': true,
         });
         return _startSession(res.data!);
       });
@@ -64,14 +66,30 @@ class AuthRepository {
         return AppUser.fromJson(res.data!);
       });
 
+  /// Cambia la contraseña. La API cierra las demás sesiones y entrega tokens nuevos para esta.
   Future<String> changePassword({required String current, required String next}) => _call(() async {
         final res = await _dio.post<Map<String, dynamic>>('/auth/change-password', data: {'currentPassword': current, 'newPassword': next});
-        return res.data?['message'] as String? ?? 'Tu contraseña se actualizó.';
+        final data = res.data ?? const {};
+        if (data['accessToken'] is String && data['refreshToken'] is String) {
+          await _storage.save(access: data['accessToken'] as String, refresh: data['refreshToken'] as String);
+        }
+        return data['message'] as String? ?? 'Tu contraseña se actualizó.';
       });
 
   Future<String> forgotPassword(String email) => _call(() async {
         final res = await _dio.post<Map<String, dynamic>>('/auth/forgot-password', data: {'email': email.trim()});
         return res.data?['message'] as String? ?? '';
+      });
+
+  /// Crea la contraseña con el código del correo (cuenta nueva o recuperación).
+  Future<void> resetPassword(String token, String password) => _call(() async {
+        await _dio.post<Map<String, dynamic>>('/auth/reset-password', data: {'token': token, 'password': password});
+      });
+
+  /// «Eliminar mi cuenta» (derecho de cancelación): pide su contraseña. Después se borra la sesión local.
+  Future<void> deleteAccount(String password) => _call(() async {
+        await _dio.delete<void>('/users/me', data: {'password': password});
+        await _storage.clear();
       });
 
   /// Cierra la sesión en la API (si no hay red, igual se borra la sesión local).

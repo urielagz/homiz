@@ -9,8 +9,11 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import pg from 'pg';
 
+/** En producción (NODE_ENV=production) NO se cargan los datos de demostración (002_seed: cuentas y casas de ejemplo). */
 async function sqlFiles(dir = 'db'): Promise<string[]> {
-  const names = (await readdir(dir)).filter((f) => /^\d{3}_.+\.sql$/.test(f)).sort();
+  const prod = process.env.NODE_ENV === 'production';
+  const names = (await readdir(dir)).filter((f) => /^\d{3}_.+\.sql$/.test(f) && !(prod && /_seed\.sql$/.test(f))).sort();
+  if (prod) console.log('Producción: se omiten los datos de demostración (002_seed.sql).');
   return names.map((n) => path.join(dir, n));
 }
 

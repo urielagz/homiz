@@ -3,6 +3,7 @@ import { pool } from '../config/database.js';
 import { currentUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { assertPropertyAccess } from '../services/access.service.js';
+import { clientDocumentFilter, clientReceiptFilter, clientReportFilter } from '../models/property-access.model.js';
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const shortDate = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
@@ -24,7 +25,8 @@ export const getDossier: RequestHandler = async (_req, res) => {
     `SELECT p.id, p.code, p.name, p.zone, p.address, p.city, p.status, p.rec, p.banos, p.m2, p.operation,
             (SELECT array_agg(name ORDER BY position) FROM property_amenities WHERE property_id = p.id) AS amenities,
             (SELECT storage_key FROM property_photos WHERE property_id = p.id ORDER BY position LIMIT 1) AS photo,
-            b.name AS broker_name, b.phone AS broker_phone
+            b.name AS broker_name, b.phone AS broker_phone, b.email AS broker_email,
+            p.electricity_service_number, p.water_service_number, p.utility_reminder_day
        FROM properties p LEFT JOIN users b ON b.id = p.broker_id WHERE p.id = $1`,
     [id],
   )).rows[0];
@@ -32,16 +34,17 @@ export const getDossier: RequestHandler = async (_req, res) => {
   const contract = (await pool.query(
     `SELECT ct.id, to_char(ct.start_date, 'YYYY-MM-DD') AS "startDate", to_char(ct.end_date, 'YYYY-MM-DD') AS "endDate",
             ct.monthly_rent AS "monthlyRent", ct.payment_day AS "paymentDay", ct.deposit, ct.status, c.id AS client_id, c.name AS client_name,
-            c.phone AS client_phone, c.email AS client_email
-       FROM contracts ct JOIN clients c ON c.id = ct.client_id
+            COALESCE(c.phone, cu.phone) AS client_phone, COALESCE(c.email, cu.email) AS client_email
+       FROM contracts ct JOIN clients c ON c.id = ct.client_id LEFT JOIN users cu ON cu.id = c.user_id
       WHERE ct.property_id = $1 ${isClient ? 'AND ct.client_id = $2' : ''} ORDER BY (ct.status = 'active') DESC, ct.start_date DESC LIMIT 1`,
     isClient ? [id, user.clientId] : [id],
   )).rows[0] ?? null;
 
   const documents = (await pool.query(
-    `SELECT id, type, name, description, mime, size, visible_to_client AS "visibleToClient", created_at AS "createdAt"
-       FROM documents WHERE property_id = $1 AND promissory_note_id IS NULL ${isClient ? 'AND visible_to_client' : ''} ORDER BY created_at`,
-    [id],
+    `SELECT d.id, d.type, d.name, d.description, d.mime, d.size, d.visible_to_client AS "visibleToClient", d.created_at AS "createdAt"
+       FROM documents d WHERE d.property_id = $1 AND d.promissory_note_id IS NULL
+        ${isClient ? `AND d.visible_to_client AND ${clientDocumentFilter('$2')}` : ''} ORDER BY d.created_at`,
+    isClient ? [id, user.clientId] : [id],
   )).rows.map((d) => (isClient ? { ...d, visibleToClient: undefined } : d));
 
   const notes = contract
@@ -57,14 +60,14 @@ export const getDossier: RequestHandler = async (_req, res) => {
 
   const receipts = (await pool.query(
     `SELECT r.id, r.kind, r.concept, r.amount, to_char(r.due_date, 'YYYY-MM-DD') AS "dueDate", r.status FROM receipts r
-      WHERE r.property_id = $1 ORDER BY r.due_date DESC NULLS LAST LIMIT 12`,
-    [id],
+      WHERE r.property_id = $1 ${isClient ? `AND ${clientReceiptFilter('$2')}` : ''} ORDER BY r.due_date DESC NULLS LAST LIMIT 12`,
+    isClient ? [id, user.clientId] : [id],
   )).rows;
 
   const maintenance = (await pool.query(
-    `SELECT id, title, category, priority, status, created_at AS "createdAt", closed_at AS "closedAt" FROM maintenance_reports
-      WHERE property_id = $1 ORDER BY created_at DESC LIMIT 20`,
-    [id],
+    `SELECT r.id, r.title, r.category, r.priority, r.status, r.created_at AS "createdAt", r.closed_at AS "closedAt" FROM maintenance_reports r
+      WHERE r.property_id = $1 ${isClient ? `AND ${clientReportFilter('$2')}` : ''} ORDER BY r.created_at DESC LIMIT 20`,
+    isClient ? [id, user.clientId] : [id],
   )).rows;
 
   /* Secciones listas para la pestaña «Expediente» de la app. */
@@ -84,6 +87,14 @@ export const getDossier: RequestHandler = async (_req, res) => {
     payments: notes,
     receipts,
     maintenance,
+    // Servicios: el inquilino consulta su recibo en la app de cada compañía con su número de servicio
+    utilities: {
+      reminderDay: property.utility_reminder_day,
+      electricity: property.electricity_service_number ? { company: 'CFE', serviceNumber: property.electricity_service_number, app: 'CFE Contigo', url: 'https://app.cfe.mx/Aplicaciones/CCFE/MiEspacio/' } : null,
+      water: property.water_service_number ? { company: 'Aguakan', serviceNumber: property.water_service_number, app: 'Aguakan', url: 'https://www.aguakan.com/' } : null,
+    },
+    // Contacto mutuo: el inquilino también ve a su asesor
+    broker: property.broker_name ? { name: property.broker_name, phone: property.broker_phone, email: property.broker_email } : null,
   };
   if (isClient) return void res.json(base);
 

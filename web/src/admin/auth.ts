@@ -20,6 +20,8 @@ export interface Session {
   refresh?: string;
   roles?: string[];
   permissions?: string[];
+  /** Entró con la contraseña temporal del correo: antes de usar el panel crea la suya */
+  mustChange?: boolean;
 }
 
 export type LoginResult = { ok: true; user: Session } | { ok: false; error: 'locked'; lockedFor: number } | { ok: false; error: 'invalid'; left: number } | { ok: false; error: 'noaccess' };
@@ -58,19 +60,54 @@ export function clearSession() {
   }
 }
 
-/** La API renueva el token cada 15 minutos: se guarda donde ya estaba la sesión */
-export function saveTokens(token: string, refresh: string) {
+/** Cambia datos de la sesión guardada (donde ya estaba) */
+function updateSession(change: Partial<Session>) {
   for (const s of [sessionStorage, localStorage]) {
     const cur = read(s);
     if (!cur) continue;
-    cur.token = token;
-    cur.refresh = refresh;
     try {
-      s.setItem(KEY, JSON.stringify(cur));
+      s.setItem(KEY, JSON.stringify({ ...cur, ...change }));
     } catch {
       /* sin almacenamiento */
     }
   }
+}
+
+/** La API renueva el token cada 15 minutos: se guarda donde ya estaba la sesión */
+export function saveTokens(token: string, refresh: string) {
+  updateSession({ token, refresh });
+}
+
+/** Ya creó su contraseña: tokens nuevos (las sesiones anteriores se cerraron) y entra al panel */
+export function passwordChanged(token: string, refresh: string) {
+  updateSession({ token, refresh, mustChange: false });
+}
+
+/* ---------- Roles y permisos ----------
+   Cada persona del personal es broker, administración o ambos; el propietario decide quién es qué.
+   El panel solo muestra las acciones permitidas; la API vuelve a validar cada una. */
+export function roleLabel(roles: string[] = []) {
+  if (roles.includes('owner')) return 'Propietario';
+  if (roles.includes('admin') && roles.includes('broker')) return 'Broker y administración';
+  return roles.includes('admin') ? 'Administración' : 'Broker';
+}
+
+/** Permisos actuales (sin servidor, el acceso de demostración puede todo) */
+/** Administración o propietario (lo que el broker no hace: hacer inquilino, números de servicio…) */
+export function isAdminSession() {
+  const r = currentSession()?.roles ?? [];
+  return r.includes('admin') || r.includes('owner');
+}
+
+export function can(permission: string) {
+  const s = currentSession();
+  if (!s) return false;
+  return s.api ? !!s.permissions?.includes(permission) : true;
+}
+
+/** Al abrir el panel se leen de nuevo roles y permisos (pudieron cambiar desde el último acceso) */
+export function refreshAccess(roles: string[], permissions: string[]) {
+  updateSession({ roles, permissions, role: roleLabel(roles) });
 }
 
 export function lockState() {
@@ -120,7 +157,7 @@ export async function login(email: string, password: string, remember: boolean):
     const u = r.user;
     if (u.type !== 'staff') return { ok: false, error: 'noaccess' }; // las cuentas de cliente usan la app
     return start(
-      { email: u.email, name: u.name, role: u.roles.includes('admin') ? 'Administración' : 'Broker', api: true, token: r.accessToken, refresh: r.refreshToken, roles: u.roles, permissions: u.permissions },
+      { email: u.email, name: u.name, role: roleLabel(u.roles), api: true, token: r.accessToken, refresh: r.refreshToken, roles: u.roles, permissions: u.permissions, mustChange: !!u.mustChangePassword },
       remember,
     );
   } catch (err) {

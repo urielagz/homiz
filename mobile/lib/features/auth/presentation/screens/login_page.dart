@@ -13,6 +13,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../../appointments/presentation/providers/pending_visit_provider.dart';
 import '../providers/session_provider.dart';
+import '../providers/site_link_provider.dart';
 
 /// Pantalla 2 · Iniciar sesión. Al entrar, el router lleva a /home.
 class LoginPage extends ConsumerStatefulWidget {
@@ -28,7 +29,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _password = TextEditingController();
   bool _loading = false;
   String? _error;
+  /// Aviso tras pedir la contraseña temporal
+  String? _notice;
   Map<String, String> _fieldErrors = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Viene de enviar un formulario del sitio: su correo ya va escrito.
+    _email.text = ref.read(siteLinkProvider).email ?? '';
+  }
 
   @override
   void dispose() {
@@ -65,8 +75,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (email == null || Validators.email(email) != null || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final message = await ref.read(authRepositoryProvider).forgotPassword(email);
-      messenger.showSnackBar(SnackBar(content: Text(message.isEmpty ? 'Si el correo está registrado, te enviamos las instrucciones.' : message)));
+      await ref.read(authRepositoryProvider).forgotPassword(email);
+      // Queda en el acceso con el correo escrito: entra con la contraseña temporal y luego crea la suya
+      _email.text = email.trim();
+      _password.clear();
+      setState(() => _notice = 'Si $email está registrado, te enviamos una contraseña temporal (revisa también el correo no deseado). Escríbela aquí; al entrar te pediremos crear la tuya.');
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(ApiException.from(e).message)));
     }
@@ -89,6 +102,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const Center(child: ZugarLogo(height: 40)),
                 const SizedBox(height: AppSpacing.xxl),
                 Semantics(header: true, child: Text('Iniciar sesión', style: AppTextStyles.authTitle)),
+                if (ref.watch(siteLinkProvider.select((l) => l.email != null)) && ref.watch(pendingVisitProvider) == null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Te creamos tu cuenta con tu solicitud. Entra con la contraseña temporal que te enviamos por correo; luego crearás la tuya.',
+                    style: AppTextStyles.body.copyWith(color: Colors.white70),
+                  ),
+                ],
                 if (ref.watch(pendingVisitProvider) != null) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text('Entra para agendar la visita a la casa que elegiste en el sitio.', style: AppTextStyles.body.copyWith(color: Colors.white70)),
@@ -124,6 +144,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: const Text('¿Olvidaste tu contraseña?'),
                   ),
                 ),
+                if (_notice != null) ...[
+                  Semantics(
+                    liveRegion: true,
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: AppRadius.inputAll),
+                      child: Text(_notice!, style: AppTextStyles.secondary.copyWith(color: Colors.white, fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
                 if (_error != null) ...[
                   Semantics(
                     liveRegion: true,
@@ -181,7 +212,8 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Recuperar contraseña'),
+      title: const Text('Recuperar contraseña', textAlign: TextAlign.center),
+      actionsAlignment: MainAxisAlignment.center,
       content: TextField(
         controller: _controller,
         keyboardType: TextInputType.emailAddress,

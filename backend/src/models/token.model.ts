@@ -31,10 +31,26 @@ export async function revokeAllForUser(userId: string, db: Db = pool): Promise<v
   await db.query('UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL', [userId]);
 }
 
-export async function insertPasswordReset(userId: string, tokenHash: string, expiresAt: Date, db: Db = pool): Promise<void> {
+export async function insertPasswordReset(userId: string, tokenHash: string, expiresAt: Date, db: Db = pool, codeHash: string | null = null): Promise<void> {
   // Un enlace nuevo invalida los anteriores que no se usaron.
   await db.query('UPDATE password_resets SET used_at = now() WHERE user_id = $1 AND used_at IS NULL', [userId]);
-  await db.query('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($1, $2, $3)', [userId, tokenHash, expiresAt]);
+  await db.query('INSERT INTO password_resets (user_id, token_hash, expires_at, code_hash) VALUES ($1, $2, $3, $4)', [userId, tokenHash, expiresAt, codeHash]);
+}
+
+/**
+ * Canjea la contraseña temporal del correo («olvidé mi contraseña»): solo la vigente (sin usar ni vencer).
+ * Devuelve true si coincide; queda usada. La contraseña anterior sigue sirviendo hasta que se canjee.
+ */
+export async function consumeTemporaryPassword(userId: string, passwordHash: string, db: Db = pool): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE password_resets SET used_at = now()
+      WHERE id = (SELECT id FROM password_resets
+                   WHERE user_id = $1 AND used_at IS NULL AND expires_at > now() AND code_hash IS NOT NULL
+                   ORDER BY created_at DESC LIMIT 1)
+        AND code_hash = $2`,
+    [userId, passwordHash],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 /** Marca el enlace como usado y devuelve el usuario, solo si existía, no se había usado y no venció. */

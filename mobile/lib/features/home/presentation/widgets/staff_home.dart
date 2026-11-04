@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/cards.dart';
+import '../../../../core/widgets/permission_gate.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/states.dart';
 import '../../../notifications/presentation/providers/notifications_provider.dart';
@@ -92,6 +93,25 @@ class StaffDashboardView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
+        PermissionGate(
+          permission: 'leads.manage',
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: PrimaryButton(
+              label: c.newLeads > 0 ? 'Solicitudes · ${c.newLeads} nuevas' : 'Solicitudes del sitio y la app',
+              icon: Icons.mark_email_unread_outlined,
+              onPressed: () => context.go('/requests'),
+            ),
+          ),
+        ),
+        // Como «Pagos» del panel: todos los pagarés con registrar, corregir o anular el pago, sellos y PDF
+        PermissionGate(
+          permission: 'payments.register',
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: PrimaryButton(label: 'Pagos y pagarés', icon: Icons.payments_outlined, onPressed: () => context.go('/home/payments')),
+          ),
+        ),
         PrimaryButton(label: 'Directorio de proveedores', icon: Icons.engineering_outlined, variant: ButtonVariant.outline, onPressed: () => context.go('/home/providers')),
       ],
     );

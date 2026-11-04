@@ -1,12 +1,18 @@
+import { Honeypot } from './Honeypot';
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { sendLead, type ApiError } from '../lib/api';
 import { appLink } from '../lib/appLink';
 import { priceUnit, type House } from '../lib/catalog';
-import { fakeFolio, longDate, money, todayISO } from '../lib/format';
-import { clean, email, futureDate, phone, required, type Errors } from '../lib/validation';
+import { fakeFolio, longDate, money, t12 } from '../lib/format';
+import { clean, emailRepeat, emailStrict, futureDate, phone, required, type Errors } from '../lib/validation';
 import { Dialog } from './Dialog';
+import { EmailFields } from './EmailFields';
+import { MoneyInput, moneyText } from './NumberInput';
+import { PrivacyLink } from './PrivacyNotice';
+import { VisitSlotPicker } from './VisitSlotPicker';
 import { Field, invalid, Opt } from './Field';
+import { ReviewAccountNote } from './ReviewAccountNote';
 import { Icon } from './Icon';
 import { useToast } from './Toasts';
 
@@ -14,12 +20,11 @@ import { useToast } from './Toasts';
    «¿Te imaginas viviendo aquí?»: solicitud de visita dentro de la ficha de una casa.
    Al enviar se guarda un resumen para la página de Gracias y se pasa a ella.
    ========================================================================== */
-const HOURS = ['10:00', '11:30', '13:00', '16:00', '17:30'];
 const PAYMENT: [string, string][] = [['contado', 'De contado'], ['credito-bancario', 'Crédito bancario'], ['infonavit', 'Infonavit o Fovissste'], ['no-se', 'Aún no lo sé']];
 export const LAST_CONTACT_KEY = 'zugar-ultimo-contacto';
 
 const EMPTY = {
-  nombre: '', correo: '', telefono: '', nacionalidad: '', ocupacion: '', presupuesto: '', forma_pago: '',
+  nombre: '', correo: '', correo2: '', telefono: '', nacionalidad: '', ocupacion: '', presupuesto: '', forma_pago: '',
   personas: '2', mascotas: '' as '' | 'si' | 'no', mascotas_detalle: '', fecha: '', horario: '', comentarios: '', privacidad: false,
 };
 type Form = typeof EMPTY;
@@ -38,12 +43,12 @@ export function HouseVisitForm({ house: c }: { house: House }) {
 
   const validate = (x: Form): Errors =>
     clean({
-      nombre: required(x.nombre), correo: email(x.correo), telefono: phone(x.telefono),
+      nombre: required(x.nombre), correo: emailStrict(x.correo), correo2: emailRepeat(x.correo, x.correo2), telefono: phone(x.telefono),
       nacionalidad: required(x.nacionalidad), ocupacion: required(x.ocupacion), presupuesto: required(x.presupuesto),
       forma_pago: sale ? required(x.forma_pago, true) : '',
       mascotas: x.mascotas ? '' : 'Elige una opción.',
       mascotas_detalle: x.mascotas === 'si' ? required(x.mascotas_detalle) : '',
-      fecha: futureDate(x.fecha), horario: required(x.horario, true),
+      fecha: futureDate(x.fecha) && 'Elige el día de tu cita en el calendario.', horario: x.horario ? '' : 'Elige la hora de tu cita.',
       privacidad: x.privacidad ? '' : 'Marca esta casilla para continuar.',
     });
 
@@ -71,17 +76,21 @@ export function HouseVisitForm({ house: c }: { house: House }) {
     setReviewing(false);
     setSending(true);
     try {
-      const { nombre, correo, telefono, comentarios, fecha, horario, privacidad: _ok, ...rest } = f;
+      const { nombre, correo, correo2: _c2, telefono, comentarios, fecha, horario, privacidad: _ok, presupuesto, ...rest } = f;
       const r = await sendLead({
         reason: 'visita', name: nombre.trim(), email: correo.trim(), phone: telefono, message: comentarios,
         propertyCode: c.code, propertySlug: c.slug, preferredDate: fecha, preferredTime: horario,
-        payload: rest as Record<string, string>,
+        payload: { ...rest, presupuesto: moneyText(presupuesto) + ' ' + priceUnit(c), presupuesto_max: Number(presupuesto) || null } as Record<string, string | number | null>,
       }).catch((err: ApiError) => {
         if (err?.sinConexion) return new Promise<{ folio: string }>((ok) => setTimeout(() => ok({ folio: fakeFolio() }), 700));
         throw err;
       });
       try {
-        sessionStorage.setItem(LAST_CONTACT_KEY, JSON.stringify({ nombre: nombre.trim(), motivo: 'visita', folio: r.folio, fecha: longDate(fecha), hora: horario, asesor: c.asesor, slug: c.slug }));
+        sessionStorage.setItem(LAST_CONTACT_KEY, JSON.stringify({
+          nombre: nombre.trim(), motivo: 'visita', folio: r.folio, fecha: longDate(fecha), hora: horario, asesor: c.asesor, slug: c.slug,
+          // Para «Cambiar mis datos» en la página de Gracias (2 horas)
+          correo: correo.trim(), telefono: telefono.trim(), editToken: 'editToken' in r ? r.editToken : null,
+        }));
       } catch {
         /* sin almacenamiento: la página de Gracias muestra el texto general */
       }
@@ -96,17 +105,18 @@ export function HouseVisitForm({ house: c }: { house: House }) {
 
   const err = (k: keyof Form) => (showErrors ? errors[k] : undefined);
   const rows: [string, string][] = [
-    ['Nombre completo', f.nombre], ['Correo electrónico', f.correo], ['Teléfono', f.telefono], ['Nacionalidad', f.nacionalidad],
-    ['¿En qué trabajas?', f.ocupacion], ['Casa de interés', c.name + (c.code ? ' · ' + c.code : '')], ['Presupuesto aproximado', f.presupuesto],
+    ['Nombre completo', f.nombre], ['Correo electrónico (tu cuenta de la app)', f.correo], ['Teléfono', f.telefono], ['Nacionalidad', f.nacionalidad],
+    ['¿En qué trabajas?', f.ocupacion], ['Casa de interés', c.name + (c.code ? ' · ' + c.code : '')], ['Presupuesto máximo', f.presupuesto ? moneyText(f.presupuesto) + ' ' + priceUnit(c) : ''],
     ['¿Cómo planeas comprar?', sale ? PAYMENT.find(([v]) => v === f.forma_pago)?.[1] ?? '' : ''],
     ['Personas que vivirán en la casa', f.personas === '5' ? '5 o más' : f.personas], ['¿Tienes mascotas?', f.mascotas === 'si' ? 'Sí' : f.mascotas === 'no' ? 'No' : ''],
-    ['¿Cuáles y cuántas mascotas?', f.mascotas === 'si' ? f.mascotas_detalle : ''], ['Fecha preferida', longDate(f.fecha)],
-    ['Horario', f.horario ? f.horario + ' h' : ''], ['Comentarios', f.comentarios],
+    ['¿Cuáles y cuántas mascotas?', f.mascotas === 'si' ? f.mascotas_detalle : ''], ['Fecha de la cita', longDate(f.fecha)],
+    ['Hora', f.horario ? t12(f.horario) + ' (15 minutos)' : ''], ['Comentarios', f.comentarios],
   ];
 
   return (
     <>
       <form className="booking-form booking-form--card" noValidate onSubmit={onSubmit}>
+        <Honeypot />
         {showErrors && Object.keys(errors).length > 0 && (
           <div className="alert alert-error is-visible" role="alert">
             <Icon id="alert" />
@@ -119,9 +129,8 @@ export function HouseVisitForm({ house: c }: { house: House }) {
             <Field id="b-nombre" label="Nombre completo *" error={err('nombre')}>
               <input className="input" id="b-nombre" type="text" autoComplete="name" placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
             </Field>
-            <Field id="b-correo" label="Correo electrónico *" error={err('correo')}>
-              <input className="input" id="b-correo" type="email" autoComplete="email" placeholder="tu@correo.com" value={f.correo} onChange={(e) => set('correo', e.target.value)} {...invalid('b-correo', err('correo'))} />
-            </Field>
+            <EmailFields prefix="b" value={f.correo} repeat={f.correo2} error={err('correo')} repeatError={err('correo2')}
+              onChange={(v, r) => setF((x) => { const next = { ...x, correo: v, correo2: r }; if (showErrors) setErrors(validate(next)); return next; })} />
             <Field id="b-telefono" label={<>Teléfono <Opt>(opcional)</Opt></>} error={err('telefono')} help={err('telefono') ? undefined : 'Para confirmar tu visita por WhatsApp.'}>
               <input className="input" id="b-telefono" type="tel" autoComplete="tel" placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} {...invalid('b-telefono', err('telefono'))} />
             </Field>
@@ -139,8 +148,9 @@ export function HouseVisitForm({ house: c }: { house: House }) {
             <Field id="b-casa-ref" label="Casa de interés">
               <input className="input" id="b-casa-ref" type="text" value={c.name + (c.code ? ' · ' + c.code : '')} readOnly />
             </Field>
-            <Field id="b-presupuesto" label="Presupuesto aproximado *" error={err('presupuesto')}>
-              <input className="input" id="b-presupuesto" type="text" inputMode="numeric" placeholder={`${money(c.price)} ${priceUnit(c)}`} value={f.presupuesto} onChange={(e) => set('presupuesto', e.target.value)} {...invalid('b-presupuesto', err('presupuesto'))} />
+            <Field id="b-presupuesto" label={`Presupuesto máximo ${sale ? '' : 'al mes '}*`} error={err('presupuesto')}
+              help={err('presupuesto') ? undefined : 'Lo más que quieres pagar. Con este límite te presentamos también cualquier otra casa que no lo pase.'}>
+              <MoneyInput id="b-presupuesto" placeholder={`${money(c.price)} ${priceUnit(c)}`} value={f.presupuesto} onChange={(v) => set('presupuesto', v)} {...invalid('b-presupuesto', err('presupuesto'))} />
             </Field>
             {sale && (
               <Field id="b-forma_pago" label="¿Cómo planeas comprar? *" error={err('forma_pago')}>
@@ -173,17 +183,10 @@ export function HouseVisitForm({ house: c }: { house: House }) {
           </div>
         </fieldset>
         <fieldset>
-          <legend>3. Elige un momento</legend>
+          <legend>3. ¿Te gustaría agendar una cita?</legend>
+          <VisitSlotPicker id="b" slug={c.slug} date={f.fecha} time={f.horario} dateError={err('fecha')} timeError={err('horario')}
+            onChange={(fecha, horario) => setF((x) => { const next = { ...x, fecha, horario }; if (showErrors) setErrors(validate(next)); return next; })} />
           <div className="form-grid">
-            <Field id="b-fecha" label="Fecha preferida *" error={err('fecha')}>
-              <input className="input" id="b-fecha" type="date" min={todayISO()} value={f.fecha} onChange={(e) => set('fecha', e.target.value)} {...invalid('b-fecha', err('fecha'))} />
-            </Field>
-            <Field id="b-horario" label="Horario *" error={err('horario')} help={err('horario') ? undefined : 'La visita es en la casa y dura unos 45 minutos.'}>
-              <select className="select" id="b-horario" value={f.horario} onChange={(e) => set('horario', e.target.value)} {...invalid('b-horario', err('horario'))}>
-                <option value="">Elige un horario</option>
-                {HOURS.map((h) => <option key={h} value={h}>{h} h</option>)}
-              </select>
-            </Field>
             <Field id="b-comentarios" label={<>Comentarios <Opt>(opcional)</Opt></>}>
               <textarea className="textarea" id="b-comentarios" rows={3} placeholder="Por ejemplo: nos gustaría ver el jardín por la mañana." value={f.comentarios} onChange={(e) => set('comentarios', e.target.value)} />
             </Field>
@@ -192,7 +195,7 @@ export function HouseVisitForm({ house: c }: { house: House }) {
         <div className={err('privacidad') ? 'is-error' : undefined}>
           <label className="check">
             <input type="checkbox" id="b-privacidad" checked={f.privacidad} onChange={(e) => set('privacidad', e.target.checked)} {...invalid('b-privacidad', err('privacidad'))} />
-            <span>Acepto el <Link to="/contacto#aviso-privacidad">aviso de privacidad</Link> y que me contacten sobre esta propiedad.</span>
+            <span>Acepto el <PrivacyLink>aviso de privacidad</PrivacyLink> y que me contacten sobre esta propiedad.</span>
           </label>
           {err('privacidad') && <p className="field__error flex" id="b-privacidad-error"><Icon id="alert" size="sm" />{err('privacidad')}</p>}
         </div>
@@ -207,7 +210,8 @@ export function HouseVisitForm({ house: c }: { house: House }) {
 
       <Dialog open={reviewing} onClose={() => setReviewing(false)} labelledBy="dlg-title">
         <h2 id="dlg-title">Revisa tu solicitud</h2>
-        <p className="dlg-lead">Confirma que tus datos estén bien antes de enviarlos. {first} te confirmará el día y la hora.</p>
+        <p className="dlg-lead">Estos son tus datos. Confirma que estén correctos: {first} te confirmará el día y la hora.</p>
+        <ReviewAccountNote email={f.correo} />
         <dl className="review">
           {rows.filter(([, v]) => v && v.trim()).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v.trim()}</dd></div>)}
         </dl>

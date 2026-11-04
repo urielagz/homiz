@@ -11,6 +11,7 @@ import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/auth_background.dart';
 import '../../../../core/widgets/auth_text_field.dart';
 import '../../../../core/widgets/password_strength_bar.dart';
+import '../legal_links.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../appointments/presentation/providers/pending_visit_provider.dart';
 import '../providers/session_provider.dart';
@@ -30,6 +31,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _phone = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
+  bool _consent = false;
+  String? _consentError;
   String? _error;
   Map<String, String> _fieldErrors = const {};
 
@@ -47,7 +50,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _error = null;
       _fieldErrors = const {};
     });
-    if (!_form.currentState!.validate()) return;
+    final valid = _form.currentState!.validate();
+    // Consentimiento expreso del aviso de privacidad (sin él no se crea la cuenta)
+    setState(() => _consentError = _consent ? null : 'Acepta el aviso de privacidad para crear tu cuenta.');
+    if (!valid || !_consent) return;
     FocusScope.of(context).unfocus();
     setState(() => _loading = true);
     try {
@@ -141,7 +147,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 PasswordStrengthBar(password: _password.text),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.md),
+                PrivacyConsentField(value: _consent, error: _consentError, color: Colors.white, onChanged: (v) => setState(() {
+                      _consent = v;
+                      if (v) _consentError = null;
+                    })),
+                const SizedBox(height: AppSpacing.lg),
                 if (_error != null) ...[
                   Semantics(
                     liveRegion: true,

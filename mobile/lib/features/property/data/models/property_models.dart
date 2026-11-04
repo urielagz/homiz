@@ -13,6 +13,8 @@ abstract class PropertyDetail with _$PropertyDetail {
     required String id,
     String? code,
     required String name,
+    /// Tipo de inmueble: Casa, Departamento, Terreno, Local comercial…
+    String? type,
     String? description,
     String? operation,
     @Default(0) double price,
@@ -55,11 +57,37 @@ abstract class Dossier with _$Dossier {
     DossierContract? contract,
     @Default(<DossierSection>[]) List<DossierSection> sections,
     @Default(<DossierDocument>[]) List<DossierDocument> documents,
+    /// Servicios de agua y luz (números que captura administración)
+    DossierUtilities? utilities,
+    /// Asesor de la casa (contacto mutuo: también lo ve el inquilino)
+    DossierContact? broker,
     // Solo para el personal:
     PersonRef? tenant,
   }) = _Dossier;
 
   factory Dossier.fromJson(Map<String, dynamic> json) => _$DossierFromJson(json);
+}
+
+@freezed
+abstract class DossierContact with _$DossierContact {
+  const factory DossierContact({required String name, String? phone, String? email}) = _DossierContact;
+
+  factory DossierContact.fromJson(Map<String, dynamic> json) => _$DossierContactFromJson(json);
+}
+
+/// Luz (CFE) y agua (Aguakan): número de servicio y la app donde se consulta el recibo.
+@freezed
+abstract class DossierUtilities with _$DossierUtilities {
+  const factory DossierUtilities({@Default(1) int reminderDay, UtilityService? electricity, UtilityService? water}) = _DossierUtilities;
+
+  factory DossierUtilities.fromJson(Map<String, dynamic> json) => _$DossierUtilitiesFromJson(json);
+}
+
+@freezed
+abstract class UtilityService with _$UtilityService {
+  const factory UtilityService({required String company, required String serviceNumber, String? app, String? url}) = _UtilityService;
+
+  factory UtilityService.fromJson(Map<String, dynamic> json) => _$UtilityServiceFromJson(json);
 }
 
 @freezed
@@ -125,7 +153,10 @@ abstract class DossierDocument with _$DossierDocument {
     required String name,
     String? description,
     String? mime,
+    int? size,
     @LocalDateOrNull() DateTime? createdAt,
+    // Solo para el personal: si el cliente lo ve en su expediente.
+    bool? visibleToClient,
   }) = _DossierDocument;
 
   factory DossierDocument.fromJson(Map<String, dynamic> json) => _$DossierDocumentFromJson(json);

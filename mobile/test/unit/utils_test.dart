@@ -39,8 +39,10 @@ void main() {
     });
 
     test('fecha de cita', () {
-      expect(Fmt.appointment(DateTime(2026, 10, 22, 17)), 'Jue - 22 Oct 5:00 pm');
-      expect(Fmt.time(DateTime(2026, 1, 1, 0, 5)), '12:05 am');
+      // Formato de 24 horas
+      expect(Fmt.appointment(DateTime(2026, 10, 22, 17)), 'Jue - 22 Oct 5:00 p.m.');
+      expect(Fmt.time(DateTime(2026, 1, 1, 0, 5)), '12:05 a.m.');
+      expect(Fmt.time(DateTime(2026, 1, 1, 9, 30)), '9:30 a.m.');
     });
 
     test('fechas de la API sin corrimiento de día', () {

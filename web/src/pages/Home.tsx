@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { toAmount } from '../components/BudgetRange';
 import { useCatalog } from '../components/CatalogProvider';
+import { MapPicker, type PickedPlace } from '../components/MapPicker';
+import { MoneyInput } from '../components/NumberInput';
 import { Icon } from '../components/Icon';
 import { PropertyCard } from '../components/PropertyCard';
 import { VisitRequest } from '../components/VisitRequest';
@@ -16,14 +19,6 @@ const FEATURED: [string, string][] = [
   ['casa-almendra', 'Casa Almendra con cochera y jardín frontal'],
 ];
 
-const ZONES = [
-  ['', 'Todo Cancún'], ['arbolada', 'Arbolada'], ['cumbres', 'Residencial Cumbres'], ['huayacan', 'Huayacán'],
-  ['lagos-del-sol', 'Lagos del Sol'], ['santa-fe', 'Santa Fe'], ['aqua', 'Aqua Residencial'],
-];
-const BUDGETS = [
-  ['30000', 'Hasta $30,000 / mes'], ['40000', 'Hasta $40,000 / mes'],
-  ['3500000', 'Hasta $3.5 millones'], ['5000000', 'Hasta $5 millones'], ['mas', 'Más de $5 millones'],
-];
 
 type Tab = 'todas' | 'renta' | 'venta';
 
@@ -32,20 +27,30 @@ export function Home() {
   const { bySlug } = useCatalog();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('todas');
-  const [search, setSearch] = useState({ zona: '', operacion: 'renta', presupuesto: '' });
+  const [search, setSearch] = useState({ operacion: 'renta', min: '', max: '' });
+  // Ubicación elegida en el mapa (cualquier parte del mundo) y radio de búsqueda
+  const [place, setPlace] = useState<PickedPlace | null>(null);
+  const [picking, setPicking] = useState(false);
 
   const featured = FEATURED.map(([slug, alt]) => ({ house: bySlug[slug], alt })).filter((x) => x.house);
   const visible = featured.filter((x) => tab === 'todas' || x.house.op === tab);
   const rentCount = featured.filter((x) => x.house.op === 'renta').length;
 
-  // Presupuestos de renta (menos de un millón) o de venta, según la operación
-  const budgets = BUDGETS.filter(([v]) => (search.operacion === 'renta') === (Number(v) > 0 && Number(v) < 1e6));
-
   const onSearch = (e: FormEvent) => {
     e.preventDefault();
-    const q = new URLSearchParams(Object.entries(search).filter(([, v]) => v));
+    const q = new URLSearchParams({ operacion: search.operacion });
+    const min = toAmount(search.min), max = toAmount(search.max);
+    if (min) q.set('precio_min', String(min));
+    if (max) q.set('precio_max', String(max));
+    if (place) {
+      q.set('lat', place.lat.toFixed(5));
+      q.set('lng', place.lng.toFixed(5));
+      q.set('radio', String(place.radius));
+      q.set('lugar', place.label);
+    }
     navigate('/propiedades?' + q.toString());
   };
+  const amounts = search.operacion === 'renta' ? [10000, 15000, 20000, 30000, 40000, 60000] : [2000000, 3000000, 4000000, 5000000, 7000000, 10000000];
 
   return (
     <>
@@ -59,36 +64,38 @@ export function Home() {
               <p>Somos una inmobiliaria pequeña de Cancún. Te atendemos de forma directa, sin intermediarios ni prisas, para encontrar una casa que se sienta tuya, en renta o en venta.</p>
               <form className="hero-search" role="search" aria-label="Buscar casas" onSubmit={onSearch}>
                 <div className="field">
-                  <label className="field__label" htmlFor="h-zona">Ubicación</label>
-                  <select className="select" id="h-zona" value={search.zona} onChange={(e) => setSearch({ ...search, zona: e.target.value })}>
-                    {ZONES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-                  </select>
+                  <span className="field__label" id="h-zona-label">Ubicación</span>
+                  <button className="input hero-search__place" id="h-zona" type="button" aria-labelledby="h-zona-label h-zona" onClick={() => setPicking(true)}>
+                    <span>{place ? `${place.label.split(',')[0]} · ${place.radius} km` : 'En el mapa'}</span><Icon id="pin" />
+                  </button>
                 </div>
                 <div className="field">
                   <label className="field__label" htmlFor="h-operacion">Operación</label>
-                  <select className="select" id="h-operacion" value={search.operacion} onChange={(e) => setSearch({ ...search, operacion: e.target.value, presupuesto: '' })}>
+                  <select className="select" id="h-operacion" value={search.operacion} onChange={(e) => setSearch({ ...search, operacion: e.target.value, min: '', max: '' })}>
                     <option value="renta">Renta</option>
                     <option value="venta">Venta</option>
                   </select>
                 </div>
+                {/* Mínimo y máximo en campos separados (antes iban juntos en una sola columna) */}
                 <div className="field">
-                  <label className="field__label" htmlFor="h-presupuesto">Presupuesto</label>
-                  <select className="select" id="h-presupuesto" value={search.presupuesto} onChange={(e) => setSearch({ ...search, presupuesto: e.target.value })}>
-                    <option value="">Cualquiera</option>
-                    {budgets.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-                  </select>
+                  <label className="field__label" htmlFor="h-min">Presupuesto desde{search.operacion === 'renta' ? ' (al mes)' : ''}</label>
+                  <MoneyInput id="h-min" placeholder="$0" value={search.min} onChange={(min) => setSearch({ ...search, min })} suggestions={amounts} />
+                </div>
+                <div className="field">
+                  <label className="field__label" htmlFor="h-max">Presupuesto hasta{search.operacion === 'renta' ? ' (al mes)' : ''}</label>
+                  <MoneyInput id="h-max" placeholder="Sin límite" value={search.max} onChange={(max) => setSearch({ ...search, max })} suggestions={amounts} />
                 </div>
                 <div className="hero-search__actions">
                   <button className="btn btn--gold btn--lg" type="submit"><Icon id="search" />Buscar propiedades</button>
-                  <Link className="btn btn--white btn--lg" to="/contacto?motivo=publicar">Publicar inmueble</Link>
                 </div>
               </form>
+              <MapPicker open={picking} initial={place} onClose={() => setPicking(false)} onPick={(p) => { setPlace(p); setPicking(false); }} />
             </div>
             <p className="hero__note"><Icon id="pin" />Con calma, con claridad y con alguien de aquí.</p>
           </div>
           <figure className="hero__figure">
             <div className="photo">
-              <img src="/assets/img/hero-casa-cancun.jpg" alt="Casa moderna de muros claros con palmeras y celosía de madera en Cancún" fetchPriority="high" />
+              <img src="/assets/img/hero-casa-cancun.jpg" alt="Casa moderna de dos niveles con grandes ventanales y alberca al atardecer" fetchPriority="high" />
             </div>
             <figcaption><span>Luz, sombra y espacio para vivir.</span><span>Cancún, Q. Roo</span></figcaption>
           </figure>

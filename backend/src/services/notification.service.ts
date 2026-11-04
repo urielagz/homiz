@@ -1,4 +1,5 @@
 import { pool, type Db } from '../config/database.js';
+import { bump } from './live.service.js';
 import { pushToUser } from './push.service.js';
 
 /*
@@ -21,6 +22,9 @@ export async function notify(userIds: (string | null | undefined)[], n: Notifica
       [userId, n.type, n.title, n.message, n.entity ?? null, n.entityId ?? null],
     );
   }
+  // Aviso en tiempo real (también para las tareas programadas, que no pasan por una petición).
+  // Con un pequeño retraso: si se notificó dentro de una transacción, para entonces ya se guardó.
+  if (ids.length) setTimeout(() => bump('notifications'), 500).unref();
   // El push sale después de guardar; si falla no afecta la operación.
   for (const userId of ids) {
     void pushToUser(userId, { title: n.title, body: n.message, data: { type: n.type, entity: n.entity ?? '', entityId: n.entityId ?? '' } });
@@ -63,11 +67,11 @@ export async function staffWithPermission(code: string, db: Db = pool): Promise<
   return rows.map((r) => r.id);
 }
 
-/** Administradores activos. */
+/** Administradores (y propietario) activos. */
 export async function admins(db: Db = pool): Promise<string[]> {
   const { rows } = await db.query<{ id: string }>(
-    `SELECT u.id FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id
-      WHERE r.code = 'admin' AND u.active`,
+    `SELECT DISTINCT u.id FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id
+      WHERE r.code IN ('admin', 'owner') AND u.active`,
   );
   return rows.map((r) => r.id);
 }

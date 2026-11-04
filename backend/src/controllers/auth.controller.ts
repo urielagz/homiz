@@ -4,6 +4,7 @@ import * as Auth from '../services/auth.service.js';
 import { passwordSchema } from '../services/password.service.js';
 import { emailField, nameField, phoneField } from '../middlewares/validate.js';
 import { currentUser } from '../middlewares/authenticate.js';
+import { deleteClientAccount } from '../services/account-deletion.service.js';
 
 /* ---------- DTOs ---------- */
 export const loginDto = z.object({
@@ -15,6 +16,8 @@ export const registerDto = z.object({
   email: emailField,
   phone: phoneField,
   password: passwordSchema,
+  // Consentimiento expreso del aviso de privacidad (LFPDPPP)
+  consent: z.literal(true, { error: 'Acepta el aviso de privacidad para crear tu cuenta.' }),
 });
 export const refreshDto = z.object({ refreshToken: z.string({ error: 'Falta el refresh token.' }).min(20).max(200) });
 export const logoutDto = z.object({
@@ -38,7 +41,7 @@ export const login: RequestHandler = async (_req, res) => {
 };
 
 export const register: RequestHandler = async (_req, res) => {
-  const body = res.locals.body as z.infer<typeof registerDto>;
+  const { consent: _consent, ...body } = res.locals.body as z.infer<typeof registerDto>;
   res.status(201).json(await Auth.register(body));
 };
 
@@ -55,8 +58,8 @@ export const logout: RequestHandler = async (_req, res) => {
 
 export const changePassword: RequestHandler = async (_req, res) => {
   const { currentPassword, newPassword } = res.locals.body as z.infer<typeof changePasswordDto>;
-  await Auth.changePassword(currentUser(res).id, currentPassword, newPassword);
-  res.json({ message: 'Tu contraseña se actualizó. Vuelve a iniciar sesión en tus otros dispositivos.' });
+  const session = await Auth.changePassword(currentUser(res).id, currentPassword, newPassword);
+  res.json({ message: 'Tu contraseña se actualizó. Vuelve a iniciar sesión en tus otros dispositivos.', ...session });
 };
 
 export const forgotPassword: RequestHandler = async (_req, res) => {
@@ -69,4 +72,13 @@ export const resetPassword: RequestHandler = async (_req, res) => {
   const { token, password } = res.locals.body as z.infer<typeof resetPasswordDto>;
   await Auth.resetPassword(token, password);
   res.json({ message: 'Listo, ya puedes iniciar sesión con tu nueva contraseña.' });
+};
+/** POST /auth/delete-account — «Eliminar mi cuenta» desde el sitio (sin la app): con su correo y contraseña. */
+export const deleteAccountDto = z.object({ email: emailField, password: z.string().min(1, 'Escribe tu contraseña.').max(128) });
+export const deleteAccount: RequestHandler = async (_req, res) => {
+  const { email, password } = res.locals.body as z.infer<typeof deleteAccountDto>;
+  // Mismas reglas que el inicio de sesión (bloqueo por intentos, mensaje igual exista o no el correo)
+  const session = await Auth.login(email, password);
+  await deleteClientAccount(session.user.id);
+  res.status(204).end();
 };

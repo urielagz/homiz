@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/auth_background.dart';
 import '../../data/models/appointment.dart';
 
 /// «Mensajes de la cita»: tarjeta tipo chat con burbujas gris (Zugar) y verde (cliente).
@@ -59,7 +60,7 @@ class _AppointmentChatState extends State<AppointmentChat> {
             padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.xs, AppSpacing.sm),
             child: Row(
               children: [
-                const Icon(Icons.notifications_active_rounded, color: AppColors.success, size: 22),
+                const ZugarIcon(size: 24),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(child: Text('Zugar', style: AppTextStyles.cardTitle)),
                 if (widget.onClose != null) IconButton(tooltip: 'Ocultar mensajes', onPressed: widget.onClose, icon: const Icon(Icons.close_rounded)),
@@ -108,9 +109,7 @@ class _AppointmentChatState extends State<AppointmentChat> {
                           tooltip: 'Enviar mensaje',
                           style: IconButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
                           onPressed: _sending ? null : _send,
-                          icon: _sending
-                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : const Icon(Icons.send_rounded, size: 20),
+                          icon: _sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.send_rounded, size: 20),
                         ),
                       ),
                     ],

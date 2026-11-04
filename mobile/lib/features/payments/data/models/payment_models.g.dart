@@ -18,6 +18,12 @@ _PromissoryNote _$PromissoryNoteFromJson(Map<String, dynamic> json) =>
           ? null
           : NotePayment.fromJson(json['payment'] as Map<String, dynamic>),
       proofDocumentId: json['proofDocumentId'] as String?,
+      documentId: json['documentId'] as String?,
+      stamps:
+          (json['stamps'] as List<dynamic>?)
+              ?.map((e) => NoteStamp.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <NoteStamp>[],
       property: json['property'] == null
           ? null
           : NoteRef.fromJson(json['property'] as Map<String, dynamic>),
@@ -36,8 +42,23 @@ Map<String, dynamic> _$PromissoryNoteToJson(_PromissoryNote instance) =>
       'status': instance.status,
       'payment': instance.payment,
       'proofDocumentId': instance.proofDocumentId,
+      'documentId': instance.documentId,
+      'stamps': instance.stamps,
       'property': instance.property,
       'client': instance.client,
+    };
+
+_NoteStamp _$NoteStampFromJson(Map<String, dynamic> json) => _NoteStamp(
+  id: json['id'] as String,
+  name: json['name'] as String,
+  createdAt: const LocalDate().fromJson(json['createdAt'] as String),
+);
+
+Map<String, dynamic> _$NoteStampToJson(_NoteStamp instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'createdAt': const LocalDate().toJson(instance.createdAt),
     };
 
 _NoteRef _$NoteRefFromJson(Map<String, dynamic> json) =>
@@ -53,6 +74,8 @@ _NotePayment _$NotePaymentFromJson(Map<String, dynamic> json) => _NotePayment(
   amount: (json['amount'] as num).toDouble(),
   paidAt: const LocalDate().fromJson(json['paidAt'] as String),
   receiptFolio: json['receiptFolio'] as String?,
+  notes: json['notes'] as String?,
+  registeredBy: json['registeredBy'] as String?,
 );
 
 Map<String, dynamic> _$NotePaymentToJson(_NotePayment instance) =>
@@ -61,6 +84,8 @@ Map<String, dynamic> _$NotePaymentToJson(_NotePayment instance) =>
       'amount': instance.amount,
       'paidAt': const LocalDate().toJson(instance.paidAt),
       'receiptFolio': instance.receiptFolio,
+      'notes': instance.notes,
+      'registeredBy': instance.registeredBy,
     };
 
 _NotesSummary _$NotesSummaryFromJson(Map<String, dynamic> json) =>

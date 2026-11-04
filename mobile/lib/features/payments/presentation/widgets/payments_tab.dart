@@ -10,10 +10,12 @@ import '../../../../core/widgets/permission_gate.dart';
 import '../../../../core/widgets/segmented_tabs.dart';
 import '../../../../core/widgets/states.dart';
 import '../../../../core/widgets/status_badge.dart';
+import '../../../auth/presentation/providers/session_provider.dart';
 import '../../../documents/presentation/open_document.dart';
 import '../../data/models/payment_models.dart';
 import '../../data/repositories/payments_repository.dart';
 import '../providers/payments_provider.dart';
+import 'note_actions_sheet.dart';
 import 'register_payment_sheet.dart';
 
 /// Pantalla 9 · Pagos: resumen, pagarés y fichas de cobro / recibos.
@@ -65,11 +67,24 @@ class _PaymentsTabState extends ConsumerState<PaymentsTab> {
         padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.xl),
         children: [
           if (notes.value?.summary case final summary?) ...[PaymentsSummaryCard(summary: summary), const SizedBox(height: AppSpacing.lg)],
+          if (widget.staff && widget.contractId != null)
+            PermissionGate(
+              permission: 'contracts.manage',
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: OutlinedButton.icon(
+                  onPressed: () => showNewNoteSheet(context, contractId: widget.contractId!, rent: notes.value?.notes.firstOrNull?.amount ?? 0),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Nuevo pagaré'),
+                ),
+              ),
+            ),
           PillToggle(options: const ['Pagarés', 'Fichas de cobro / Recibos'], selected: _view, onChanged: (i) => setState(() => _view = i)),
           const SizedBox(height: AppSpacing.md),
           InfoNotice(
             text: widget.staff
-                ? 'Los pagos se reciben en persona con efectivo. Registra cada pago con el folio del recibo; avisaremos al cliente.'
+                ? 'Los pagos se reciben en persona con efectivo. Registra cada pago con el folio del recibo; avisaremos al cliente. '
+                    'Toca un pagaré para ver lo que puedes hacer${ref.watch(sessionProvider.select((s) => s.value?.can('payments.correct') ?? false)) ? ' (también corregir o anular pagos)' : ''}.'
                 : 'Esta información solo es para consulta, los pagos se realizan en persona con efectivo.',
           ),
           const SizedBox(height: AppSpacing.md),
@@ -96,6 +111,8 @@ class PaymentsSummaryCard extends StatelessWidget {
             ? 'No hay pagarés pendientes'
             : 'Te faltan ${summary.remaining} ${summary.remaining == 1 ? 'pagaré' : 'pagarés'} ● ${Fmt.money(summary.remainingAmount)}',
         'Pagados ${summary.paid} de ${summary.total}${next == null ? '' : ' ● Próximo: ${Fmt.dayMonthShort(next.dueDate)}'}',
+        // Aviso fiscal: el recibo de la app es un comprobante interno; la factura (CFDI) se emite aparte
+        'Los recibos de pago son comprobantes internos; no son factura (CFDI).',
       ],
       progress: summary.progress,
     );
@@ -103,21 +120,34 @@ class PaymentsSummaryCard extends StatelessWidget {
 }
 
 /// Lista de pagarés: «Pagaré 05 - 5 nov» · $12,000 · Pendiente / Comprobante.
-class NotesList extends StatelessWidget {
+/// Personal: al tocar un pagaré se abren las acciones que permite su rol (registrar, editar, corregir, anular).
+class NotesList extends ConsumerWidget {
   const NotesList({super.key, required this.page, required this.onOpenProof, this.staff = false});
 
   final NotesPage page;
   final ValueChanged<String> onOpenProof;
   final bool staff;
 
-  static String statusText(PromissoryNote n) => switch (n.status) {
-        'paid' => n.proofDocumentId != null ? 'Comprobante' : 'Pagado el ${Fmt.dayMonthShort(n.payment?.paidAt ?? n.dueDate)}',
-        'overdue' => 'Vencido',
-        _ => 'Pendiente',
-      };
+  static String statusText(PromissoryNote n) => [
+        switch (n.status) {
+          'paid' => n.proofDocumentId != null ? 'Comprobante' : 'Pagado el ${Fmt.dayMonthShort(n.payment?.paidAt ?? n.dueDate)}',
+          'overdue' => 'Vencido',
+          _ => 'Pendiente',
+        },
+        if (n.documentId != null) 'Pagaré en PDF',
+        if (n.stamps.isNotEmpty) '${n.stamps.length} ${n.stamps.length == 1 ? 'sello' : 'sellos'}',
+      ].join(' · ');
+
+  /// Cliente: un solo archivo se abre directo; si hay varios (pagaré, comprobante, sellos), se elige en una hoja.
+  static VoidCallback? _clientTap(BuildContext context, WidgetRef ref, PromissoryNote n, ValueChanged<String> open) {
+    final files = [?n.documentId, ?n.proofDocumentId];
+    if (files.length + n.stamps.length > 1) return () => showNoteActions(context, ref, n);
+    if (n.stamps.length == 1) return () => showStamps(context, ref, n);
+    return files.isEmpty ? null : () => open(files.first);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final notes = page.notes.where((n) => n.status != 'cancelled').toList();
     if (notes.isEmpty) {
       return EmptyState(
@@ -133,7 +163,9 @@ class NotesList extends StatelessWidget {
             note: n,
             title: '${n.label} - ${Fmt.dayMonthShort(n.dueDate)}',
             subtitle: [statusText(n), if (staff && n.payment?.receiptFolio != null) 'Folio ${n.payment!.receiptFolio}'].join(' · '),
-            onTap: n.proofDocumentId == null ? null : () => onOpenProof(n.proofDocumentId!),
+            onTap: staff
+                ? (noteActions(context, ref, n).isNotEmpty ? () => showNoteActions(context, ref, n) : null)
+                : _clientTap(context, ref, n, onOpenProof),
             allowRegister: staff,
           ),
           const SizedBox(height: AppSpacing.md),

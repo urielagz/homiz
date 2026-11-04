@@ -108,6 +108,37 @@ export function Options({ list, placeholder }: { list: (string | [string, string
   );
 }
 
+/**
+ * Hora de 1 a 12, minutos y a.m./p.m. El valor («HH:MM» de 24 h, el que manda la API) queda en un campo
+ * oculto con el `id`, así que `validateForm` y `document.getElementById(id).value` funcionan igual que con un <select>.
+ */
+export function TimeInput({ id, defaultValue = '', required, invalid, onChange }: { id: string; defaultValue?: string; required?: boolean; invalid?: boolean; onChange?: (hhmm: string) => void }) {
+  const [h0, m0] = /^\d{2}:\d{2}/.test(defaultValue) ? defaultValue.split(':').map(Number) : [NaN, 0];
+  const [hour, setHour] = useState(Number.isNaN(h0) ? '' : String(h0 % 12 || 12));
+  const [min, setMin] = useState(String(m0 - (m0 % 15)).padStart(2, '0'));
+  const [ap, setAp] = useState(!Number.isNaN(h0) && h0 >= 12 ? 'pm' : 'am');
+  const value = hour ? `${String((Number(hour) % 12) + (ap === 'pm' ? 12 : 0)).padStart(2, '0')}:${min}` : '';
+  const first = useRef(true);
+  useEffect(() => { if (first.current) { first.current = false; return; } onChange?.(value); }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bad = invalid ? { 'aria-invalid': true as const, 'aria-describedby': id + '-error' } : {};
+  return (
+    <div className="time-input" role="group" aria-label="Hora">
+      <select className="select" id={id + '-h'} aria-label="Hora" value={hour} onChange={(e) => setHour(e.target.value)} {...bad}>
+        <option value="">Hora</option>
+        {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((h) => <option key={h} value={h}>{h}</option>)}
+      </select>
+      <span aria-hidden="true">:</span>
+      <select className="select" aria-label="Minutos" value={min} onChange={(e) => setMin(e.target.value)}>
+        {['00', '15', '30', '45'].map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+      <select className="select" aria-label="a.m. o p.m." value={ap} onChange={(e) => setAp(e.target.value)}>
+        <option value="am">a.m.</option><option value="pm">p.m.</option>
+      </select>
+      <input id={id} name="Hora" hidden readOnly required={required} value={value} />
+    </div>
+  );
+}
+
 /** Brokers para un <select>: los inactivos aparecen deshabilitados (salvo el ya elegido) */
 export const brokerOptions = (brokers: Broker[], selected: string) =>
   brokers.map((b): [string, string, boolean] => [b.id, b.name + (b.active ? '' : ' (inactivo)'), !b.active && b.id !== selected]);
@@ -147,7 +178,8 @@ export function validateForm(form: HTMLFormElement, extra: ExtraError[] = []): F
   });
   extra.forEach((e) => (errors[e.id] = e.msg));
   const first = Object.keys(errors)[0];
-  if (first) document.getElementById(first)?.focus();
+  // La hora (TimeInput) guarda el valor en un campo oculto: se enfoca su primer selector
+  if (first) (document.getElementById(first + '-h') ?? document.getElementById(first))?.focus();
   return errors;
 }
 

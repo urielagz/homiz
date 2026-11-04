@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { appLink } from '../lib/appLink';
 import { Icon } from './Icon';
 
 const LINKS = [
   ['/propiedades', 'Propiedades'],
-  ['/como-trabajamos', 'Cómo trabajamos'],
   ['/contacto', 'Contáctanos'],
+  ['/como-trabajamos', 'Cómo trabajamos'],
 ] as const;
 
 /** Encabezado del sitio. En la portada es claro (light); en las demás páginas, azul marino. */
@@ -29,11 +28,9 @@ export function SiteHeader({ light = false }: { light?: boolean }) {
   return (
     <header className={`site-header${light ? ' site-header--light' : ''}`}>
       <div className="wrap site-header__inner">
+        {/* Logo a color en el encabezado claro; versión blanca sobre el azul marino */}
         <Link className="logo" to="/" aria-label="Zugar Inmobiliaria, ir al inicio">
-          <span className="logo__name">
-            Zugar<span className="logo__dot">.</span>
-          </span>
-          <span className="logo__tag">Inmobiliaria · Cancún</span>
+          <img className="logo__img" src={light ? '/assets/img/logo-zugar-600.png' : '/assets/img/logo-zugar-blanco-1200.png'} alt="Inmobiliaria Zugar" width="600" height="246" />
         </Link>
         {/* El menú móvil usa la casilla oculta del diseño original (los estilos dependen de :checked) */}
         <input type="checkbox" id="menu-toggle" className="menu-toggle" aria-label="Abrir o cerrar el menú" checked={open} onChange={(e) => setOpen(e.target.checked)} />
@@ -51,12 +48,6 @@ export function SiteHeader({ light = false }: { light?: boolean }) {
               </li>
             ))}
           </ul>
-          <div className="site-nav__actions">
-            <a className="btn btn--on-dark" href={appLink()} target="_blank" rel="noopener">
-              <Icon id="phone" />
-              Usa la app Homiz
-            </a>
-          </div>
         </nav>
       </div>
     </header>

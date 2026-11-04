@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 /// Pide confirmación antes de una acción. Devuelve true solo si la persona acepta.
+/// Título, mensaje y botones centrados, igual que las confirmaciones del sitio y del panel.
 Future<bool> showConfirmDialog(
   BuildContext context, {
   required String title,
@@ -15,8 +16,10 @@ Future<bool> showConfirmDialog(
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 17)),
-      content: Text(message, style: AppTextStyles.body),
+      icon: Icon(destructive ? Icons.delete_outline : Icons.help_outline, color: destructive ? AppColors.danger : AppColors.primary),
+      title: Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 17), textAlign: TextAlign.center),
+      content: Text(message, style: AppTextStyles.body, textAlign: TextAlign.center),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(cancelLabel)),
         TextButton(

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { TYPE_LABELS } from '../lib/propertyTypes';
 
 /* ==========================================================================
    Datos del panel. Con sesión de la API se llenan desde el servidor (api.ts);
@@ -10,32 +11,47 @@ export interface Property {
   id: string; _id?: string; _zoneKey?: string; slug?: string; lat?: number | null; lng?: number | null;
   name: string; type: string; zone: string; city: string; address: string; street: string;
   op: 'renta' | 'venta'; price: number; rec: number; banos: number; m2: number | ''; terreno: number | ''; est: number; age: number | '';
-  status: string; visibility: 'publicada' | 'pausada' | 'borrador'; broker: string;
+  status: string; visibility: 'publicada' | 'pausada'; broker: string;
   maintenance: string; deposit: number; availableFrom: string; furnished: string; desc: string;
   amenities: string[]; photos: Photo[]; published: string; updated: string; updatedAt: number;
+  /** Servicios (solo administración): número de servicio de CFE, contrato de Aguakan y día del recordatorio */
+  utilities?: { electricity: string; water: string; day: number };
+  /** Cuota de mantenimiento (monto 0 = sin cuota) y día del mes en que se paga */
+  fee?: { amount: number; day: number };
 }
 export interface Person {
-  id: string; name: string; email: string; phone: string; type: 'cliente' | 'inquilino'; label?: string;
+  /** code: ID visible de la persona (CLI-0004), no cambia al volverse inquilina */
+  id: string; code?: string; name: string; email: string; phone: string; type: 'cliente' | 'inquilino'; label?: string;
   property: string; broker: string; follow: string; op: string; budget: string; needs: string; job: string;
 }
 export interface Appointment {
   id: string; _id?: string; person: string; property: string; broker: string; date: string; start: string; end: string;
   status: string; kind: string; note: string; confirmedBy?: string;
+  /** Por confirmar: de quién se espera que acepte la fecha (la otra parte de quien la propuso) */
+  awaiting?: 'staff' | 'client' | null;
+  /** Lo que llenó en el formulario del sitio, si la cita salió de una solicitud */
+  /** Formulario que llenó la persona: el de la solicitud de la cita o (linked=false) su solicitud más reciente */
+  lead?: {
+    id: string; folio: string; reason: string; name: string; email: string; phone: string | null; payload: Record<string, string | number | boolean>;
+    message: string | null; property: { code: string; name: string } | null; preferredDate: string | null; preferredTime: string | null; createdAt: string; linked: boolean;
+  } | null;
 }
 export interface Broker { id: string; name: string; initials: string; role: string; zones: string; email: string; phone: string; photo: string; active: boolean }
 export interface Activity { when: string; text: string }
+/** Personal con sus roles (lo ve el propietario, que decide quién es broker, administración o ambos) */
+export interface StaffMember { id: string; name: string; email: string; roles: string[]; active: boolean; properties: number }
 
 export const IMG = '/assets/img/';
 export const Z = {
   TODAY: '2026-10-20',
   ZONES: ['Arbolada', 'Residencial Cumbres', 'Santa Fe', 'Lagos del Sol', 'Aqua Residencial', 'Jardines del Sur', 'Huayacán'],
-  TYPES: ['Casa', 'Casa en condominio', 'Townhouse'],
+  TYPES: TYPE_LABELS,
   AMENITIES: ['Jardín privado', 'Cocina integral', 'Acceso controlado 24/7', 'Se aceptan mascotas', 'Alberca', 'Casa club', 'Amueblada', 'Terraza'],
   STATUS: {
     disponible: { label: 'Disponible', tone: 'ok' },
     reservada: { label: 'Reservada', tone: 'warn' },
     rentada: { label: 'Rentada', tone: 'gris' },
-    borrador: { label: 'Borrador', tone: 'gris' },
+    vendida: { label: 'Vendida', tone: 'gris' },
   } as Record<string, { label: string; tone: string }>,
   APPT_STATUS: {
     confirmada: { label: 'Confirmada', tone: 'ok' },
@@ -60,7 +76,7 @@ export const D = {
     { id: 'ZUG-003', name: 'Casa Olivo', type: 'Casa', zone: 'Santa Fe', city: 'Cancún, Quintana Roo', address: 'Calle Olivo 7, Santa Fe, C.P. 77535', street: 'Calle Olivo 7', op: 'renta', price: 22500, rec: 2, banos: 2, m2: 135, terreno: 120, est: 1, age: 8, status: 'rentada', visibility: 'pausada', broker: 'valeria', maintenance: 'Incluido en la renta', deposit: 22500, availableFrom: '2026-06-01', furnished: 'Semiamueblada', desc: 'Casa compacta y luminosa de estilo caribeño, con balcón en planta alta y cocina abierta. Cerca de escuelas y plazas comerciales.', amenities: ['Cocina integral', 'Terraza'], photos: [{ src: 'casa-olivo.jpg', label: 'Fachada' }], published: '2026-05-12', updated: 'Hace 2 semanas', updatedAt: 4 },
     { id: 'ZUG-004', name: 'Casa de la Luz', type: 'Casa', zone: 'Lagos del Sol', city: 'Cancún, Quintana Roo', address: 'Paseo Lagos del Sol 52, C.P. 77560', street: 'Paseo Lagos del Sol 52', op: 'venta', price: 6200000, rec: 4, banos: 4, m2: 320, terreno: 300, est: 3, age: 2, status: 'reservada', visibility: 'publicada', broker: 'diego', maintenance: '$3,100 MXN al mes', deposit: 0, availableFrom: '2026-11-15', furnished: 'Sin amueblar', desc: 'Residencia de dos niveles con grandes ventanales, alberca privada y vista a las áreas verdes del residencial.', amenities: ['Alberca', 'Jardín privado', 'Casa club', 'Acceso controlado 24/7', 'Terraza'], photos: [{ src: 'casa-de-la-luz.jpg', label: 'Fachada' }], published: '2026-09-02', updated: 'Ayer a las 16:20 h', updatedAt: 3 },
     { id: 'ZUG-005', name: 'Casa Nativa', type: 'Casa en condominio', zone: 'Aqua Residencial', city: 'Cancún, Quintana Roo', address: 'Circuito Aqua 31, Aqua Residencial, C.P. 77560', street: 'Circuito Aqua 31', op: 'renta', price: 35000, rec: 3, banos: 3, m2: 210, terreno: 180, est: 2, age: 4, status: 'disponible', visibility: 'publicada', broker: 'mariana', maintenance: 'Incluido en la renta', deposit: 35000, availableFrom: '2026-11-01', furnished: 'Amueblada', desc: 'Casa con fachada de madera y piedra, alberca y terraza techada. Se entrega amueblada y lista para habitar.', amenities: ['Alberca', 'Amueblada', 'Se aceptan mascotas', 'Acceso controlado 24/7', 'Terraza'], photos: [{ src: 'casa-nativa.jpg', label: 'Alberca' }], published: '2026-10-05', updated: 'Hace 4 días', updatedAt: 2 },
-    { id: 'ZUG-006', name: 'Casa Almendra', type: 'Casa', zone: 'Jardines del Sur', city: 'Cancún, Quintana Roo', address: 'Calle Almendro 15, Jardines del Sur, C.P. 77536', street: 'Calle Almendro 15', op: 'venta', price: 3450000, rec: 3, banos: 2, m2: 165, terreno: 150, est: 2, age: 6, status: 'borrador', visibility: 'borrador', broker: 'valeria', maintenance: '$1,200 MXN al mes', deposit: 0, availableFrom: '2026-11-01', furnished: 'Sin amueblar', desc: 'Casa familiar con cochera para dos autos y jardín frontal, en una zona tranquila del sur de Cancún.', amenities: ['Jardín privado', 'Cocina integral'], photos: [], published: '', updated: 'Hace 1 semana', updatedAt: 1 },
+    { id: 'ZUG-006', name: 'Casa Almendra', type: 'Casa', zone: 'Jardines del Sur', city: 'Cancún, Quintana Roo', address: 'Calle Almendro 15, Jardines del Sur, C.P. 77536', street: 'Calle Almendro 15', op: 'venta', price: 3450000, rec: 3, banos: 2, m2: 165, terreno: 150, est: 2, age: 6, status: 'disponible', visibility: 'pausada', broker: 'valeria', maintenance: '$1,200 MXN al mes', deposit: 0, availableFrom: '2026-11-01', furnished: 'Sin amueblar', desc: 'Casa familiar con cochera para dos autos y jardín frontal, en una zona tranquila del sur de Cancún.', amenities: ['Jardín privado', 'Cocina integral'], photos: [], published: '', updated: 'Hace 1 semana', updatedAt: 1 },
   ] as Property[],
   people: [
     { id: 'p1', name: 'Ana García López', email: 'ana@example.com', phone: '998 000 0123', type: 'cliente', property: 'ZUG-001', broker: 'mariana', follow: 'Visita confirmada', op: 'Renta', budget: '$30,000 MXN / mes', needs: '3 recámaras · 2 personas · 1 perro pequeño', job: 'Diseño de interiores · Nacionalidad mexicana' },
@@ -91,6 +107,7 @@ export const D = {
     ],
   } as Record<string, Activity[]>,
   nextNumbers: { property: 7, appointment: 27, person: 9 },
+  staff: [] as StaffMember[],
 };
 
 /* ---------- Redibujar: las vistas se suscriben y se actualizan después de cada cambio ---------- */
@@ -143,6 +160,12 @@ export const sortAppts = (list: Appointment[]) => list.slice().sort((a, b) => (a
 export const upcoming = (filter?: (a: Appointment) => boolean) => sortAppts(D.appointments.filter((a) => isUpcoming(a) && (!filter || filter(a))));
 export const brokerStats = (id: string) => ({ props: D.properties.filter((p) => p.broker === id).length, next: upcoming((a) => a.broker === id).length });
 export const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+/** «15:30» → «3:30 p.m.» (la hora se muestra de 1 a 12 con a.m./p.m.) */
+export const t12 = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  if (Number.isNaN(h)) return hhmm;
+  return `${h % 12 || 12}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}`;
+};
 
 /* ---------- Registro de actividad ---------- */
 export function log(text: string, propId?: string) {
@@ -174,5 +197,6 @@ export const viewState = {
   props: { tab: 'todas', q: '', op: '', zone: '', broker: '', amen: [] as string[], more: false, detailId: '', detailTab: 'general' },
   people: { tab: 'todas', q: '', follow: '', broker: '', selected: 'p1' as string | null },
   brokers: { q: '', broker: '', status: '', prop: 'ZUG-001' as string | null },
-  citas: { offset: 0, day: null as string | null, tab: 'todas', q: '', broker: '', selected: 'CIT-024' as string | null },
+  // hour: '' | 'manana' | 'tarde' | 'HH:MM' · prop: código de propiedad · dup: solo personas con más de una cita vigente
+  citas: { offset: 0, day: null as string | null, tab: 'todas', q: '', broker: '', hour: '', prop: '', dup: false, selected: 'CIT-024' as string | null },
 };

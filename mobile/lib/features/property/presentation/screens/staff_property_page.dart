@@ -39,7 +39,7 @@ class _StaffPropertyPageState extends ConsumerState<StaffPropertyPage> {
               Expanded(
                 child: switch (_tab) {
                   0 => SummaryTab(propertyId: widget.propertyId),
-                  1 => DossierTab(propertyId: widget.propertyId),
+                  1 => DossierTab(propertyId: widget.propertyId, staff: true),
                   // Solo el contrato vigente genera pagarés.
                   2 => PaymentsTab(
                       staff: true,

@@ -6,6 +6,7 @@ import { currentUser, type AuthUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { dateField, dateTimeField, money, pagination, paged, queryArray } from '../middlewares/validate.js';
 import { assertPropertyAccess, propertyScope } from '../services/access.service.js';
+import { clientReceiptFilter } from '../models/property-access.model.js';
 import { notify, tenantUserOf } from '../services/notification.service.js';
 
 /* ---------- Servicios (cuentas de CFE / Aguakan) ---------- */
@@ -107,6 +108,10 @@ async function loadReceipt(user: AuthUser, id: string) {
   const { rows } = await pool.query(`${SELECT} WHERE r.id = $1`, [id]);
   if (!rows[0]) throw new AppError(404, 'NOT_FOUND', 'El recibo no existe.');
   await assertPropertyAccess(user, rows[0].property_id);
+  if (user.type === 'client') {
+    const own = await pool.query(`SELECT 1 FROM receipts r WHERE r.id = $1 AND ${clientReceiptFilter('$2')}`, [id, user.clientId]);
+    if (!own.rowCount) throw new AppError(404, 'NOT_FOUND', 'El recibo no existe.');
+  }
   return rows[0];
 }
 
@@ -117,6 +122,8 @@ export const listReceipts: RequestHandler = async (_req, res) => {
   const params: unknown[] = [];
   const where: string[] = [];
   if (scope) where.push(`r.property_id = ANY($${params.push(scope)}::uuid[])`);
+  // El cliente solo ve los recibos de su contrato (no los del inquilino anterior)
+  if (user.type === 'client') where.push(clientReceiptFilter(`$${params.push(user.clientId)}`));
   if (q.propertyId) where.push(`r.property_id = $${params.push(q.propertyId)}`);
   if (q.status?.length) where.push(`r.status::text = ANY($${params.push(q.status)}::text[])`);
   if (q.kind) where.push(`r.kind = $${params.push(q.kind)}`);

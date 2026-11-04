@@ -8,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../utils/formatters.dart';
+import 'auth_background.dart';
 
 /// Encabezado de las pestañas: «Hola, Laura», campana con contador y acceso al perfil.
 /// Debajo, el subtítulo de la sección en azul («Mi propiedad»).
@@ -27,6 +28,8 @@ class HomizHeader extends ConsumerWidget {
         children: [
           Row(
             children: [
+              const ZugarIcon(size: 30),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Semantics(
                   header: true,

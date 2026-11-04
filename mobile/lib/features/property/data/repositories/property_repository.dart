@@ -19,7 +19,8 @@ class PropertyRepository {
 
   /// Catálogo disponible para el cliente (publicadas y disponibles).
   Future<List<PropertyDetail>> catalog() => apiCall(() async {
-        final res = await _dio.get<Map<String, dynamic>>('/properties', queryParameters: {'limit': 50, 'sort': 'recent'});
+        // Todas las activas (publicadas y disponibles): la API limita a 100 por página
+        final res = await _dio.get<Map<String, dynamic>>('/properties', queryParameters: {'limit': 100, 'sort': 'recent'});
         return dataList(res.data, PropertyDetail.fromJson);
       });
 

@@ -35,6 +35,13 @@ export interface PropertyRow {
   broker_phone: string | null;
   broker_email: string | null;
   published_at: string | null;
+  /** Servicios: número de servicio de luz (CFE) y agua (Aguakan) y día del recordatorio mensual al inquilino */
+  electricity_service_number: string | null;
+  water_service_number: string | null;
+  utility_reminder_day: number;
+  /** Cuota de mantenimiento (la captura administración) y día del mes en que se paga */
+  maintenance_fee: string | null;
+  maintenance_fee_day: number | null;
   active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -54,7 +61,8 @@ const SELECT = `
          to_char(p.available_from, 'YYYY-MM-DD') AS available_from, p.address, p.street, p.city, p.zone, p.zone_key,
          p.map_query, p.lat, p.lng, p.status, p.visibility, p.broker_id,
          b.name AS broker_name, b.phone AS broker_phone, b.email AS broker_email,
-         to_char(p.published_at, 'YYYY-MM-DD') AS published_at, p.active, p.created_at, p.updated_at
+         to_char(p.published_at, 'YYYY-MM-DD') AS published_at, p.electricity_service_number, p.water_service_number,
+         p.utility_reminder_day, p.maintenance_fee, p.maintenance_fee_day, p.active, p.created_at, p.updated_at
     FROM properties p
     LEFT JOIN users b ON b.id = p.broker_id`;
 
@@ -74,6 +82,7 @@ export interface PropertyFilters {
   banosMin?: number;
   estMin?: number;
   m2Min?: number;
+  m2Max?: number;
   pets?: boolean;
   furnished?: string;
   amenities?: string[];
@@ -111,6 +120,7 @@ export async function list(f: PropertyFilters): Promise<{ rows: PropertyRow[]; t
   if (f.banosMin !== undefined) add('p.banos >= ?', f.banosMin);
   if (f.estMin !== undefined) add('p.est >= ?', f.estMin);
   if (f.m2Min !== undefined) add('p.m2 >= ?', f.m2Min);
+  if (f.m2Max !== undefined) add('p.m2 <= ?', f.m2Max);
   if (f.pets !== undefined) add('p.pets_allowed = ?', f.pets);
   if (f.furnished) add('p.furnished = ?', f.furnished);
   if (f.amenities?.length) {
@@ -197,6 +207,11 @@ export interface PropertyWrite {
   mapQuery?: string | null;
   lat?: number | null;
   lng?: number | null;
+  electricityServiceNumber?: string | null;
+  waterServiceNumber?: string | null;
+  utilityReminderDay?: number;
+  maintenanceFee?: number | null;
+  maintenanceFeeDay?: number | null;
 }
 
 const COLUMN: Record<keyof PropertyWrite, string> = {
@@ -204,6 +219,8 @@ const COLUMN: Record<keyof PropertyWrite, string> = {
   m2: 'm2', terreno: 'terreno', est: 'est', age: 'age', furnished: 'furnished', petsAllowed: 'pets_allowed',
   maintenance: 'maintenance', deposit: 'deposit', availableFrom: 'available_from', address: 'address', street: 'street',
   city: 'city', zone: 'zone', zoneKey: 'zone_key', mapQuery: 'map_query', lat: 'lat', lng: 'lng',
+  electricityServiceNumber: 'electricity_service_number', waterServiceNumber: 'water_service_number', utilityReminderDay: 'utility_reminder_day',
+  maintenanceFee: 'maintenance_fee', maintenanceFeeDay: 'maintenance_fee_day',
 };
 
 export async function insert(

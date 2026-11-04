@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useCatalog } from '../components/CatalogProvider';
-import { googleEmbed, googleLink, hasCoords, MarkersMap } from '../components/HouseMap';
+import { hasCoords, MarkersMap } from '../components/HouseMap';
 import { Icon } from '../components/Icon';
+import { AreaInput, MoneyInput } from '../components/NumberInput';
 import { PropertyCard } from '../components/PropertyCard';
-import { shortPrice, type House } from '../lib/catalog';
-import { toNumber } from '../lib/format';
+import { inPlace, placeLabel, shortPrice, type House } from '../lib/catalog';
+import { PET_OPTIONS, PROPERTY_TYPES, TYPE_GROUPS, typeMatches, typePlural } from '../lib/propertyTypes';
 import { usePageTitle } from '../lib/usePageTitle';
 
 /* ==========================================================================
@@ -15,41 +16,56 @@ import { usePageTitle } from '../lib/usePageTitle';
 const PER_PAGE = 6;
 
 type Option = [string, string];
-const TYPES: Option[] = [['', 'Todos los tipos'], ['casa', 'Casa'], ['casa-condominio', 'Casa en condominio'], ['townhouse', 'Townhouse']];
-const ZONES: Option[] = [['', 'Todas las zonas'], ['arbolada', 'Arbolada'], ['cumbres', 'Residencial Cumbres'], ['huayacan', 'Huayacán'], ['lagos-del-sol', 'Lagos del Sol'], ['palmaris', 'Residencial Palmaris'], ['aqua', 'Aqua Residencial'], ['santa-fe', 'Santa Fe'], ['jardines-del-sur', 'Jardines del Sur']];
-const PRICES: Record<'renta' | 'venta', Option[]> = {
-  renta: [['20000', 'Hasta $20,000'], ['30000', 'Hasta $30,000'], ['40000', 'Hasta $40,000'], ['60000', 'Hasta $60,000']],
-  venta: [['3500000', 'Hasta $3.5 millones'], ['4500000', 'Hasta $4.5 millones'], ['5500000', 'Hasta $5.5 millones'], ['7000000', 'Hasta $7 millones'], ['mas', 'Más de $5 millones']],
+const TYPES: Option[] = [['', 'Todos los tipos'], ...PROPERTY_TYPES.map((t): Option => [t.key, t.label])];
+// Montos sugeridos (también se puede escribir cualquier otro)
+const PRICES: Record<'renta' | 'venta', number[]> = {
+  renta: [8000, 10000, 15000, 20000, 25000, 30000, 40000, 60000, 80000],
+  venta: [1500000, 2500000, 3500000, 4500000, 5500000, 7000000, 10000000, 15000000],
 };
+const AREAS = [50, 80, 120, 180, 250, 400, 1000, 5000];
 const BEDROOMS: Option[] = [['', 'Cualquiera'], ['1', '1 recámara'], ['2', '2 recámaras'], ['3', '3 recámaras'], ['4', '4 o más']];
 const ATLEAST: Option[] = [['', 'Cualquiera'], ['1', '1 o más'], ['2', '2 o más'], ['3', '3 o más']];
-const AREA: Option[] = [['', 'Cualquier m²'], ['120', 'Desde 120 m²'], ['180', 'Desde 180 m²'], ['250', 'Desde 250 m²']];
-const PETS: Option[] = [['', 'Sin preferencia'], ['si', 'Acepta mascotas']];
-const FURNISHED: Option[] = [['', 'Sin preferencia'], ['si', 'Amueblada'], ['semi', 'Semiamueblada'], ['no', 'Sin amueblar']];
+const FURNISHED: Option[] = [['', 'Indistinto'], ['si', 'Amueblada'], ['semi', 'Semiamueblada'], ['no', 'Sin amueblar']];
 const SORTS: Option[] = [['precio-asc', 'Precio: menor a mayor'], ['precio-desc', 'Precio: mayor a menor'], ['recientes', 'Más recientes']];
 
-const FILTERS = ['tipo', 'zona', 'precio_max', 'recamaras', 'banos', 'estacionamientos', 'superficie', 'mascotas', 'amueblada'] as const;
+const FILTERS = ['tipo', 'zona', 'precio_min', 'precio_max', 'superficie', 'superficie_max', 'recamaras', 'banos', 'estacionamientos', 'mascotas', 'amueblada'] as const;
 type FilterKey = (typeof FILTERS)[number];
 type Filters = Record<FilterKey, string>;
+/** Filtros que se escriben (montos y metros): solo dígitos */
+const WRITTEN = new Set<FilterKey>(['precio_min', 'precio_max', 'superficie', 'superficie_max']);
 
-const optionsFor = (k: FilterKey, op: string): Option[] =>
-  ({
-    tipo: TYPES, zona: ZONES, recamaras: BEDROOMS, banos: ATLEAST, estacionamientos: ATLEAST, superficie: AREA, mascotas: PETS, amueblada: FURNISHED,
-    precio_max: [['', 'Cualquiera'] as Option, ...(op === 'renta' || op === 'venta' ? PRICES[op] : [...PRICES.renta, ...PRICES.venta])],
-  })[k];
+const optionsFor = (k: FilterKey): Option[] =>
+  ({ tipo: TYPES, recamaras: BEDROOMS, banos: ATLEAST, estacionamientos: ATLEAST, mascotas: PET_OPTIONS, amueblada: FURNISHED } as Partial<Record<FilterKey, Option[]>>)[k] ?? [];
+const fmt = (n: string) => Number(n).toLocaleString('en-US');
 
-function matches(c: House, op: string, q: Filters) {
-  const p = q.precio_max;
+/** Distancia en km entre dos puntos (fórmula del semiverseno) */
+function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const r = (d: number) => (d * Math.PI) / 180;
+  const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+
+/** Punto elegido en el mapa de la portada: casas a menos de «radio» km (las que no tienen ubicación no entran). */
+export type Near = { lat: number; lng: number; radius: number; label: string } | null;
+
+function matches(c: House, op: string, q: Filters, near: Near) {
+  const min = +q.precio_min || 0, max = +q.precio_max || 0;
+  // Sin operación elegida, los montos de millones se entienden como venta y los demás como renta
+  const opOk = !op || c.op === op;
+  const opFromPrice = op || !max ? true : (max >= 1e6) === (c.op === 'venta');
   return (
-    (!op || c.op === op) &&
-    (!q.tipo || (q.tipo === 'casa' ? /^casa/.test(c.tipo) : c.tipo === q.tipo)) &&
-    (!q.zona || c.zonaKey === q.zona) &&
-    (!p || (p === 'mas' ? c.op === 'venta' && c.price > 5e6 : (toNumber(p) >= 1e6) === (c.op === 'venta') && c.price <= toNumber(p))) &&
+    opOk && opFromPrice &&
+    typeMatches(q.tipo, c.tipo) &&
+    inPlace(c, q.zona) &&
+    (!near || (hasCoords(c) && km(near, c) <= near.radius)) &&
+    (!min || c.price >= min) &&
+    (!max || c.price <= max) &&
+    (!q.superficie || c.m2 >= +q.superficie) &&
+    (!q.superficie_max || (c.m2 > 0 && c.m2 <= +q.superficie_max)) &&
     (!q.recamaras || (q.recamaras === '4' ? c.rec >= 4 : c.rec === +q.recamaras)) &&
     (!q.banos || c.banos >= +q.banos) &&
     (!q.estacionamientos || c.est >= +q.estacionamientos) &&
-    (!q.superficie || c.m2 >= +q.superficie) &&
-    (!q.mascotas || c.pets) &&
+    (!q.mascotas || c.pets === (q.mascotas === 'si')) &&
     (!q.amueblada || c.amueblada === q.amueblada)
   );
 }
@@ -68,11 +84,14 @@ export function Listing() {
   const q = Object.fromEntries(
     FILTERS.map((k) => {
       const v = params.get(k) ?? (k === 'precio_max' ? params.get('presupuesto') ?? '' : '');
-      return [k, optionsFor(k, op).some(([o]) => o === v) ? v : ''];
+      if (k === 'zona') return [k, v.trim().slice(0, 80)]; // texto libre
+      if (WRITTEN.has(k)) return [k, /^\d{1,12}$/.test(v) && +v > 0 ? String(+v) : ''];
+      return [k, optionsFor(k).some(([o]) => o === v) ? v : ''];
     }),
   ) as Filters;
   const [draft, setDraft] = useState<Filters>(q);
-  useEffect(() => setDraft(q), [params.toString()]); // al cambiar la dirección, el formulario muestra los filtros aplicados
+  const [draftOp, setDraftOp] = useState(op);
+  useEffect(() => { setDraft(q); setDraftOp(op); }, [params.toString()]); // al cambiar la dirección, el formulario muestra los filtros aplicados
 
   /** Dirección con cambios (null o '' quitan el parámetro) */
   const urlWith = (changes: Record<string, string | number | null>) => {
@@ -83,10 +102,19 @@ export function Listing() {
     return '/propiedades' + (s ? '?' + s : '');
   };
 
+  // Lugar elegido en el mapa de la portada (?lat=&lng=&radio=&lugar=) y presupuesto mínimo (?precio_min=)
+  const near: Near = useMemo(() => {
+    const lat = Number(params.get('lat')), lng = Number(params.get('lng')), radius = Number(params.get('radio')) || 10;
+    return params.get('lat') && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180
+      ? { lat, lng, radius: Math.min(Math.max(radius, 1), 200), label: (params.get('lugar') || 'el punto elegido').slice(0, 80) }
+      : null;
+  }, [params.toString()]);
   const results = useMemo(
-    () => houses.filter((c) => matches(c, op, q)).sort((a, b) => (sort === 'precio-desc' ? b.price - a.price : sort === 'recientes' ? b.orden - a.orden : a.price - b.price)),
-    [houses, op, sort, JSON.stringify(q)],
+    () => houses.filter((c) => matches(c, op, q, near)).sort((a, b) => (sort === 'precio-desc' ? b.price - a.price : sort === 'recientes' ? b.orden - a.orden : a.price - b.price)),
+    [houses, op, sort, JSON.stringify(q), near],
   );
+  // Sugerencias para «Ubicación»: las zonas de las casas publicadas (se puede escribir cualquier otra)
+  const places = useMemo(() => [...new Set(houses.map((h) => h.zona))].sort(), [houses]);
   const total = results.length;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(pages, Math.max(1, parseInt(params.get('pagina') || '1', 10) || 1));
@@ -95,14 +123,21 @@ export function Listing() {
 
   const recTxt = q.recamaras ? (q.recamaras === '4' ? ' de 4 o más recámaras' : ` de ${q.recamaras} recámara${q.recamaras === '1' ? '' : 's'}`) : '';
   const opTxt = op === 'renta' ? ' en renta' : op === 'venta' ? ' en venta' : ' en renta y venta';
-  const title = 'Casas' + recTxt + opTxt + ' en Cancún';
+  const title = typePlural(q.tipo) + recTxt + opTxt + (near ? ' cerca de ' + near.label.split(',')[0] : ' en ' + (q.zona ? placeLabel(q.zona) : 'Cancún'));
   usePageTitle(title + ' | Zugar Inmobiliaria');
 
   const chips: [string, Record<string, null>][] = [];
-  if (op) chips.push([op === 'renta' ? 'En renta' : 'En venta', { operacion: null, precio_max: null }]);
+  if (op) chips.push([op === 'renta' ? 'En renta' : 'En venta', { operacion: null }]);
+  if (near) chips.push([`A ${near.radius} km de ${near.label.split(',')[0]}`, { lat: null, lng: null, radio: null, lugar: null }]);
   FILTERS.forEach((k) => {
     if (!q[k]) return;
-    const text = optionsFor(k, op).find(([v]) => v === q[k])![1];
+    const text = {
+      zona: 'Ubicación: ' + placeLabel(q.zona),
+      precio_min: `Desde $${fmt(q.precio_min)}`,
+      precio_max: `Hasta $${fmt(q.precio_max)}`,
+      superficie: `Desde ${fmt(q.superficie)} m²`,
+      superficie_max: `Hasta ${fmt(q.superficie_max)} m²`,
+    }[k as string] ?? optionsFor(k).find(([v]) => v === q[k])![1];
     const prefix = ({ banos: 'Baños: ', estacionamientos: 'Estacionamientos: ' } as Record<string, string>)[k] ?? '';
     chips.push([prefix + text, { [k]: null }]);
   });
@@ -119,17 +154,19 @@ export function Listing() {
     e.preventDefault();
     setPanelOpen(false);
     const u = new URLSearchParams();
-    if (op) u.set('operacion', op);
-    FILTERS.forEach((k) => draft[k] && u.set(k, draft[k]));
+    if (draftOp) u.set('operacion', draftOp);
+    // Mínimo mayor que el máximo: se intercambian en lugar de dar cero resultados
+    const d = { ...draft };
+    if (d.precio_min && d.precio_max && +d.precio_min > +d.precio_max) [d.precio_min, d.precio_max] = [d.precio_max, d.precio_min];
+    if (d.superficie && d.superficie_max && +d.superficie > +d.superficie_max) [d.superficie, d.superficie_max] = [d.superficie_max, d.superficie];
+    FILTERS.forEach((k) => d[k] && u.set(k, d[k]));
+    // Se conserva el lugar elegido en el mapa de la portada
+    ['lat', 'lng', 'radio', 'lugar'].forEach((k) => params.get(k) && u.set(k, params.get(k)!));
     if (sort !== 'precio-asc') u.set('orden', sort);
     if (view !== 'cuadricula') u.set('vista', view);
     setParams(u);
   };
 
-  const zoneQuery = q.zona && pageItems[0] ? pageItems[0].mapa + ', Quintana Roo' : 'Cancún, Quintana Roo';
-  const picked = pageItems.find((c) => c.slug === selected);
-  const mapLink = picked ? googleLink(hasCoords(picked) ? `${picked.lat},${picked.lng}` : picked.mapa + ', Quintana Roo') : googleLink(zoneQuery);
-  const useLeaflet = pageItems.some(hasCoords);
 
   const cell = (n: number, label: string, content: ReactNode, current = false) =>
     n < 1 || n > pages ? (
@@ -157,7 +194,7 @@ export function Listing() {
             <span className="eyebrow">Un lugar para tu siguiente capítulo</span>
             <h1>{title}</h1>
             <p>
-              {total} casa{total === 1 ? '' : 's'} disponible{total === 1 ? '' : 's'} · {op === 'renta' ? 'Rentas a largo plazo' : op === 'venta' ? 'Contado, crédito bancario o Infonavit' : 'Renta y venta'} · Precios en MXN
+              {total} propiedad{total === 1 ? '' : 'es'} disponible{total === 1 ? '' : 's'} · {op === 'renta' ? 'Rentas a largo plazo' : op === 'venta' ? 'Contado, crédito bancario o Infonavit' : 'Renta y venta'} · Precios en MXN
             </p>
           </div>
           <Link className="btn btn--secondary btn--lg" to="/contacto?motivo=alerta-busqueda"><Icon id="bookmark" />Guardar búsqueda</Link>
@@ -176,32 +213,74 @@ export function Listing() {
             </div>
             <form id="filtros" onSubmit={onFilter}>
               <div className="filters__grid">
+                {/* Renta o venta: lo primero que se elige al buscar */}
+                <div className="field field--full">
+                  <span className="field__label" id="f-op-label">Operación</span>
+                  <div className="choice-group" role="radiogroup" aria-labelledby="f-op-label">
+                    {([['', 'Renta y venta'], ['renta', 'Renta'], ['venta', 'Venta']] as const).map(([v, t]) => (
+                      <label key={v} className="choice">
+                        <input type="radio" name="f-op" value={v} checked={draftOp === v}
+                          onChange={() => { setDraftOp(v); setDraft((d) => ({ ...d, precio_min: '', precio_max: '' })); }} />
+                        <span>{t}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 {FILTERS.map((k) => {
+                  const priceWord = draftOp === 'renta' ? 'Renta mensual' : draftOp === 'venta' ? 'Precio de venta' : 'Precio';
                   const labels: Record<FilterKey, string> = {
-                    tipo: 'Tipo', zona: 'Zona', precio_max: op === 'renta' ? 'Precio mensual' : op === 'venta' ? 'Precio de venta' : 'Precio',
-                    recamaras: 'Recámaras', banos: 'Baños', estacionamientos: 'Estacionamientos', superficie: 'Superficie', mascotas: 'Mascotas', amueblada: 'Amueblada',
+                    tipo: 'Tipo de inmueble', zona: 'Ubicación', precio_min: priceWord + ' desde', precio_max: priceWord + ' hasta',
+                    superficie: 'Superficie desde', superficie_max: 'Superficie hasta',
+                    recamaras: 'Recámaras', banos: 'Baños', estacionamientos: 'Estacionamientos', mascotas: 'Mascotas', amueblada: 'Amueblado',
                   };
-                  const id = { tipo: 'f-tipo', zona: 'f-zona', precio_max: 'f-precio', recamaras: 'f-rec', banos: 'f-banos', estacionamientos: 'f-est', superficie: 'f-sup', mascotas: 'f-mascotas', amueblada: 'f-amueblada' }[k];
-                  const opts = optionsFor(k, op);
+                  const id = 'f-' + k.replace('_', '-');
+                  const set = (v: string) => setDraft({ ...draft, [k]: v });
+                  if (k === 'zona') {
+                    return (
+                      <div key={k} className="field field--full">
+                        <label className="field__label" htmlFor={id}>{labels[k]}</label>
+                        <input className="input" id={id} type="search" list="ubicaciones" maxLength={80} placeholder="Colonia, ciudad o país" value={draft.zona} onChange={(e) => set(e.target.value)} />
+                        <datalist id="ubicaciones">{places.map((z) => <option key={z} value={z} />)}</datalist>
+                      </div>
+                    );
+                  }
+                  if (k === 'precio_min' || k === 'precio_max') {
+                    const list = draftOp === 'renta' || draftOp === 'venta' ? PRICES[draftOp] : [...PRICES.renta, ...PRICES.venta];
+                    return (
+                      <div key={k} className="field">
+                        <label className="field__label" htmlFor={id}>{labels[k]}</label>
+                        <MoneyInput id={id} placeholder={k === 'precio_min' ? '$0' : 'Sin límite'} value={draft[k]} onChange={set} suggestions={list} />
+                      </div>
+                    );
+                  }
+                  if (k === 'superficie' || k === 'superficie_max') {
+                    return (
+                      <div key={k} className="field">
+                        <label className="field__label" htmlFor={id}>{labels[k]}</label>
+                        <AreaInput id={id} placeholder={k === 'superficie' ? '0' : 'Sin límite'} value={draft[k]} onChange={set} suggestions={AREAS} />
+                      </div>
+                    );
+                  }
                   return (
-                    <div key={k} className={`field${k === 'tipo' || k === 'zona' ? ' field--full' : ''}`}>
+                    <div key={k} className={`field${k === 'tipo' ? ' field--full' : ''}`}>
                       <label className="field__label" htmlFor={id}>{labels[k]}</label>
-                      <select className="select" id={id} value={draft[k]} onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}>
-                        {k === 'precio_max' && !op ? (
+                      <select className="select" id={id} value={draft[k]} onChange={(e) => set(e.target.value)}>
+                        {k === 'tipo' ? (
                           <>
-                            <option value="">Cualquiera</option>
-                            <optgroup label="Renta mensual">{PRICES.renta.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</optgroup>
-                            <optgroup label="Venta">{PRICES.venta.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</optgroup>
+                            <option value="">Todos los tipos</option>
+                            {TYPE_GROUPS.map((g) => (
+                              <optgroup key={g} label={g}>{PROPERTY_TYPES.filter((t) => t.group === g).map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}</optgroup>
+                            ))}
                           </>
                         ) : (
-                          opts.map(([v, t]) => <option key={v} value={v}>{t}</option>)
+                          optionsFor(k).map(([v, t]) => <option key={v} value={v}>{t}</option>)
                         )}
                       </select>
                     </div>
                   );
                 })}
                 <div className="filters__submit">
-                  <button className="btn btn--lg btn--block" type="submit"><Icon id="search" />Buscar casas</button>
+                  <button className="btn btn--lg btn--block" type="submit"><Icon id="search" />Buscar propiedades</button>
                 </div>
                 <div className="filters__mobile-only">
                   <Link className="btn btn--secondary btn--lg btn--block" to="/propiedades" onClick={() => setPanelOpen(false)}>Limpiar filtros</Link>
@@ -229,7 +308,7 @@ export function Listing() {
                 {SORTS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
               </select>
             </div>
-            <p className="toolbar__count">{total ? `Mostrando ${from + 1}–${from + pageItems.length} de ${total} casa${total === 1 ? '' : 's'}` : loading ? 'Cargando casas…' : 'Sin resultados'}</p>
+            <p className="toolbar__count">{total ? `Mostrando ${from + 1}–${from + pageItems.length} de ${total} propiedad${total === 1 ? '' : 'es'}` : loading ? 'Cargando propiedades…' : 'Sin resultados'}</p>
           </div>
           <nav className="segmented" aria-label="Tipo de vista">
             {([['lista', 'list', 'Lista'], ['cuadricula', 'grid', 'Cuadrícula'], ['mapa', 'map', 'Mapa']] as const).map(([v, icon, label]) => (
@@ -247,7 +326,7 @@ export function Listing() {
               ) : (
                 !loading && (
                   <div className="listing-empty">
-                    <h3>No encontramos casas con esos filtros</h3>
+                    <h3>No encontramos propiedades con esos filtros</h3>
                     <p>Prueba con otra zona o un presupuesto distinto. También podemos buscar por ti.</p>
                     <p className="listing-empty__actions">
                       <Link className="btn btn--secondary" to="/propiedades">Limpiar filtros</Link>
@@ -270,18 +349,11 @@ export function Listing() {
 
           <aside className="listing-aside" aria-label="Mapa y ayuda">
             <div className="map map--listing">
-              {useLeaflet ? (
-                <MarkersMap houses={pageItems} selected={selected} label="Mapa de Cancún con la zona de las casas" />
-              ) : (
-                <iframe
-                  src={picked ? googleEmbed(picked.mapa + ', Quintana Roo', 15) : googleEmbed(zoneQuery, q.zona ? 14 : 12)}
-                  title={picked ? `Mapa de Google con la zona de ${picked.name}` : 'Mapa de Google de Cancún con la zona de las casas'}
-                  loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen
-                />
-              )}
+              {/* Solo las propiedades disponibles que coinciden con la búsqueda, cada una como una zona aproximada */}
+              <MarkersMap houses={results} selected={selected} label="Mapa con la zona aproximada de las propiedades disponibles" />
             </div>
             <div className="map-places">
-              <p className="map-places__title">Ubicación aproximada de cada casa</p>
+              <p className="map-places__title">Zona aproximada de cada propiedad</p>
               <ul id="map-places">
                 {pageItems.length ? (
                   pageItems.map((c) => (
@@ -292,10 +364,10 @@ export function Listing() {
                     </li>
                   ))
                 ) : (
-                  <li className="muted small">Sin casas para mostrar en el mapa.</li>
+                  <li className="muted small">Sin propiedades para mostrar en el mapa.</li>
                 )}
               </ul>
-              <a className="link-arrow" id="map-open" href={mapLink} target="_blank" rel="noopener">Abrir en Google Maps<Icon id="arrow" size="sm" /></a>
+              <p className="muted small">Por seguridad mostramos la zona, no la dirección. La ubicación exacta te llega en la app al confirmar tu cita.</p>
             </div>
             <div className="zone-card">
               <span className="eyebrow">Conocemos Cancún</span>

@@ -1,5 +1,5 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getMessaging, getToken, isSupported, onMessage, type Messaging } from 'firebase/messaging';
+import { initializeApp, getApps } from '@firebase/app';
+import { getMessaging, getToken, isSupported, onMessage, type Messaging } from '@firebase/messaging';
 import { API_URL } from '../lib/api';
 
 /* ==========================================================================

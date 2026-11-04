@@ -22,7 +22,8 @@ class MyDataCard extends ConsumerWidget {
     return c?.budget ?? 'Sin registrar';
   }
 
-  static String petsText(ClientProfile? c) => (c?.hasPets ?? false) ? 'Sí, ${c!.petsCount}' : 'No';
+  /// «Sí, 2» o solo «Sí» si no dijo cuántas (antes salía «Sí, 0»).
+  static String petsText(ClientProfile? c) => (c?.hasPets ?? false) ? (c!.petsCount > 0 ? 'Sí, ${c.petsCount}' : 'Sí') : 'No';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,7 +35,11 @@ class MyDataCard extends ConsumerWidget {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          decoration: BoxDecoration(color: AppColors.surface, borderRadius: AppRadius.cardAll, border: Border.all(color: AppColors.divider)),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadius.cardAll,
+            border: Border.all(color: AppColors.divider),
+          ),
           child: Column(
             children: [
               KeyValueRow(label: 'Nombre', value: user.name),
@@ -50,14 +55,14 @@ class MyDataCard extends ConsumerWidget {
           onPressed: c == null
               ? null
               : () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    showDragHandle: true,
-                    builder: (context) => Padding(
-                      padding: EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.xl),
-                      child: _EditMyDataSheet(profile: c),
-                    ),
+                  context: context,
+                  isScrollControlled: true,
+                  showDragHandle: true,
+                  builder: (context) => Padding(
+                    padding: EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.xl),
+                    child: _EditMyDataSheet(profile: c),
                   ),
+                ),
         ),
       ],
     );
@@ -96,12 +101,16 @@ class _EditMyDataSheetState extends ConsumerState<_EditMyDataSheet> {
       _error = null;
     });
     try {
-      final updated = await ref.read(authRepositoryProvider).updateProfile(client: {
-        'budgetAmount': _budget.text.isEmpty ? null : double.parse(_budget.text),
-        'hasPets': _hasPets,
-        'petsCount': _hasPets ? _pets : 0,
-        'occupants': _occupants.text.isEmpty ? null : int.parse(_occupants.text),
-      });
+      final updated = await ref
+          .read(authRepositoryProvider)
+          .updateProfile(
+            client: {
+              'budgetAmount': _budget.text.isEmpty ? null : double.parse(_budget.text),
+              'hasPets': _hasPets,
+              'petsCount': _hasPets ? _pets : 0,
+              'occupants': _occupants.text.isEmpty ? null : int.parse(_occupants.text),
+            },
+          );
       ref.read(sessionProvider.notifier).updateUser(updated);
       if (mounted) Navigator.pop(context);
     } catch (e) {

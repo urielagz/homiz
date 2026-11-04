@@ -16,7 +16,12 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Appointment {
 
- String get id; String get code; AppointmentProperty get property;@LocalDate() DateTime get scheduledAt; int get durationMin; String get status; String? get note; String? get reason; PersonRef? get client; PersonRef? get broker; String? get confirmedBy;
+ String get id; String get code; AppointmentProperty get property;@LocalDate() DateTime get scheduledAt; int get durationMin; String get status;/// Por confirmar: de quién se espera que acepte la fecha («staff» o «client»): la otra parte de quien la propuso
+ String? get awaiting;/// Quien ve la cita puede aceptar la fecha (la propuso la otra parte)
+ bool get canAccept; String? get note; String? get reason;/// Formulario que llenó la persona: el de la solicitud de la cita o su solicitud más reciente
+/// (mismo formato que una solicitud; «linked» = salió de esa solicitud).
+ Map<String, dynamic>? get lead;/// Asesor de la cita (lo ven el cliente y el personal)
+ PersonRef? get broker; PersonRef? get client; String? get confirmedBy;
 /// Create a copy of Appointment
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +35,20 @@ $AppointmentCopyWith<Appointment> get copyWith => _$AppointmentCopyWithImpl<Appo
 @override
 bool operator ==(Object other) {
   final _this = this as Appointment;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Appointment&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.property, _this.property) || other.property == _this.property)&&(identical(other.scheduledAt, _this.scheduledAt) || other.scheduledAt == _this.scheduledAt)&&(identical(other.durationMin, _this.durationMin) || other.durationMin == _this.durationMin)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.note, _this.note) || other.note == _this.note)&&(identical(other.reason, _this.reason) || other.reason == _this.reason)&&(identical(other.client, _this.client) || other.client == _this.client)&&(identical(other.broker, _this.broker) || other.broker == _this.broker)&&(identical(other.confirmedBy, _this.confirmedBy) || other.confirmedBy == _this.confirmedBy));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Appointment&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.property, _this.property) || other.property == _this.property)&&(identical(other.scheduledAt, _this.scheduledAt) || other.scheduledAt == _this.scheduledAt)&&(identical(other.durationMin, _this.durationMin) || other.durationMin == _this.durationMin)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.awaiting, _this.awaiting) || other.awaiting == _this.awaiting)&&(identical(other.canAccept, _this.canAccept) || other.canAccept == _this.canAccept)&&(identical(other.note, _this.note) || other.note == _this.note)&&(identical(other.reason, _this.reason) || other.reason == _this.reason)&&const DeepCollectionEquality().equals(other.lead, _this.lead)&&(identical(other.broker, _this.broker) || other.broker == _this.broker)&&(identical(other.client, _this.client) || other.client == _this.client)&&(identical(other.confirmedBy, _this.confirmedBy) || other.confirmedBy == _this.confirmedBy));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Appointment;
-  return Object.hash(runtimeType,_this.id,_this.code,_this.property,_this.scheduledAt,_this.durationMin,_this.status,_this.note,_this.reason,_this.client,_this.broker,_this.confirmedBy);
+  return Object.hash(runtimeType,_this.id,_this.code,_this.property,_this.scheduledAt,_this.durationMin,_this.status,_this.awaiting,_this.canAccept,_this.note,_this.reason,const DeepCollectionEquality().hash(_this.lead),_this.broker,_this.client,_this.confirmedBy);
 }
 
 @override
 String toString() {
   final _this = this as Appointment;
-  return 'Appointment(id: ${_this.id}, code: ${_this.code}, property: ${_this.property}, scheduledAt: ${_this.scheduledAt}, durationMin: ${_this.durationMin}, status: ${_this.status}, note: ${_this.note}, reason: ${_this.reason}, client: ${_this.client}, broker: ${_this.broker}, confirmedBy: ${_this.confirmedBy})';
+  return 'Appointment(id: ${_this.id}, code: ${_this.code}, property: ${_this.property}, scheduledAt: ${_this.scheduledAt}, durationMin: ${_this.durationMin}, status: ${_this.status}, awaiting: ${_this.awaiting}, canAccept: ${_this.canAccept}, note: ${_this.note}, reason: ${_this.reason}, lead: ${_this.lead}, broker: ${_this.broker}, client: ${_this.client}, confirmedBy: ${_this.confirmedBy})';
 }
 
 
@@ -54,11 +59,11 @@ abstract mixin class $AppointmentCopyWith<$Res>  {
   factory $AppointmentCopyWith(Appointment value, $Res Function(Appointment) _then) = _$AppointmentCopyWithImpl;
 @useResult
 $Res call({
- String id, String code, AppointmentProperty property,@LocalDate() DateTime scheduledAt, int durationMin, String status, String? note, String? reason, PersonRef? client, PersonRef? broker, String? confirmedBy
+ String id, String code, AppointmentProperty property,@LocalDate() DateTime scheduledAt, int durationMin, String status, String? awaiting, bool canAccept, String? note, String? reason, Map<String, dynamic>? lead, PersonRef? broker, PersonRef? client, String? confirmedBy
 });
 
 
-$AppointmentPropertyCopyWith<$Res> get property;$PersonRefCopyWith<$Res>? get client;$PersonRefCopyWith<$Res>? get broker;
+$AppointmentPropertyCopyWith<$Res> get property;$PersonRefCopyWith<$Res>? get broker;$PersonRefCopyWith<$Res>? get client;
 
 }
 /// @nodoc
@@ -71,7 +76,7 @@ class _$AppointmentCopyWithImpl<$Res>
 
 /// Create a copy of Appointment
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = null,Object? property = null,Object? scheduledAt = null,Object? durationMin = null,Object? status = null,Object? note = freezed,Object? reason = freezed,Object? client = freezed,Object? broker = freezed,Object? confirmedBy = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = null,Object? property = null,Object? scheduledAt = null,Object? durationMin = null,Object? status = null,Object? awaiting = freezed,Object? canAccept = null,Object? note = freezed,Object? reason = freezed,Object? lead = freezed,Object? broker = freezed,Object? client = freezed,Object? confirmedBy = freezed,}) {
   return _then(Appointment(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
@@ -79,10 +84,13 @@ as String,property: null == property ? _self.property : property // ignore: cast
 as AppointmentProperty,scheduledAt: null == scheduledAt ? _self.scheduledAt : scheduledAt // ignore: cast_nullable_to_non_nullable
 as DateTime,durationMin: null == durationMin ? _self.durationMin : durationMin // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,awaiting: freezed == awaiting ? _self.awaiting : awaiting // ignore: cast_nullable_to_non_nullable
+as String?,canAccept: null == canAccept ? _self.canAccept : canAccept // ignore: cast_nullable_to_non_nullable
+as bool,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
 as String?,reason: freezed == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
-as String?,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
-as PersonRef?,broker: freezed == broker ? _self.broker : broker // ignore: cast_nullable_to_non_nullable
+as String?,lead: freezed == lead ? _self.lead : lead // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,broker: freezed == broker ? _self.broker : broker // ignore: cast_nullable_to_non_nullable
+as PersonRef?,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
 as PersonRef?,confirmedBy: freezed == confirmedBy ? _self.confirmedBy : confirmedBy // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
@@ -100,18 +108,6 @@ $AppointmentPropertyCopyWith<$Res> get property {
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$PersonRefCopyWith<$Res>? get client {
-    if (_self.client == null) {
-    return null;
-  }
-
-  return $PersonRefCopyWith<$Res>(_self.client!, (value) {
-    return _then(_self.copyWith(client: value));
-  });
-}/// Create a copy of Appointment
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
 $PersonRefCopyWith<$Res>? get broker {
     if (_self.broker == null) {
     return null;
@@ -119,6 +115,18 @@ $PersonRefCopyWith<$Res>? get broker {
 
   return $PersonRefCopyWith<$Res>(_self.broker!, (value) {
     return _then(_self.copyWith(broker: value));
+  });
+}/// Create a copy of Appointment
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$PersonRefCopyWith<$Res>? get client {
+    if (_self.client == null) {
+    return null;
+  }
+
+  return $PersonRefCopyWith<$Res>(_self.client!, (value) {
+    return _then(_self.copyWith(client: value));
   });
 }
 }
@@ -202,10 +210,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String code,  AppointmentProperty property, @LocalDate()  DateTime scheduledAt,  int durationMin,  String status,  String? note,  String? reason,  PersonRef? client,  PersonRef? broker,  String? confirmedBy)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String code,  AppointmentProperty property, @LocalDate()  DateTime scheduledAt,  int durationMin,  String status,  String? awaiting,  bool canAccept,  String? note,  String? reason,  Map<String, dynamic>? lead,  PersonRef? broker,  PersonRef? client,  String? confirmedBy)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Appointment() when $default != null:
-return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durationMin,_that.status,_that.note,_that.reason,_that.client,_that.broker,_that.confirmedBy);case _:
+return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durationMin,_that.status,_that.awaiting,_that.canAccept,_that.note,_that.reason,_that.lead,_that.broker,_that.client,_that.confirmedBy);case _:
   return orElse();
 
 }
@@ -223,10 +231,10 @@ return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durat
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String code,  AppointmentProperty property, @LocalDate()  DateTime scheduledAt,  int durationMin,  String status,  String? note,  String? reason,  PersonRef? client,  PersonRef? broker,  String? confirmedBy)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String code,  AppointmentProperty property, @LocalDate()  DateTime scheduledAt,  int durationMin,  String status,  String? awaiting,  bool canAccept,  String? note,  String? reason,  Map<String, dynamic>? lead,  PersonRef? broker,  PersonRef? client,  String? confirmedBy)  $default,) {final _that = this;
 switch (_that) {
 case _Appointment():
-return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durationMin,_that.status,_that.note,_that.reason,_that.client,_that.broker,_that.confirmedBy);case _:
+return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durationMin,_that.status,_that.awaiting,_that.canAccept,_that.note,_that.reason,_that.lead,_that.broker,_that.client,_that.confirmedBy);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -243,10 +251,10 @@ return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durat
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String code,  AppointmentProperty property, @LocalDate()  DateTime scheduledAt,  int durationMin,  String status,  String? note,  String? reason,  PersonRef? client,  PersonRef? broker,  String? confirmedBy)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String code,  AppointmentProperty property, @LocalDate()  DateTime scheduledAt,  int durationMin,  String status,  String? awaiting,  bool canAccept,  String? note,  String? reason,  Map<String, dynamic>? lead,  PersonRef? broker,  PersonRef? client,  String? confirmedBy)?  $default,) {final _that = this;
 switch (_that) {
 case _Appointment() when $default != null:
-return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durationMin,_that.status,_that.note,_that.reason,_that.client,_that.broker,_that.confirmedBy);case _:
+return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durationMin,_that.status,_that.awaiting,_that.canAccept,_that.note,_that.reason,_that.lead,_that.broker,_that.client,_that.confirmedBy);case _:
   return null;
 
 }
@@ -258,7 +266,7 @@ return $default(_that.id,_that.code,_that.property,_that.scheduledAt,_that.durat
 @JsonSerializable()
 
 class _Appointment extends Appointment {
-  const _Appointment({required this.id, required this.code, required this.property, @LocalDate() required this.scheduledAt, this.durationMin = 60, required this.status, this.note, this.reason, this.client, this.broker, this.confirmedBy}): super._();
+  const _Appointment({required this.id, required this.code, required this.property, @LocalDate() required this.scheduledAt, this.durationMin = 60, required this.status, this.awaiting, this.canAccept = false, this.note, this.reason,  Map<String, dynamic>? lead, this.broker, this.client, this.confirmedBy}): _lead = lead,super._();
   factory _Appointment.fromJson(Map<String, dynamic> json) => _$AppointmentFromJson(json);
 
 @override final  String id;
@@ -267,10 +275,28 @@ class _Appointment extends Appointment {
 @override@LocalDate() final  DateTime scheduledAt;
 @override@JsonKey() final  int durationMin;
 @override final  String status;
+/// Por confirmar: de quién se espera que acepte la fecha («staff» o «client»): la otra parte de quien la propuso
+@override final  String? awaiting;
+/// Quien ve la cita puede aceptar la fecha (la propuso la otra parte)
+@override@JsonKey() final  bool canAccept;
 @override final  String? note;
 @override final  String? reason;
-@override final  PersonRef? client;
+/// Formulario que llenó la persona: el de la solicitud de la cita o su solicitud más reciente
+/// (mismo formato que una solicitud; «linked» = salió de esa solicitud).
+ final  Map<String, dynamic>? _lead;
+/// Formulario que llenó la persona: el de la solicitud de la cita o su solicitud más reciente
+/// (mismo formato que una solicitud; «linked» = salió de esa solicitud).
+@override Map<String, dynamic>? get lead {
+  final value = _lead;
+  if (value == null) return null;
+  if (_lead is EqualUnmodifiableMapView) return _lead;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+/// Asesor de la cita (lo ven el cliente y el personal)
 @override final  PersonRef? broker;
+@override final  PersonRef? client;
 @override final  String? confirmedBy;
 
 /// Create a copy of Appointment
@@ -286,18 +312,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Appointment&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.property, property) || other.property == property)&&(identical(other.scheduledAt, scheduledAt) || other.scheduledAt == scheduledAt)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.status, status) || other.status == status)&&(identical(other.note, note) || other.note == note)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.client, client) || other.client == client)&&(identical(other.broker, broker) || other.broker == broker)&&(identical(other.confirmedBy, confirmedBy) || other.confirmedBy == confirmedBy));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Appointment&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.property, property) || other.property == property)&&(identical(other.scheduledAt, scheduledAt) || other.scheduledAt == scheduledAt)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.status, status) || other.status == status)&&(identical(other.awaiting, awaiting) || other.awaiting == awaiting)&&(identical(other.canAccept, canAccept) || other.canAccept == canAccept)&&(identical(other.note, note) || other.note == note)&&(identical(other.reason, reason) || other.reason == reason)&&const DeepCollectionEquality().equals(other.lead, _lead)&&(identical(other.broker, broker) || other.broker == broker)&&(identical(other.client, client) || other.client == client)&&(identical(other.confirmedBy, confirmedBy) || other.confirmedBy == confirmedBy));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,code,property,scheduledAt,durationMin,status,note,reason,client,broker,confirmedBy);
+    return Object.hash(runtimeType,id,code,property,scheduledAt,durationMin,status,awaiting,canAccept,note,reason,const DeepCollectionEquality().hash(_lead),broker,client,confirmedBy);
 }
 
 @override
 String toString() {
-    return 'Appointment(id: $id, code: $code, property: $property, scheduledAt: $scheduledAt, durationMin: $durationMin, status: $status, note: $note, reason: $reason, client: $client, broker: $broker, confirmedBy: $confirmedBy)';
+    return 'Appointment(id: $id, code: $code, property: $property, scheduledAt: $scheduledAt, durationMin: $durationMin, status: $status, awaiting: $awaiting, canAccept: $canAccept, note: $note, reason: $reason, lead: $lead, broker: $broker, client: $client, confirmedBy: $confirmedBy)';
 }
 
 
@@ -308,11 +334,11 @@ abstract mixin class _$AppointmentCopyWith<$Res> implements $AppointmentCopyWith
   factory _$AppointmentCopyWith(_Appointment value, $Res Function(_Appointment) _then) = __$AppointmentCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String code, AppointmentProperty property,@LocalDate() DateTime scheduledAt, int durationMin, String status, String? note, String? reason, PersonRef? client, PersonRef? broker, String? confirmedBy
+ String id, String code, AppointmentProperty property,@LocalDate() DateTime scheduledAt, int durationMin, String status, String? awaiting, bool canAccept, String? note, String? reason, Map<String, dynamic>? lead, PersonRef? broker, PersonRef? client, String? confirmedBy
 });
 
 
-@override $AppointmentPropertyCopyWith<$Res> get property;@override $PersonRefCopyWith<$Res>? get client;@override $PersonRefCopyWith<$Res>? get broker;
+@override $AppointmentPropertyCopyWith<$Res> get property;@override $PersonRefCopyWith<$Res>? get broker;@override $PersonRefCopyWith<$Res>? get client;
 
 }
 /// @nodoc
@@ -325,7 +351,7 @@ class __$AppointmentCopyWithImpl<$Res>
 
 /// Create a copy of Appointment
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = null,Object? property = null,Object? scheduledAt = null,Object? durationMin = null,Object? status = null,Object? note = freezed,Object? reason = freezed,Object? client = freezed,Object? broker = freezed,Object? confirmedBy = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = null,Object? property = null,Object? scheduledAt = null,Object? durationMin = null,Object? status = null,Object? awaiting = freezed,Object? canAccept = null,Object? note = freezed,Object? reason = freezed,Object? lead = freezed,Object? broker = freezed,Object? client = freezed,Object? confirmedBy = freezed,}) {
   return _then(_Appointment(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
@@ -333,10 +359,13 @@ as String,property: null == property ? _self.property : property // ignore: cast
 as AppointmentProperty,scheduledAt: null == scheduledAt ? _self.scheduledAt : scheduledAt // ignore: cast_nullable_to_non_nullable
 as DateTime,durationMin: null == durationMin ? _self.durationMin : durationMin // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as String,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,awaiting: freezed == awaiting ? _self.awaiting : awaiting // ignore: cast_nullable_to_non_nullable
+as String?,canAccept: null == canAccept ? _self.canAccept : canAccept // ignore: cast_nullable_to_non_nullable
+as bool,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
 as String?,reason: freezed == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
-as String?,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
-as PersonRef?,broker: freezed == broker ? _self.broker : broker // ignore: cast_nullable_to_non_nullable
+as String?,lead: freezed == lead ? _self._lead : lead // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,broker: freezed == broker ? _self.broker : broker // ignore: cast_nullable_to_non_nullable
+as PersonRef?,client: freezed == client ? _self.client : client // ignore: cast_nullable_to_non_nullable
 as PersonRef?,confirmedBy: freezed == confirmedBy ? _self.confirmedBy : confirmedBy // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
@@ -355,18 +384,6 @@ $AppointmentPropertyCopyWith<$Res> get property {
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$PersonRefCopyWith<$Res>? get client {
-    if (_self.client == null) {
-    return null;
-  }
-
-  return $PersonRefCopyWith<$Res>(_self.client!, (value) {
-    return _then(_self.copyWith(client: value));
-  });
-}/// Create a copy of Appointment
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
 $PersonRefCopyWith<$Res>? get broker {
     if (_self.broker == null) {
     return null;
@@ -375,6 +392,18 @@ $PersonRefCopyWith<$Res>? get broker {
   return $PersonRefCopyWith<$Res>(_self.broker!, (value) {
     return _then(_self.copyWith(broker: value));
   });
+}/// Create a copy of Appointment
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$PersonRefCopyWith<$Res>? get client {
+    if (_self.client == null) {
+    return null;
+  }
+
+  return $PersonRefCopyWith<$Res>(_self.client!, (value) {
+    return _then(_self.copyWith(client: value));
+  });
 }
 }
 
@@ -382,7 +411,8 @@ $PersonRefCopyWith<$Res>? get broker {
 /// @nodoc
 mixin _$AppointmentProperty {
 
- String get id; String? get code; String get name; String? get zone; String? get address; String? get photo;
+ String get id; String? get code; String get name; String? get zone; String? get address; String? get photo;/// Punto exacto: al cliente le llega cuando la cita está confirmada (o la visita ya se hizo)
+ double? get lat; double? get lng; bool get exactLocation;
 /// Create a copy of AppointmentProperty
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -396,20 +426,20 @@ $AppointmentPropertyCopyWith<AppointmentProperty> get copyWith => _$AppointmentP
 @override
 bool operator ==(Object other) {
   final _this = this as AppointmentProperty;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppointmentProperty&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.zone, _this.zone) || other.zone == _this.zone)&&(identical(other.address, _this.address) || other.address == _this.address)&&(identical(other.photo, _this.photo) || other.photo == _this.photo));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppointmentProperty&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.zone, _this.zone) || other.zone == _this.zone)&&(identical(other.address, _this.address) || other.address == _this.address)&&(identical(other.photo, _this.photo) || other.photo == _this.photo)&&(identical(other.lat, _this.lat) || other.lat == _this.lat)&&(identical(other.lng, _this.lng) || other.lng == _this.lng)&&(identical(other.exactLocation, _this.exactLocation) || other.exactLocation == _this.exactLocation));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as AppointmentProperty;
-  return Object.hash(runtimeType,_this.id,_this.code,_this.name,_this.zone,_this.address,_this.photo);
+  return Object.hash(runtimeType,_this.id,_this.code,_this.name,_this.zone,_this.address,_this.photo,_this.lat,_this.lng,_this.exactLocation);
 }
 
 @override
 String toString() {
   final _this = this as AppointmentProperty;
-  return 'AppointmentProperty(id: ${_this.id}, code: ${_this.code}, name: ${_this.name}, zone: ${_this.zone}, address: ${_this.address}, photo: ${_this.photo})';
+  return 'AppointmentProperty(id: ${_this.id}, code: ${_this.code}, name: ${_this.name}, zone: ${_this.zone}, address: ${_this.address}, photo: ${_this.photo}, lat: ${_this.lat}, lng: ${_this.lng}, exactLocation: ${_this.exactLocation})';
 }
 
 
@@ -420,7 +450,7 @@ abstract mixin class $AppointmentPropertyCopyWith<$Res>  {
   factory $AppointmentPropertyCopyWith(AppointmentProperty value, $Res Function(AppointmentProperty) _then) = _$AppointmentPropertyCopyWithImpl;
 @useResult
 $Res call({
- String id, String? code, String name, String? zone, String? address, String? photo
+ String id, String? code, String name, String? zone, String? address, String? photo, double? lat, double? lng, bool exactLocation
 });
 
 
@@ -437,7 +467,7 @@ class _$AppointmentPropertyCopyWithImpl<$Res>
 
 /// Create a copy of AppointmentProperty
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? zone = freezed,Object? address = freezed,Object? photo = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? zone = freezed,Object? address = freezed,Object? photo = freezed,Object? lat = freezed,Object? lng = freezed,Object? exactLocation = null,}) {
   return _then(AppointmentProperty(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
@@ -445,7 +475,10 @@ as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_no
 as String,zone: freezed == zone ? _self.zone : zone // ignore: cast_nullable_to_non_nullable
 as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
 as String?,photo: freezed == photo ? _self.photo : photo // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,lat: freezed == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
+as double?,lng: freezed == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
+as double?,exactLocation: null == exactLocation ? _self.exactLocation : exactLocation // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -530,10 +563,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? zone,  String? address,  String? photo)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? zone,  String? address,  String? photo,  double? lat,  double? lng,  bool exactLocation)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AppointmentProperty() when $default != null:
-return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.photo);case _:
+return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.photo,_that.lat,_that.lng,_that.exactLocation);case _:
   return orElse();
 
 }
@@ -551,10 +584,10 @@ return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.ph
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? zone,  String? address,  String? photo)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? code,  String name,  String? zone,  String? address,  String? photo,  double? lat,  double? lng,  bool exactLocation)  $default,) {final _that = this;
 switch (_that) {
 case _AppointmentProperty():
-return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.photo);case _:
+return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.photo,_that.lat,_that.lng,_that.exactLocation);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -571,10 +604,10 @@ return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.ph
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? code,  String name,  String? zone,  String? address,  String? photo)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? code,  String name,  String? zone,  String? address,  String? photo,  double? lat,  double? lng,  bool exactLocation)?  $default,) {final _that = this;
 switch (_that) {
 case _AppointmentProperty() when $default != null:
-return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.photo);case _:
+return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.photo,_that.lat,_that.lng,_that.exactLocation);case _:
   return null;
 
 }
@@ -585,8 +618,8 @@ return $default(_that.id,_that.code,_that.name,_that.zone,_that.address,_that.ph
 /// @nodoc
 @JsonSerializable()
 
-class _AppointmentProperty implements AppointmentProperty {
-  const _AppointmentProperty({required this.id, this.code, required this.name, this.zone, this.address, this.photo});
+class _AppointmentProperty extends AppointmentProperty {
+  const _AppointmentProperty({required this.id, this.code, required this.name, this.zone, this.address, this.photo, this.lat, this.lng, this.exactLocation = true}): super._();
   factory _AppointmentProperty.fromJson(Map<String, dynamic> json) => _$AppointmentPropertyFromJson(json);
 
 @override final  String id;
@@ -595,6 +628,10 @@ class _AppointmentProperty implements AppointmentProperty {
 @override final  String? zone;
 @override final  String? address;
 @override final  String? photo;
+/// Punto exacto: al cliente le llega cuando la cita está confirmada (o la visita ya se hizo)
+@override final  double? lat;
+@override final  double? lng;
+@override@JsonKey() final  bool exactLocation;
 
 /// Create a copy of AppointmentProperty
 /// with the given fields replaced by the non-null parameter values.
@@ -609,18 +646,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppointmentProperty&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.zone, zone) || other.zone == zone)&&(identical(other.address, address) || other.address == address)&&(identical(other.photo, photo) || other.photo == photo));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppointmentProperty&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.zone, zone) || other.zone == zone)&&(identical(other.address, address) || other.address == address)&&(identical(other.photo, photo) || other.photo == photo)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.exactLocation, exactLocation) || other.exactLocation == exactLocation));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,code,name,zone,address,photo);
+    return Object.hash(runtimeType,id,code,name,zone,address,photo,lat,lng,exactLocation);
 }
 
 @override
 String toString() {
-    return 'AppointmentProperty(id: $id, code: $code, name: $name, zone: $zone, address: $address, photo: $photo)';
+    return 'AppointmentProperty(id: $id, code: $code, name: $name, zone: $zone, address: $address, photo: $photo, lat: $lat, lng: $lng, exactLocation: $exactLocation)';
 }
 
 
@@ -631,7 +668,7 @@ abstract mixin class _$AppointmentPropertyCopyWith<$Res> implements $Appointment
   factory _$AppointmentPropertyCopyWith(_AppointmentProperty value, $Res Function(_AppointmentProperty) _then) = __$AppointmentPropertyCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String? code, String name, String? zone, String? address, String? photo
+ String id, String? code, String name, String? zone, String? address, String? photo, double? lat, double? lng, bool exactLocation
 });
 
 
@@ -648,7 +685,7 @@ class __$AppointmentPropertyCopyWithImpl<$Res>
 
 /// Create a copy of AppointmentProperty
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? zone = freezed,Object? address = freezed,Object? photo = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = freezed,Object? name = null,Object? zone = freezed,Object? address = freezed,Object? photo = freezed,Object? lat = freezed,Object? lng = freezed,Object? exactLocation = null,}) {
   return _then(_AppointmentProperty(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
@@ -656,7 +693,10 @@ as String?,name: null == name ? _self.name : name // ignore: cast_nullable_to_no
 as String,zone: freezed == zone ? _self.zone : zone // ignore: cast_nullable_to_non_nullable
 as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
 as String?,photo: freezed == photo ? _self.photo : photo // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,lat: freezed == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
+as double?,lng: freezed == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
+as double?,exactLocation: null == exactLocation ? _self.exactLocation : exactLocation // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -667,7 +707,7 @@ as String?,
 /// @nodoc
 mixin _$PersonRef {
 
- String get id; String get name; String? get phone; String? get email;
+ String get id; String get name; String? get phone; String? get email; String? get code; String? get kind;
 /// Create a copy of PersonRef
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -681,20 +721,20 @@ $PersonRefCopyWith<PersonRef> get copyWith => _$PersonRefCopyWithImpl<PersonRef>
 @override
 bool operator ==(Object other) {
   final _this = this as PersonRef;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonRef&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.phone, _this.phone) || other.phone == _this.phone)&&(identical(other.email, _this.email) || other.email == _this.email));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonRef&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.phone, _this.phone) || other.phone == _this.phone)&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.kind, _this.kind) || other.kind == _this.kind));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as PersonRef;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.phone,_this.email);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.phone,_this.email,_this.code,_this.kind);
 }
 
 @override
 String toString() {
   final _this = this as PersonRef;
-  return 'PersonRef(id: ${_this.id}, name: ${_this.name}, phone: ${_this.phone}, email: ${_this.email})';
+  return 'PersonRef(id: ${_this.id}, name: ${_this.name}, phone: ${_this.phone}, email: ${_this.email}, code: ${_this.code}, kind: ${_this.kind})';
 }
 
 
@@ -705,7 +745,7 @@ abstract mixin class $PersonRefCopyWith<$Res>  {
   factory $PersonRefCopyWith(PersonRef value, $Res Function(PersonRef) _then) = _$PersonRefCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? phone, String? email
+ String id, String name, String? phone, String? email, String? code, String? kind
 });
 
 
@@ -722,12 +762,14 @@ class _$PersonRefCopyWithImpl<$Res>
 
 /// Create a copy of PersonRef
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? phone = freezed,Object? email = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? phone = freezed,Object? email = freezed,Object? code = freezed,Object? kind = freezed,}) {
   return _then(PersonRef(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String?,kind: freezed == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -813,10 +855,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? phone,  String? email)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? phone,  String? email,  String? code,  String? kind)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PersonRef() when $default != null:
-return $default(_that.id,_that.name,_that.phone,_that.email);case _:
+return $default(_that.id,_that.name,_that.phone,_that.email,_that.code,_that.kind);case _:
   return orElse();
 
 }
@@ -834,10 +876,10 @@ return $default(_that.id,_that.name,_that.phone,_that.email);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? phone,  String? email)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? phone,  String? email,  String? code,  String? kind)  $default,) {final _that = this;
 switch (_that) {
 case _PersonRef():
-return $default(_that.id,_that.name,_that.phone,_that.email);case _:
+return $default(_that.id,_that.name,_that.phone,_that.email,_that.code,_that.kind);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -854,10 +896,10 @@ return $default(_that.id,_that.name,_that.phone,_that.email);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? phone,  String? email)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? phone,  String? email,  String? code,  String? kind)?  $default,) {final _that = this;
 switch (_that) {
 case _PersonRef() when $default != null:
-return $default(_that.id,_that.name,_that.phone,_that.email);case _:
+return $default(_that.id,_that.name,_that.phone,_that.email,_that.code,_that.kind);case _:
   return null;
 
 }
@@ -869,13 +911,15 @@ return $default(_that.id,_that.name,_that.phone,_that.email);case _:
 @JsonSerializable()
 
 class _PersonRef implements PersonRef {
-  const _PersonRef({required this.id, required this.name, this.phone, this.email});
+  const _PersonRef({required this.id, required this.name, this.phone, this.email, this.code, this.kind});
   factory _PersonRef.fromJson(Map<String, dynamic> json) => _$PersonRefFromJson(json);
 
 @override final  String id;
 @override final  String name;
 @override final  String? phone;
 @override final  String? email;
+@override final  String? code;
+@override final  String? kind;
 
 /// Create a copy of PersonRef
 /// with the given fields replaced by the non-null parameter values.
@@ -890,18 +934,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonRef&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.email, email) || other.email == email));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonRef&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.email, email) || other.email == email)&&(identical(other.code, code) || other.code == code)&&(identical(other.kind, kind) || other.kind == kind));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,phone,email);
+    return Object.hash(runtimeType,id,name,phone,email,code,kind);
 }
 
 @override
 String toString() {
-    return 'PersonRef(id: $id, name: $name, phone: $phone, email: $email)';
+    return 'PersonRef(id: $id, name: $name, phone: $phone, email: $email, code: $code, kind: $kind)';
 }
 
 
@@ -912,7 +956,7 @@ abstract mixin class _$PersonRefCopyWith<$Res> implements $PersonRefCopyWith<$Re
   factory _$PersonRefCopyWith(_PersonRef value, $Res Function(_PersonRef) _then) = __$PersonRefCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? phone, String? email
+ String id, String name, String? phone, String? email, String? code, String? kind
 });
 
 
@@ -929,12 +973,14 @@ class __$PersonRefCopyWithImpl<$Res>
 
 /// Create a copy of PersonRef
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? phone = freezed,Object? email = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? phone = freezed,Object? email = freezed,Object? code = freezed,Object? kind = freezed,}) {
   return _then(_PersonRef(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String?,kind: freezed == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

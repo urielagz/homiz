@@ -11,6 +11,8 @@ import { HowWeWork } from './pages/HowWeWork';
 import { Listing } from './pages/Listing';
 import { NotFound } from './pages/NotFound';
 import { Thanks } from './pages/Thanks';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { DeleteAccount } from './pages/DeleteAccount';
 import './styles.css';
 
 /* Direcciones del sitio HTML anterior (enlaces guardados, la app y correos): llevan a la página nueva. */
@@ -38,6 +40,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="contacto" element={<Contact />} />
               <Route path="como-trabajamos" element={<HowWeWork />} />
               <Route path="gracias" element={<Thanks />} />
+            <Route path="aviso-de-privacidad" element={<PrivacyPolicy />} />
+            <Route path="eliminar-cuenta" element={<DeleteAccount />} />
               <Route path="*" element={<NotFound />} />
             </Route>
             <Route path="index.html" element={<LegacyRedirect to="/" />} />

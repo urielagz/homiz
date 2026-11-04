@@ -1,11 +1,13 @@
+import { randomInt } from 'node:crypto';
 import { env } from '../config/env.js';
-import { withTransaction } from '../config/database.js';
+import { PRIVACY_VERSION } from '../config/legal.js';
+import { withTransaction, type Db } from '../config/database.js';
 import { AppError } from '../middlewares/error-handler.js';
 import * as Users from '../models/user.model.js';
 import * as Clients from '../models/client.model.js';
 import * as Tokens from '../models/token.model.js';
 import { insertActivity } from '../models/activity.model.js';
-import { hashPassword, verifyAgainstDummy, verifyPassword } from './password.service.js';
+import { hashPassword, needsRehash, verifyAgainstDummy, verifyPassword } from './password.service.js';
 import {
   accessTokenSeconds,
   createOpaqueToken,
@@ -17,7 +19,7 @@ import { sendMail } from './mail.service.js';
 
 export const MSG_INVALID_LOGIN = 'El correo o la contraseña son inválidos, intente de nuevo.';
 export const MSG_INACTIVE = 'Su cuenta no está activa, comuníquese con la inmobiliaria.';
-export const MSG_FORGOT = 'Si el correo está registrado, recibirás un enlace para crear una nueva contraseña.';
+export const MSG_FORGOT = 'Si el correo está registrado, te enviamos una contraseña temporal. Entra con ella y crea la tuya.';
 
 export interface PublicUser {
   id: string;
@@ -29,6 +31,8 @@ export interface PublicUser {
   initials: string | null;
   roles: string[];
   permissions: string[];
+  /** Entró con una contraseña temporal: el panel y la app le piden crear la suya */
+  mustChangePassword: boolean;
 }
 
 export interface Session {
@@ -50,6 +54,7 @@ export async function toPublicUser(u: Users.UserRow): Promise<PublicUser> {
     initials: u.initials,
     roles: access.roles,
     permissions: access.permissions,
+    mustChangePassword: u.must_change_password,
   };
 }
 
@@ -85,7 +90,14 @@ export async function login(email: string, password: string): Promise<Session> {
     await insertActivity({ userId: user.id, entity: 'auth', action: 'login_blocked', description: 'Intento de acceso con la cuenta bloqueada.' });
     throw lockedError(user.locked_until);
   }
-  if (!(await verifyPassword(user.password_hash, password))) {
+  let ok = await verifyPassword(user.password_hash, password);
+  if (!ok && (await Tokens.consumeTemporaryPassword(user.id, temporaryHash(user.id, password)))) {
+    // Entró con la contraseña temporal del correo: queda como su contraseña hasta que cree la suya
+    await Users.updatePassword(user.id, await hashPassword(password), undefined, true);
+    user.must_change_password = true;
+    ok = true;
+  }
+  if (!ok) {
     const lockedUntil = await Users.registerFailedAttempt(user.id, env.LOGIN_MAX_ATTEMPTS, env.LOGIN_LOCK_MINUTES);
     const nowLocked = !!lockedUntil && lockedUntil.getTime() > Date.now();
     await insertActivity({
@@ -102,6 +114,10 @@ export async function login(email: string, password: string): Promise<Session> {
     throw new AppError(403, 'ACCOUNT_INACTIVE', MSG_INACTIVE);
   }
   await Users.resetAttempts(user.id);
+  // Guardada con los parámetros anteriores (64 MiB): se vuelve a guardar con los de menos memoria
+  if (needsRehash(user.password_hash)) {
+    await Users.updatePassword(user.id, await hashPassword(password), undefined, user.must_change_password).catch(() => {});
+  }
   await insertActivity({ userId: user.id, entity: 'auth', action: 'login_success', description: 'Inicio de sesión.' });
   return issueSession(user);
 }
@@ -115,7 +131,7 @@ export async function register(data: { name: string; email: string; phone: strin
   const user = await withTransaction(async (db) => {
     const u = await Users.createUser({ ...data, passwordHash, type: 'client' }, db);
     const clientId = await Clients.linkOrCreateForUser(u, db);
-    await insertActivity({ userId: u.id, entity: 'client', entityId: clientId, action: 'register', description: 'Cuenta de cliente creada desde la app.' }, db);
+    await insertActivity({ userId: u.id, entity: 'client', entityId: clientId, action: 'register', description: `Cuenta de cliente creada desde la app. Aceptó el aviso de privacidad (versión ${PRIVACY_VERSION}).` }, db);
     return u;
   }).catch((err) => {
     if (err?.code === '23505') throw new AppError(409, 'EMAIL_TAKEN', 'Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');
@@ -156,7 +172,11 @@ export async function logout(userId: string, refreshToken: string | undefined, a
   await insertActivity({ userId, entity: 'auth', action: 'logout', description: allDevices ? 'Cerró sesión en todos los dispositivos.' : 'Cerró sesión.' });
 }
 
-export async function changePassword(userId: string, current: string, next: string): Promise<void> {
+/**
+ * Cambia la contraseña (también la que pide crear tras entrar con la temporal). Cierra las demás sesiones
+ * y devuelve una sesión nueva para que quien la cambió siga dentro.
+ */
+export async function changePassword(userId: string, current: string, next: string): Promise<Session> {
   const user = await Users.findById(userId);
   if (!user || !(await verifyPassword(user.password_hash, current))) {
     throw new AppError(400, 'INVALID_CURRENT_PASSWORD', 'La contraseña actual no es correcta.');
@@ -164,26 +184,86 @@ export async function changePassword(userId: string, current: string, next: stri
   if (current === next) throw new AppError(400, 'SAME_PASSWORD', 'La nueva contraseña debe ser distinta de la actual.');
   await Users.updatePassword(userId, await hashPassword(next));
   await Tokens.revokeAllForUser(userId);
-  await insertActivity({ userId, entity: 'auth', action: 'password_changed', description: 'Cambió su contraseña.' });
+  await insertActivity({ userId, entity: 'auth', action: 'password_changed', description: user.must_change_password ? 'Creó su contraseña (después de la temporal).' : 'Cambió su contraseña.' });
+  return issueSession({ ...user, must_change_password: false });
 }
 
-/** Siempre responde igual, exista o no el correo, para no revelar qué cuentas existen. */
+/** Sin letras ni números que se confundan (0/O, 1/I/l) */
+const TEMP_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+/** Contraseña temporal fácil de copiar: Zug-xxxx-xxxx (con mayúscula, minúscula y número) */
+export function temporaryPassword(): string {
+  const part = () => Array.from({ length: 4 }, () => TEMP_CHARS[randomInt(TEMP_CHARS.length)]).join('');
+  return `Zug-${part()}-${randomInt(10, 100)}${part()}`;
+}
+/** Hash de la contraseña temporal ligado al usuario (en password_resets.code_hash) */
+const temporaryHash = (userId: string, password: string) => hashOpaqueToken(`${userId}:${password}`);
+
+/** Enlace del correo: al inicio de sesión de la app (clientes, con el correo escrito) o del panel (personal). */
+function loginLink(user: { type: string; email: string }): string {
+  if (user.type === 'client') {
+    const base = env.APP_CLIENT_URL;
+    return `${base}${base.includes('?') ? '&' : '?'}email=${encodeURIComponent(user.email)}`;
+  }
+  return env.APP_RESET_URL;
+}
+
+/**
+ * «Olvidé mi contraseña»: envía una contraseña temporal (vale PASSWORD_RESET_MINUTES). La anterior sigue
+ * sirviendo hasta que se use la temporal; al entrar con ella se le pide crear la suya.
+ * Siempre responde igual, exista o no el correo, para no revelar qué cuentas existen.
+ */
 export async function forgotPassword(email: string): Promise<void> {
   const user = await Users.findByEmail(email);
   if (!user || !user.active) return;
-  const { token, hash } = createOpaqueToken();
+  const temp = temporaryPassword();
   const expiresAt = new Date(Date.now() + env.PASSWORD_RESET_MINUTES * 60000);
-  await Tokens.insertPasswordReset(user.id, hash, expiresAt);
-  await insertActivity({ userId: user.id, entity: 'auth', action: 'password_reset_requested', description: 'Solicitó recuperar su contraseña.' });
-  const link = `${env.APP_RESET_URL}${env.APP_RESET_URL.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+  await Tokens.insertPasswordReset(user.id, createOpaqueToken().hash, expiresAt, undefined, temporaryHash(user.id, temp));
+  await insertActivity({ userId: user.id, entity: 'auth', action: 'password_reset_requested', description: 'Solicitó recuperar su contraseña (contraseña temporal).' });
   await sendMail({
     to: user.email,
-    subject: 'Recupera tu acceso a Zugar',
+    subject: 'Tu contraseña temporal · Zugar',
     text:
       `Hola, ${user.name.split(' ')[0]}:\n\n` +
-      `Recibimos una solicitud para crear una nueva contraseña. Usa este enlace en los próximos ${env.PASSWORD_RESET_MINUTES} minutos:\n\n` +
-      `${link}\n\nTu código es: ${token}\n\n` +
-      'Si no fuiste tú, ignora este correo; tu contraseña no cambiará.\n\nInmobiliaria Zugar',
+      `Recibimos una solicitud para recuperar tu contraseña. Entra con esta contraseña temporal (vale ${env.PASSWORD_RESET_MINUTES} minutos):\n\n` +
+      `${temp}\n\nAl entrar te pediremos crear tu propia contraseña.\n\n` +
+      'Si no fuiste tú, ignora este correo: tu contraseña de siempre sigue funcionando.\n\nInmobiliaria Zugar',
+    action: { label: user.type === 'client' ? 'Abrir la app Homiz' : 'Entrar al panel', url: loginLink(user) },
+  });
+}
+
+/**
+ * Cuenta de la app creada sola al enviar un formulario del sitio: le llega una contraseña temporal por correo;
+ * al entrar crea la suya y ve su solicitud. Si ya tenía cuenta, no se toca.
+ * Devuelve el expediente (cliente) vinculado y si la cuenta es nueva.
+ */
+export async function ensureClientAccount(data: { name: string; email: string; phone: string | null }, db: Db): Promise<{ clientId: string; created: boolean; userId: string }> {
+  const existing = await Users.findByEmail(data.email);
+  if (existing) {
+    const { rows } = await db.query<{ id: string }>('SELECT id FROM clients WHERE user_id = $1 ORDER BY created_at LIMIT 1', [existing.id]);
+    const clientId = rows[0]?.id ?? (existing.type === 'client' ? await Clients.linkOrCreateForUser(existing, db) : '');
+    return { clientId, created: false, userId: existing.id };
+  }
+  // Contraseña temporal por correo: al entrar con ella se le pide crear la suya.
+  const user = await Users.createUser({ ...data, passwordHash: await hashPassword(temporaryPassword()), type: 'client' }, db);
+  const clientId = await Clients.linkOrCreateForUser(user, db);
+  await insertActivity({ userId: user.id, entity: 'client', entityId: clientId, action: 'register', description: 'Cuenta de la app creada al enviar un formulario del sitio.' }, db);
+  await sendAccountReady(user, db);
+  return { clientId, created: true, userId: user.id };
+}
+
+/** Pone una contraseña temporal nueva a la cuenta del cliente y le envía el correo «Tu cuenta de Homiz está lista». */
+export async function sendAccountReady(user: { id: string; name: string; email: string; type: string }, db: Db): Promise<void> {
+  const temp = temporaryPassword();
+  await db.query('UPDATE users SET password_hash = $2, must_change_password = TRUE, failed_attempts = 0, locked_until = NULL WHERE id = $1', [user.id, await hashPassword(temp)]);
+  await sendMail({
+    to: user.email,
+    subject: 'Tu cuenta de Homiz está lista · Inmobiliaria Zugar',
+    text:
+      `Hola, ${user.name.split(' ')[0]}:\n\n` +
+      'Recibimos tu solicitud y te creamos una cuenta en la app Homiz para que la sigas: ahí tu asesor te contesta, te propone casas y agendas tus visitas.\n\n' +
+      `Entra con tu correo (${user.email}) y esta contraseña temporal:\n\n${temp}\n\n` +
+      'Al entrar te pediremos crear tu propia contraseña.\n\nInmobiliaria Zugar',
+    action: { label: 'Abrir la app Homiz', url: loginLink(user) },
   });
 }
 

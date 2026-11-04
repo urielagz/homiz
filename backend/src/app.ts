@@ -4,15 +4,13 @@ import cors from 'cors';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
 
-/** Origen permitido: igual a uno de CORS_ORIGINS o a un patrón con «*» (p. ej. https://*.devtunnels.ms). */
-export function corsAllowed(origin: string, allowed: string[] = env.corsOrigins): boolean {
-  return allowed.some((o) =>
-    o.includes('*')
-      ? new RegExp('^' + o.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\/]/g, '\\$&')).join('[a-z0-9-]+') + '$', 'i').test(origin)
-      : o === origin,
-  );
-}
+import { corsAllowed } from './config/cors.js';
+export { corsAllowed };
 import { logger } from './config/logger.js';
+
+/** /api/v1/events?token=abc → ?token=[oculto]; /api/v1/files/<firma> → /api/v1/files/[oculto] */
+export const redactUrl = (url: string) =>
+  url.replace(/([?&](?:token|access_token|refreshToken)=)[^&]*/gi, '$1[oculto]').replace(/(\/files\/)[^/?]+/, '$1[oculto]');
 import { requestId } from './middlewares/request-id.js';
 import { errorHandler, notFound } from './middlewares/error-handler.js';
 import { globalLimiter } from './middlewares/rate-limit.js';
@@ -28,7 +26,8 @@ export function createApp() {
     pinoHttp({
       logger,
       genReqId: (_req, res) => res.locals.requestId,
-      serializers: { req: (req) => ({ id: req.id, method: req.method, url: req.url }) },
+      // Los tokens nunca se escriben en los registros: ni el de sesión en ?token= ni el de los archivos firmados
+      serializers: { req: (req) => ({ id: req.id, method: req.method, url: redactUrl(String(req.url)) }) },
     }),
   );
   // Las fotos firmadas (/files/:token) se muestran desde el sitio, el panel y la app, que viven en otro origen.

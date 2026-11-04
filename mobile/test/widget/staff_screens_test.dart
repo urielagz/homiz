@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homiz/core/network/token_storage.dart';
 import 'package:homiz/core/theme/app_text_styles.dart';
+import 'package:homiz/core/widgets/primary_button.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import '../fixtures.dart';
@@ -61,7 +62,7 @@ void main() {
     expect(find.text('Directorio de proveedores'), findsOneWidget);
   });
 
-  testWidgets('Pagarés vencidos: registrar pago con folio', (tester) async {
+  testWidgets('Pagarés vencidos: registrar pago (el folio lo genera el servidor)', (tester) async {
     await start(tester);
     await tester.tap(find.text('Pagarés vencidos...'));
     await settle(tester);
@@ -73,19 +74,19 @@ void main() {
     await settle(tester);
     expect(find.text(r'$18,000'), findsWidgets);
 
-    // El último «Registrar pago» es el botón de la hoja.
-    await tester.tap(find.text('Registrar pago').last);
-    await tester.pump();
-    expect(find.text('Escribe el folio del recibo.'), findsOneWidget);
+    // En el mismo paso: el recibo se genera solo y se adjuntan el PDF del pagaré y la foto del sello
+    expect(find.textContaining('El recibo se genera solo como pagado'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Folio del recibo'), findsNothing);
+    expect(find.text('Adjuntar PDF del pagaré'), findsOneWidget);
+    expect(find.text('Foto del sello'), findsOneWidget);
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'Folio del recibo'), 'F-00125');
-    await tester.tap(find.text('Registrar pago').last);
+    await tapVisible(tester, find.widgetWithText(PrimaryButton, 'Marcar como pagado'));
     await settle(tester);
 
     final body = sent['POST /promissory-notes/$overdueNoteId/payments']! as Map;
     expect(body['amount'], 18000);
-    expect(body['receiptFolio'], 'F-00125');
-    expect(find.text('Pago registrado. Avisamos al cliente.'), findsOneWidget);
+    expect(body.containsKey('receiptFolio'), isFalse);
+    expect(find.text('Pagaré 11 quedó pagado (folio REC-ZUG-005-11). Avisamos al cliente.'), findsOneWidget);
   });
 
   testWidgets('Sin el permiso payments.register no aparece «Registrar pago»', (tester) async {
@@ -109,14 +110,20 @@ void main() {
     await tester.tap(find.text('Casa Ceiba'));
     await settle(tester);
     expect(find.text('Cita - Casa Ceiba'), findsOneWidget);
-    expect(find.text('Cliente'), findsOneWidget);
-    expect(find.text('998 555 0128'), findsOneWidget);
+    final page = find.byType(ListView).first;
+    await tester.dragUntilVisible(find.text('Prospecto'), page, const Offset(0, -200));
+    await tester.dragUntilVisible(find.text('998 555 0128'), page, const Offset(0, -200));
     expect(find.text('Llamar'), findsOneWidget);
     expect(find.text('Mis Datos'), findsNothing);
 
-    await tapVisible(tester, find.text('Confirmar cita'));
+    // El botón y el diálogo muestran el día y la hora que se confirman
+    await tapVisible(tester, find.textContaining(RegExp(r'^Confirmar \w')));
+    expect(find.text('¿Confirmar la visita?'), findsOneWidget);
+    expect(find.textContaining('Casa Ceiba con Laura Medina'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Confirmar'));
+    await settle(tester);
     expect(sent.containsKey('POST /appointments/$pendingId/confirm'), isTrue);
-    expect(find.text('Cita confirmada. Avisamos al cliente.'), findsOneWidget);
+    expect(find.textContaining('Cita confirmada para el'), findsOneWidget);
   });
 
   testWidgets('Agenda: rechazar pide el motivo', (tester) async {
@@ -135,10 +142,10 @@ void main() {
 
   testWidgets('Propiedades: lista y ficha con inquilino y asesor', (tester) async {
     await start(tester);
-    await tester.tap(find.bySemanticsLabel('Mi propiedad'));
+    await tester.tap(find.bySemanticsLabel('Propiedades'));
     await settle(tester);
 
-    expect(find.text('Propiedades'), findsOneWidget);
+    expect(find.text('Propiedades'), findsWidgets); // título y barra inferior
     expect(find.text('Casa Las Palmas'), findsOneWidget);
     expect(find.text('ZUG-003 · Cumbres'), findsOneWidget);
     // La broker solo pide sus casas.
@@ -154,6 +161,173 @@ void main() {
     await settle(tester);
     expect(find.text('Estado de pagos'), findsOneWidget);
     expect(find.text('Registrar pago'), findsOneWidget); // solo el pagaré 05 está pendiente
+  });
+
+  Future<void> openProperty(WidgetTester tester, String tab, {Map<String, Object?> user = marianaJson}) async {
+    await start(tester, user: user);
+    await tester.tap(find.bySemanticsLabel('Propiedades'));
+    await settle(tester);
+    await tester.tap(find.text('Casa Las Palmas'));
+    await settle(tester);
+    await tester.tap(find.text(tab));
+    await settle(tester);
+  }
+
+  testWidgets('Pagos por rol: la broker edita pagarés pero no corrige ni anula pagos', (tester) async {
+    await openProperty(tester, 'Pagos');
+    // Pagaré pendiente: registrar y editar.
+    await tester.tap(find.text('Pagaré 05 - 5 nov'));
+    await settle(tester);
+    expect(find.text('Registrar pago'), findsWidgets);
+    expect(find.text('Editar pagaré'), findsOneWidget);
+    expect(find.text('Anular pago'), findsNothing);
+    await tester.tap(find.text('Editar pagaré'));
+    await settle(tester);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Monto (MXN)'), '12500');
+    await tester.tap(find.text('Guardar cambios'));
+    await settle(tester);
+    expect((sent['PATCH /promissory-notes/n5']! as Map)['amount'], 12500);
+    expect(find.text('Pagaré actualizado.'), findsOneWidget);
+
+    // Pagaré pagado: la broker solo puede ver el comprobante.
+    await tester.tap(find.text('Pagaré 04 - 5 oct'));
+    await settle(tester);
+    expect(find.text('Ver comprobante'), findsOneWidget);
+    expect(find.text('Corregir pago'), findsNothing);
+    expect(find.text('Anular pago'), findsNothing);
+  });
+
+  testWidgets('Pagos por rol: administración anula un pago con motivo', (tester) async {
+    await openProperty(tester, 'Pagos', user: ownerJson);
+    await tester.tap(find.text('Pagaré 04 - 5 oct'));
+    await settle(tester);
+    expect(find.text('Corregir pago'), findsOneWidget);
+    await tester.tap(find.text('Anular pago'));
+    await settle(tester);
+    await tester.tap(find.text('Sí, anular pago'));
+    await tester.pump();
+    expect(find.text('Explica por qué se anula el pago (al menos 5 letras).'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextFormField, 'Motivo de la anulación'), 'Se registró en el pagaré equivocado.');
+    await tester.tap(find.text('Sí, anular pago'));
+    await settle(tester);
+    expect((sent['POST /promissory-notes/n4/payments/p4/void']! as Map)['reason'], 'Se registró en el pagaré equivocado.');
+    expect(find.text('Pago anulado. El pagaré vuelve a estar por cobrar.'), findsOneWidget);
+  });
+
+  testWidgets('PDF del pagaré: la broker ve «Subir pagaré (PDF)»; sin permiso no aparece', (tester) async {
+    await openProperty(tester, 'Pagos');
+    await tester.tap(find.text('Pagaré 05 - 5 nov'));
+    await settle(tester);
+    expect(find.text('Subir pagaré (PDF)'), findsOneWidget);
+  });
+
+  testWidgets('Expediente por rol: la broker oculta documentos pero no los elimina', (tester) async {
+    await openProperty(tester, 'Expediente');
+    expect(find.text('Subir documento'), findsOneWidget);
+    expect(find.text('Identificación del aval'), findsOneWidget);
+    expect(find.text('Solo personal'), findsOneWidget);
+    await tester.tap(find.text('Identificación del aval'));
+    await settle(tester);
+    expect(find.text('Mostrar al cliente'), findsOneWidget);
+    expect(find.text('Eliminar documento'), findsNothing);
+    await tester.tap(find.text('Mostrar al cliente'));
+    await settle(tester);
+    expect((sent['PATCH /documents/doc-aval']! as Map)['visibleToClient'], true);
+  });
+
+  testWidgets('Expediente por rol: administración elimina un documento', (tester) async {
+    await openProperty(tester, 'Expediente', user: ownerJson);
+    await tester.tap(find.text('Identificación del aval'));
+    await settle(tester);
+    await tester.tap(find.text('Eliminar documento'));
+    await settle(tester);
+    expect(find.text('¿Eliminar «Identificación del aval»?'), findsOneWidget);
+    await tester.tap(find.text('Sí, eliminar'));
+    await settle(tester);
+    expect(sent.containsKey('DELETE /documents/doc-aval'), isTrue);
+    expect(find.text('Se eliminó «Identificación del aval» del expediente.'), findsOneWidget);
+  });
+
+  testWidgets('Solicitudes: la broker contesta y propone una casa (le llega al cliente en la app)', (tester) async {
+    await start(tester);
+    await tapVisible(tester, find.textContaining('Solicitudes ·'));
+    expect(find.text('Laura Mendez · Z-10001'), findsOneWidget);
+    await tester.tap(find.text('Laura Mendez · Z-10001'));
+    await settle(tester);
+    // Todo el formulario, con sus datos de contacto
+    expect(find.text('CONTACTO'), findsOneWidget);
+    expect(find.text('lau.mendez@correo.com'), findsOneWidget);
+    await scrollTo(tester, find.byTooltip('Enviar mensaje'));
+    expect(find.text('Aún no hay mensajes. Escríbele para darle seguimiento.'), findsOneWidget);
+
+    // Le escribe en la conversación (le llega a su app)
+    await tester.enterText(find.widgetWithText(TextField, 'Escribe al cliente'), 'Te propongo Casa Ceiba.');
+    await tester.tap(find.byTooltip('Enviar mensaje'));
+    await settle(tester);
+    expect((sent['POST /leads/lead-1/messages']! as Map)['body'], 'Te propongo Casa Ceiba.');
+
+    await tapVisible(tester, find.text('Proponer una casa'));
+    expect(find.text('Casa Las Palmas'), findsNothing); // rentada: no se propone
+    await tester.tap(find.text('Casa Ceiba').last);
+    await settle(tester);
+    await tester.tap(find.text('Sin nota'));
+    await settle(tester);
+    expect((sent['POST /leads/lead-1/proposals']! as Map)['propertyId'], 'p-ceiba');
+    expect(find.text('Casa propuesta. Le avisamos al cliente.'), findsOneWidget);
+  });
+
+  testWidgets('Pestaña «Solicitudes» en la barra: con las nuevas contadas y abre la lista y el detalle', (tester) async {
+    await start(tester);
+    final tab = find.bySemanticsLabel('Solicitudes, 1 nuevas');
+    expect(tab, findsOneWidget);
+    await tester.tap(tab);
+    await settle(tester);
+    expect(find.text('Laura Mendez · Z-10001'), findsOneWidget);
+    await tester.tap(find.text('Laura Mendez · Z-10001'));
+    await settle(tester);
+    expect(find.text('Solicitud Z-10001'), findsOneWidget);
+    expect(find.text('QUÉ BUSCA'), findsOneWidget);
+  });
+
+  testWidgets('Solicitudes: «Agendar cita» crea la cita desde la solicitud', (tester) async {
+    await start(tester);
+    await tapVisible(tester, find.textContaining('Solicitudes ·'));
+    await tester.tap(find.text('Laura Mendez · Z-10001'));
+    await settle(tester);
+    // Administración ve arriba «Broker asignado»; las citas quedan más abajo
+    await tester.scrollUntilVisible(find.text('Aún no tiene cita. Agéndala y le avisamos en la app.'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('Aún no tiene cita. Agéndala y le avisamos en la app.'), findsOneWidget);
+
+    await tapVisible(tester, find.widgetWithText(PrimaryButton, 'Agendar cita'));
+    // Sin elegir nada no deja guardar
+    await tapVisible(tester, find.widgetWithText(PrimaryButton, 'Agendar cita').last);
+    expect(find.text('Elige la casa, el día y el horario.'), findsOneWidget);
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await settle(tester);
+    await tester.tap(find.textContaining('Casa Ceiba').last);
+    await settle(tester);
+    await tester.tap(find.text('Elegir día'));
+    await settle(tester);
+    final ok = MaterialLocalizations.of(tester.element(find.byType(DatePickerDialog))).okButtonLabel;
+    await tester.tap(find.text(ok));
+    await settle(tester);
+    // Hora de 1 a 12, minutos y a.m./p.m. (10:00 p.m. = 22:00)
+    await tapVisible(tester, find.widgetWithText(DropdownButtonFormField<int>, 'Hora'));
+    await tester.tap(find.text('10').last);
+    await settle(tester);
+    await tapVisible(tester, find.widgetWithText(DropdownButtonFormField<String>, 'Minutos'));
+    await tester.tap(find.text(':00').last);
+    await settle(tester);
+    await tapVisible(tester, find.widgetWithText(DropdownButtonFormField<bool>, 'a.m./p.m.'));
+    await tester.tap(find.text('p.m.').last);
+    await settle(tester);
+    await tapVisible(tester, find.widgetWithText(PrimaryButton, 'Agendar cita').last);
+
+    final body = sent['POST /leads/lead-1/appointment']! as Map;
+    expect(body['propertyId'], 'p-ceiba');
+    expect(body['scheduledAt'] as String, endsWith('T22:00:00-05:00'));
+    expect(find.text('Cita CIT-099 guardada. Quedó por confirmar y le avisamos al cliente.'), findsOneWidget);
   });
 
   testWidgets('Mantenimiento: UpdateStatusSheet cambia estado y asigna proveedor', (tester) async {

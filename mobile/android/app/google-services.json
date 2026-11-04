@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "781670117568",
+    "project_id": "homiz-413ff",
+    "storage_bucket": "homiz-413ff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:781670117568:android:76ec2a2314de49f6c57d25",
+        "android_client_info": {
+          "package_name": "mx.zugar.homiz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9ABCMIBFZ3uXA3OvCBHz_le7DifocQQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

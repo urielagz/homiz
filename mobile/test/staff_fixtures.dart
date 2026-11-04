@@ -25,6 +25,16 @@ const marianaJson = {
 /// Broker sin permiso para registrar pagos ni cambiar reportes (para probar PermissionGate).
 final limitedStaffJson = {...marianaJson, 'permissions': const ['properties.read_all', 'dossier.read']};
 
+/// Propietaria y administradora: además corrige y anula pagos y elimina documentos.
+final ownerJson = {
+  ...marianaJson,
+  'id': '00000000-0000-4000-8000-000000000001',
+  'name': 'Lucía Méndez',
+  'email': 'lucia@zugar.example',
+  'roles': const ['admin', 'owner'],
+  'permissions': const [...brokerPermissions, 'payments.correct', 'documents.delete', 'users.manage'],
+};
+
 const pendingId = '00000000-0000-4000-8000-000000000031';
 const overdueNoteId = 'n-olivo-11';
 
@@ -83,7 +93,7 @@ final providersJson = {
 final inventoryJson = {
   'data': [
     {'id': propertyId, 'code': 'ZUG-012', 'name': 'Casa Las Palmas', 'operation': 'renta', 'price': 12000, 'zone': 'Isla Dorada', 'status': 'rentada', 'photos': <Object>[], 'broker': {'id': marianaJson['id'], 'name': 'Mariana Solís'}},
-    {'id': 'p-ceiba', 'code': 'ZUG-003', 'name': 'Casa Ceiba', 'operation': 'renta', 'price': 28000, 'zone': 'Cumbres', 'status': 'disponible', 'photos': <Object>[], 'broker': {'id': marianaJson['id'], 'name': 'Mariana Solís'}},
+    {'id': 'p-ceiba', 'code': 'ZUG-003', 'name': 'Casa Ceiba', 'operation': 'renta', 'price': 28000, 'zone': 'Cumbres', 'status': 'disponible', 'visibility': 'publicada', 'photos': <Object>[], 'broker': {'id': marianaJson['id'], 'name': 'Mariana Solís'}},
   ],
 };
 
@@ -91,7 +101,25 @@ Map<String, Object?> get staffDossierJson => {
       ...dossierJson,
       'property': {...(dossierJson['property']! as Map<String, Object?>), 'status': 'rentada', 'broker': {'name': 'Mariana Solís', 'phone': '998 100 0002'}},
       'tenant': {'id': 'c-laura', 'name': 'Laura Mendez', 'phone': '+52 998 000 0000', 'email': 'lau.mendez@correo.com'},
+      'documents': [
+        for (final d in dossierJson['documents']! as List) {...(d as Map<String, Object?>), 'visibleToClient': true},
+        {'id': 'doc-aval', 'type': 'other', 'name': 'Identificación del aval', 'description': 'Uso interno', 'mime': 'application/pdf', 'size': 2000, 'visibleToClient': false, 'createdAt': '2026-07-01T15:00:00.000Z'},
+      ],
     };
+
+/// Solicitud nueva vista por el personal (con los datos de contacto).
+final staffRequestJson = {
+  ...requestJson,
+  'name': 'Laura Mendez',
+  'email': 'lau.mendez@correo.com',
+  'phone': '+52 998 000 0000',
+  'status': 'nuevo',
+  'statusLabel': 'Recibida',
+  'response': null,
+  'respondedBy': null,
+  'proposalCount': 0,
+  'proposals': <Object>[],
+};
 
 /// Backend simulado del personal. [user] permite cambiar los permisos de la sesión.
 FakeReply staffBackend(RequestOptions o, {Map<String, Object?>? log, Map<String, Object?> user = marianaJson}) {
@@ -108,8 +136,26 @@ FakeReply staffBackend(RequestOptions o, {Map<String, Object?>? log, Map<String,
     ('POST', '/appointments/$pendingId/reject') => (200, {...pendingAppointmentJson, 'status': 'rechazada', 'reason': (o.data as Map)['reason']}),
     ('GET', '/promissory-notes') when (q['status'] as List?)?.contains('overdue') ?? false => (200, {'data': [overdueNoteJson], 'summary': null}),
     ('GET', '/promissory-notes') => (200, {...notesJson, 'data': [for (final n in notesJson['data']! as List) {...(n as Map<String, Object?>), 'client': {'id': 'c-laura', 'name': 'Laura Mendez'}}]}),
-    ('POST', '/promissory-notes/$overdueNoteId/payments') => (201, {...overdueNoteJson, 'status': 'paid'}),
+    ('POST', '/promissory-notes/$overdueNoteId/payments') => (
+        201,
+        {...overdueNoteJson, 'status': 'paid', 'payment': {'id': 'p11', 'amount': 18000, 'paidAt': '2026-10-20T16:00:00.000Z', 'receiptFolio': 'REC-ZUG-005-11'}},
+      ),
     ('POST', '/promissory-notes/n5/payments') => (201, {...note(5, '2026-11-05', 'paid')}),
+    ('PATCH', '/promissory-notes/n5') => (200, {...note(5, '2026-11-10', 'pending')}),
+    ('POST', '/promissory-notes/n4/payments/p4/void') => (200, {...note(4, '2026-10-05', 'overdue')}),
+    ('GET', '/leads') => (200, {'data': [staffRequestJson]}),
+    ('GET', '/leads/lead-1') => (200, staffRequestJson),
+    ('PATCH', '/leads/lead-1') => (200, staffRequestJson),
+    ('POST', '/leads/lead-1/proposals') => (201, staffRequestJson),
+    ('POST', '/leads/lead-1/appointment') => (201, {'appointment': {'id': 'ap-new', 'code': 'CIT-099'}, 'lead': staffRequestJson}),
+    ('GET', '/leads/lead-1/messages') => (200, {'data': <Object>[]}),
+    ('POST', '/leads/lead-1/messages') => (201, {
+        'data': [
+          {'id': 'sm1', 'body': (o.data as Map)['body'], 'fromStaff': true, 'mine': true, 'sender': 'Mariana Solís', 'createdAt': '2026-10-20T17:00:00.000Z'},
+        ],
+      }),
+    ('PATCH', '/documents/doc-aval') => (200, <String, Object?>{}),
+    ('DELETE', '/documents/doc-aval') => (204, null),
     ('GET', '/receipts') => (200, receiptsJson),
     ('GET', '/providers') => (200, providersJson),
     ('GET', '/properties') => (200, inventoryJson),

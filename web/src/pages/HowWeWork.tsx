@@ -4,6 +4,15 @@ import { Icon } from '../components/Icon';
 import { appLink } from '../lib/appLink';
 import { usePageTitle } from '../lib/usePageTitle';
 
+/** Lo que se hace en la app Homiz (sección «La app Homiz») */
+const APP_FEATURES: [string, string, string][] = [
+  ['chat', 'Mis solicitudes y mensajes', 'Dinos qué buscas y platica con tu asesor: te contesta y te propone casas ahí mismo, no por correo.'],
+  ['cal', 'Agenda tus visitas', 'Elige el día y la hora; te confirmamos la visita y te avisamos de cualquier cambio.'],
+  ['wallet', 'Tus pagos y recibos', 'Consulta tus pagarés, lo que ya pagaste, los comprobantes y los recibos de luz y agua.'],
+  ['doc', 'Tu expediente', 'Contrato, depósito, ficha de entrega y pagarés en PDF, siempre a la mano.'],
+  ['shield', 'Mantenimiento', 'Reporta algo de la casa con fotos y sigue cada avance hasta que quede resuelto.'],
+];
+
 const STEPS: [string, string, string, string][] = [
   ['chat', 'Cuéntanos qué buscas', 'Escuchamos tus planes, presupuesto, zonas favoritas y fecha de mudanza. Sin prisas ni compromisos.', 'Una conversación para empezar.'],
   ['home', 'Te proponemos casas', 'Seleccionamos opciones que sí encajan contigo y te explicamos precios, condiciones y ventajas de cada zona.', 'Menos ruido, mejores opciones.'],
@@ -45,7 +54,7 @@ export function HowWeWork() {
             <p className="split-hero__fine">La misma persona, desde el primer hola hasta la entrega de llaves.</p>
           </div>
           <figure>
-            <div className="photo"><img src="/assets/img/como-trabajamos-terraza.jpg" alt="Terraza con camastros, piso de piedra y una palmera en maceta frente al mar" loading="lazy" /></div>
+            <div className="photo"><img src="/assets/img/como-trabajamos-terraza.jpg" alt="Fila de casas con fachadas blancas y turquesa bajo un cielo despejado" loading="lazy" /></div>
             <span className="photo-tag">Hecho para vivir Cancún</span>
           </figure>
         </section>
@@ -93,7 +102,24 @@ export function HowWeWork() {
         </div>
       </section>
 
-      <section className="section" style={{ paddingTop: 0 }} aria-labelledby="faq-titulo">
+      {/* La app Homiz: lo que la persona puede hacer en ella */}
+      <section className="section section--surface" aria-labelledby="app-titulo">
+        <div className="wrap app-feature">
+          <div>
+            <span className="eyebrow">La app Homiz</span>
+            <h2 id="app-titulo">Todo tu proceso, en tu celular.</h2>
+            <p className="lead">Al enviarnos tu solicitud te creamos tu cuenta: solo pones tu contraseña y desde ahí seguimos juntos.</p>
+            <a className="btn btn--lg" href={appLink()} target="_blank" rel="noopener"><Icon id="phone" />Abrir la app Homiz</a>
+          </div>
+          <ul className="app-feature__list">
+            {APP_FEATURES.map(([icon, title, text]) => (
+              <li key={title}><span className="app-feature__icon"><Icon id={icon} /></span><div><h3>{title}</h3><p>{text}</p></div></li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="section" aria-labelledby="faq-titulo">
         <div className="wrap faq-layout">
           <div>
             <span className="eyebrow">Hablemos con claridad</span>

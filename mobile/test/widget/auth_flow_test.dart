@@ -127,10 +127,52 @@ void main() {
     await tester.pump();
     expect(find.text('Muy segura'), findsOneWidget);
 
+    // Sin aceptar el aviso de privacidad no se envía
     await tester.ensureVisible(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Crear cuenta'));
     await settle(tester);
+    expect(find.text('Acepta el aviso de privacidad para crear tu cuenta.'), findsOneWidget);
+
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+    await tester.tap(find.text('Crear cuenta'));
+    await settle(tester);
     expect(find.text('Ese correo ya está registrado.'), findsOneWidget);
+  });
+
+  testWidgets('cuenta nueva sin QR: abre el formulario de Contáctanos y «Ahora no» lleva al Inicio', (tester) async {
+    FakeReply newAccount(RequestOptions o) =>
+        o.path == '/auth/register' ? (201, {'accessToken': 'a1', 'refreshToken': 'r1', 'user': lauraJson}) : lauraBackend(o);
+    await tester.pumpWidget(testApp(testOverrides(adapter: FakeAdapter((o) => newAccount(o)))));
+    await settle(tester);
+    await tester.ensureVisible(find.text('Regístrate aquí'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Regístrate aquí'));
+    await settle(tester);
+
+    final fields = find.byType(TextFormField);
+    await tester.enterText(fields.at(0), 'Laura Méndez');
+    await tester.enterText(fields.at(1), 'lau.mendez@correo.com');
+    await tester.enterText(fields.at(2), '998 123 4567');
+    await tester.enterText(fields.at(3), 'Zugar2026!');
+    await tester.pump();
+    await tester.ensureVisible(find.byType(Checkbox));
+    await tester.tap(find.byType(Checkbox));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Crear cuenta'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crear cuenta'));
+    await settle(tester);
+
+    expect(find.text('Bienvenido a Homiz'), findsOneWidget);
+    expect(find.text('¿Qué quieres hacer?'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Ahora no, ver la app'), 300, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ahora no, ver la app'));
+    await settle(tester);
+    expect(find.text('Hola, Laura'), findsOneWidget);
   });
 }

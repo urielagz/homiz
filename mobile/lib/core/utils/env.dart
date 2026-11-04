@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 /// - En el teléfono o el emulador de Android: http://10.0.2.2:3000/api/v1 («localhost» de la computadora).
 /// - En la versión web: el puerto 3000 del mismo servidor que sirve la app (localhost, la IP de la red o el puerto
 ///   reenviado de VS Code: https://abc-5600.usw2.devtunnels.ms → https://abc-3000.usw2.devtunnels.ms).
+/// - Publicada con un túnel de Cloudflare (https://xxx.trycloudflare.com): /api/v1 del mismo dominio.
 abstract final class Env {
   static const _fromDefine = String.fromEnvironment('API_URL');
 
@@ -18,6 +19,8 @@ abstract final class Env {
   @visibleForTesting
   static String apiFor(Uri page) {
     final host = page.host;
+    // Túnel público de Cloudflare: el mismo servidor de la app reenvía /api a la API (un solo dominio)
+    if (host.toLowerCase().endsWith('.trycloudflare.com')) return '${page.scheme}://$host/api/v1';
     final tunnel = RegExp(r'^[a-z0-9]+-\d+\.', caseSensitive: false);
     if (tunnel.hasMatch(host) && host.toLowerCase().endsWith('.devtunnels.ms')) {
       return '${page.scheme}://${host.replaceFirst(RegExp(r'-\d+\.'), '-3000.')}/api/v1';

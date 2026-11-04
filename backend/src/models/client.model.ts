@@ -55,10 +55,11 @@ export async function linkOrCreateForUser(
   db: Db = pool,
 ): Promise<string> {
   const linked = await db.query<{ id: string }>(
-    `UPDATE clients SET user_id = $1
+    // Si el expediente no tenía teléfono, se toma el de la cuenta (para poder contactarlo)
+    `UPDATE clients SET user_id = $1, phone = COALESCE(phone, $3)
       WHERE id = (SELECT id FROM clients WHERE lower(email) = lower($2) AND user_id IS NULL AND active ORDER BY created_at LIMIT 1)
       RETURNING id`,
-    [user.id, user.email],
+    [user.id, user.email, user.phone],
   );
   if (linked.rows[0]) return linked.rows[0].id;
   const created = await db.query<{ id: string }>(

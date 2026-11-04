@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
+import { ChangeMyData, type Contact } from '../components/ChangeMyData';
 import { useCatalog } from '../components/CatalogProvider';
 import { LAST_CONTACT_KEY } from '../components/HouseVisitForm';
 import { Icon } from '../components/Icon';
-import { appLink } from '../lib/appLink';
+import { appAccountLink, appLink } from '../lib/appLink';
+import { AppQr } from '../components/AppQr';
 import { fichaOf, IMG, photoOf, priceUnit } from '../lib/catalog';
-import { money } from '../lib/format';
+import { money, t12 } from '../lib/format';
 import { usePageTitle } from '../lib/usePageTitle';
 
 interface LastContact {
@@ -15,6 +18,9 @@ interface LastContact {
   hora?: string;
   asesor?: string;
   slug?: string;
+  correo?: string;
+  telefono?: string;
+  editToken?: string | null;
 }
 
 function lastContact(): LastContact {
@@ -29,7 +35,14 @@ function lastContact(): LastContact {
 export function Thanks() {
   usePageTitle('¡Gracias! | Zugar Inmobiliaria');
   const { bySlug } = useCatalog();
-  const last = lastContact();
+  const [last, setLast] = useState<LastContact>(lastContact);
+  const [changed, setChanged] = useState('');
+  const onChanged = (c: Contact, msg: string) => {
+    const next = { ...last, nombre: c.name, correo: c.email, telefono: c.phone, editToken: c.token };
+    setLast(next);
+    setChanged(msg);
+    try { sessionStorage.setItem(LAST_CONTACT_KEY, JSON.stringify(next)); } catch { /* sin almacenamiento */ }
+  };
   const house = bySlug[last.slug || 'casa-huayacan'];
   const advisor = last.asesor || house?.asesor || 'Mariana Solís';
   const first = advisor.split(' ')[0];
@@ -37,7 +50,7 @@ export function Thanks() {
 
   const lead =
     name && last.motivo === 'visita' && last.fecha
-      ? `Gracias, ${name}. Tu solicitud para visitar la casa el ${last.fecha.toLowerCase()}${last.hora ? ` a las ${last.hora} h` : ''} fue enviada a ${advisor}. Te escribirá para confirmarla.${last.folio ? ` Tu folio es ${last.folio}.` : ''}`
+      ? `Gracias, ${name}. Tu solicitud para visitar la casa el ${last.fecha.toLowerCase()}${last.hora ? ` a las ${t12(last.hora)}` : ''} fue enviada a ${advisor}. Te escribirá para confirmarla.${last.folio ? ` Tu folio es ${last.folio}.` : ''}`
       : `${name ? `Gracias, ${name}. ` : ''}Tu mensaje fue enviado a ${advisor}. Te contactará al correo o teléfono que compartiste para ayudarte con esta casa.`;
 
   return (
@@ -47,6 +60,15 @@ export function Thanks() {
           <span className="thanks__icon"><Icon id="check" /></span>
           <h1>¡Tu próximo hogar está más cerca!</h1>
           <p>{lead}</p>
+          {last.correo && <p className="small">Tu cuenta de la app Homiz es <b>{last.correo}</b>: ahí te llegó tu contraseña temporal y verás tu cita.</p>}
+          {last.correo && (
+            <AppQr href={appAccountLink(last.correo)} title="Tu cita ya está en la app: escanéalo con tu celular"
+              text="Entra con tu correo y la contraseña temporal que te enviamos; ahí verás cuándo se confirme tu cita y la ubicación exacta." />
+          )}
+          {changed && <p className="alert alert-success is-visible" role="status">{changed}</p>}
+          {last.editToken && last.folio && last.correo && (
+            <ChangeMyData contact={{ folio: last.folio, token: last.editToken, name: last.nombre ?? '', email: last.correo, phone: last.telefono ?? '' }} onChanged={onChanged} />
+          )}
           {house && (
             <div className="mini-home">
               <div className="photo"><img src={photoOf(house)} alt={`${house.name} en ${house.zona}, Cancún`} loading="lazy" /></div>
@@ -78,7 +100,7 @@ export function Thanks() {
           </div>
           <div className="thanks__actions">
             <Link className="btn btn--lg" to={house ? fichaOf(house) : '/propiedades'}><Icon id="left" />Volver a la propiedad</Link>
-            <a className="btn btn--secondary btn--lg" href={appLink(house?.slug)} target="_blank" rel="noopener"><Icon id="phone" />Continuar en la app Homiz</a>
+            <a className="btn btn--secondary btn--lg" href={last.correo ? appAccountLink(last.correo) : appLink(house?.slug)} target="_blank" rel="noopener"><Icon id="phone" />Continuar en la app Homiz</a>
           </div>
           <p className="thanks__foot">¿No recibiste respuesta? Llámanos al <a href="tel:+529985550142">+52 998 555 0142</a>.</p>
         </div>

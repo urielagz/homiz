@@ -11,6 +11,7 @@ _PropertyDetail _$PropertyDetailFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       code: json['code'] as String?,
       name: json['name'] as String,
+      type: json['type'] as String?,
       description: json['description'] as String?,
       operation: json['operation'] as String?,
       price: (json['price'] as num?)?.toDouble() ?? 0,
@@ -45,6 +46,7 @@ Map<String, dynamic> _$PropertyDetailToJson(_PropertyDetail instance) =>
       'id': instance.id,
       'code': instance.code,
       'name': instance.name,
+      'type': instance.type,
       'description': instance.description,
       'operation': instance.operation,
       'price': instance.price,
@@ -93,6 +95,12 @@ _Dossier _$DossierFromJson(Map<String, dynamic> json) => _Dossier(
           ?.map((e) => DossierDocument.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const <DossierDocument>[],
+  utilities: json['utilities'] == null
+      ? null
+      : DossierUtilities.fromJson(json['utilities'] as Map<String, dynamic>),
+  broker: json['broker'] == null
+      ? null
+      : DossierContact.fromJson(json['broker'] as Map<String, dynamic>),
   tenant: json['tenant'] == null
       ? null
       : PersonRef.fromJson(json['tenant'] as Map<String, dynamic>),
@@ -103,8 +111,60 @@ Map<String, dynamic> _$DossierToJson(_Dossier instance) => <String, dynamic>{
   'contract': instance.contract,
   'sections': instance.sections,
   'documents': instance.documents,
+  'utilities': instance.utilities,
+  'broker': instance.broker,
   'tenant': instance.tenant,
 };
+
+_DossierContact _$DossierContactFromJson(Map<String, dynamic> json) =>
+    _DossierContact(
+      name: json['name'] as String,
+      phone: json['phone'] as String?,
+      email: json['email'] as String?,
+    );
+
+Map<String, dynamic> _$DossierContactToJson(_DossierContact instance) =>
+    <String, dynamic>{
+      'name': instance.name,
+      'phone': instance.phone,
+      'email': instance.email,
+    };
+
+_DossierUtilities _$DossierUtilitiesFromJson(Map<String, dynamic> json) =>
+    _DossierUtilities(
+      reminderDay: (json['reminderDay'] as num?)?.toInt() ?? 1,
+      electricity: json['electricity'] == null
+          ? null
+          : UtilityService.fromJson(
+              json['electricity'] as Map<String, dynamic>,
+            ),
+      water: json['water'] == null
+          ? null
+          : UtilityService.fromJson(json['water'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$DossierUtilitiesToJson(_DossierUtilities instance) =>
+    <String, dynamic>{
+      'reminderDay': instance.reminderDay,
+      'electricity': instance.electricity,
+      'water': instance.water,
+    };
+
+_UtilityService _$UtilityServiceFromJson(Map<String, dynamic> json) =>
+    _UtilityService(
+      company: json['company'] as String,
+      serviceNumber: json['serviceNumber'] as String,
+      app: json['app'] as String?,
+      url: json['url'] as String?,
+    );
+
+Map<String, dynamic> _$UtilityServiceToJson(_UtilityService instance) =>
+    <String, dynamic>{
+      'company': instance.company,
+      'serviceNumber': instance.serviceNumber,
+      'app': instance.app,
+      'url': instance.url,
+    };
 
 _DossierProperty _$DossierPropertyFromJson(Map<String, dynamic> json) =>
     _DossierProperty(
@@ -200,7 +260,9 @@ _DossierDocument _$DossierDocumentFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       description: json['description'] as String?,
       mime: json['mime'] as String?,
+      size: (json['size'] as num?)?.toInt(),
       createdAt: const LocalDateOrNull().fromJson(json['createdAt'] as String?),
+      visibleToClient: json['visibleToClient'] as bool?,
     );
 
 Map<String, dynamic> _$DossierDocumentToJson(_DossierDocument instance) =>
@@ -210,5 +272,7 @@ Map<String, dynamic> _$DossierDocumentToJson(_DossierDocument instance) =>
       'name': instance.name,
       'description': instance.description,
       'mime': instance.mime,
+      'size': instance.size,
       'createdAt': const LocalDateOrNull().toJson(instance.createdAt),
+      'visibleToClient': instance.visibleToClient,
     };

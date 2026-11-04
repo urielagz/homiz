@@ -25,10 +25,11 @@ void main() {
     expect(d.openReports.latest, isNull);
   });
 
-  test('las horas de la API se pasan a la hora local', () {
+  test('las horas de la API se muestran en hora de Cancún (aunque el teléfono tenga otra zona)', () {
     final m = AppointmentMessage.fromJson(messages.first);
     expect(m.createdAt.isUtc, isFalse);
-    expect(m.createdAt.toUtc(), DateTime.utc(2026, 10, 18, 17));
+    // 17:00 UTC = 12:00 en Cancún (UTC-5 todo el año)
+    expect(m.createdAt, DateTime(2026, 10, 18, 12));
   });
 
   test('cita activa y cancelable', () {

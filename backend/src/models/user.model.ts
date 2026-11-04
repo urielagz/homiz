@@ -12,10 +12,12 @@ export interface UserRow {
   active: boolean;
   failed_attempts: number;
   locked_until: Date | null;
+  /** Entró con una contraseña temporal: debe crear una propia */
+  must_change_password: boolean;
 }
 
 const COLUMNS = `id, name, email, phone, to_char(birth_date, 'YYYY-MM-DD') AS birth_date, password_hash, type, initials,
-  active, failed_attempts, locked_until`;
+  active, failed_attempts, locked_until, must_change_password`;
 
 export async function findByEmail(email: string, db: Db = pool): Promise<UserRow | null> {
   const { rows } = await db.query<UserRow>(`SELECT ${COLUMNS} FROM users WHERE lower(email) = lower($1)`, [email.trim()]);
@@ -75,8 +77,9 @@ export async function createUser(
   return rows[0];
 }
 
-export async function updatePassword(id: string, passwordHash: string, db: Db = pool): Promise<void> {
-  await db.query('UPDATE users SET password_hash = $2, failed_attempts = 0, locked_until = NULL WHERE id = $1', [id, passwordHash]);
+/** [temporary]: contraseña temporal del correo; al entrar con ella se le pide crear una propia. */
+export async function updatePassword(id: string, passwordHash: string, db: Db = pool, temporary = false): Promise<void> {
+  await db.query('UPDATE users SET password_hash = $2, failed_attempts = 0, locked_until = NULL, must_change_password = $3 WHERE id = $1', [id, passwordHash, temporary]);
 }
 
 export async function updateProfile(

@@ -5,26 +5,17 @@ import 'leaflet/dist/leaflet.css';
 import { fichaOf, photoOf, shortPrice, type House } from '../lib/catalog';
 
 /* ==========================================================================
-   Mapas con Leaflet + OpenStreetMap.
-   - Listado: un marcador por casa con ventana (foto, nombre, zona, precio y «Ver la casa»).
-   - Ficha: un círculo de zona (la ubicación es aproximada a propósito).
-   Sin coordenadas se muestra el mapa de Google de siempre (iframe, sin clave).
+   Mapas con Leaflet + OpenStreetMap (sin enlaces a Google Maps).
+   - Listado: una zona por propiedad disponible, con ventana (foto, nombre, zona, precio y «Ver la propiedad»).
+   - Ficha: el círculo de la zona.
+   La ubicación es aproximada a propósito: la API manda un punto movido y un radio de ≈ 1.5 km;
+   la dirección exacta solo se ve en la app cuando la cita está confirmada.
    ========================================================================== */
-export const googleEmbed = (q: string, zoom = 15) => `https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&hl=es&output=embed`;
-export const googleLink = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+const AREA = 1500;
 export const hasCoords = (c?: House | null): c is House & { lat: number; lng: number } =>
   !!c && typeof c.lat === 'number' && typeof c.lng === 'number' && isFinite(c.lat) && isFinite(c.lng);
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
-
-const pin = () =>
-  L.divIcon({
-    className: 'map-pin',
-    html: '<svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>',
-    iconSize: [34, 34],
-    iconAnchor: [17, 32],
-    popupAnchor: [0, -28],
-  });
 
 function baseMap(el: HTMLElement) {
   const map = L.map(el, { scrollWheelZoom: false });
@@ -42,50 +33,51 @@ interface MarkersMapProps {
   label: string;
 }
 
-/** Mapa del listado con un marcador por casa */
+/** Mapa del listado: una zona aproximada por propiedad */
 export function MarkersMap({ houses, selected, label }: MarkersMapProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
-  const markers = useRef<Record<string, L.Marker>>({});
+  const areas = useRef<Record<string, L.Circle>>({});
   const navigate = useNavigate();
   const located = houses.filter(hasCoords);
   const key = located.map((h) => h.slug).join(',');
 
   useEffect(() => {
-    if (!el.current || !located.length) return;
+    if (!el.current) return;
     const m = (map.current = baseMap(el.current));
-    const icon = pin();
-    markers.current = {};
-    const bounds = located.map((c) => {
-      markers.current[c.slug] = L.marker([c.lat, c.lng], { icon, title: c.name, alt: c.name })
+    areas.current = {};
+    m.setView([21.1405, -86.8574], 12); // Cancún; con propiedades se ajusta a sus zonas
+    const bounds = L.latLngBounds([]);
+    located.forEach((c) => {
+      const area = L.circle([c.lat, c.lng], { radius: c.areaMeters || AREA, className: 'map-area' })
+        .bindTooltip(c.name, { direction: 'top' })
         .bindPopup(
           `<a class="map-popup" href="${esc(fichaOf(c))}">` +
             `<img src="${esc(photoOf(c))}" alt="" loading="lazy" onerror="this.remove()">` +
-            `<strong>${esc(c.name)}</strong><span>${esc(c.zona)}</span>` +
+            `<strong>${esc(c.name)}</strong><span>${esc(c.zona)} · zona aproximada</span>` +
             `<span class="map-popup__price">${shortPrice(c)}${c.op === 'renta' ? ' al mes' : ''}</span>` +
-            `<span class="map-popup__more">Ver la casa</span></a>`,
+            `<span class="map-popup__more">Ver la propiedad</span></a>`,
           { minWidth: 200, maxWidth: 240 },
         )
         .addTo(m);
-      return [c.lat, c.lng] as L.LatLngTuple;
+      areas.current[c.slug] = area;
+      bounds.extend(L.latLng(c.lat, c.lng).toBounds((c.areaMeters || AREA) * 2));
     });
-    if (bounds.length === 1) m.setView(bounds[0], 14);
-    else m.fitBounds(bounds, { padding: [36, 36], maxZoom: 15 });
+    if (located.length) m.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
     return () => {
       m.remove();
       map.current = null;
     };
-  }, [key]); // se redibuja solo si cambian las casas
+  }, [key]); // se redibuja solo si cambian las propiedades
 
   useEffect(() => {
-    const marker = selected ? markers.current[selected] : null;
-    if (marker && map.current) {
-      map.current.flyTo(marker.getLatLng(), 15, { duration: 0.8 });
-      marker.openPopup();
+    const area = selected ? areas.current[selected] : null;
+    if (area && map.current) {
+      map.current.flyToBounds(area.getLatLng().toBounds(area.getRadius() * 2), { duration: 0.8, maxZoom: 14 });
+      area.openPopup();
     }
   }, [selected]);
 
-  if (!located.length) return null;
   return (
     <div
       ref={el}
@@ -104,17 +96,18 @@ export function MarkersMap({ houses, selected, label }: MarkersMapProps) {
   );
 }
 
-/** Mapa de la ficha: círculo de 350 m alrededor de la ubicación aproximada */
+/** Mapa de la ficha: el círculo de la zona aproximada (≈ 3 km) */
 export function ZoneMap({ house, label }: { house: House & { lat: number; lng: number }; label: string }) {
   const el = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!el.current) return;
-    const center: L.LatLngTuple = [house.lat, house.lng];
-    const m = baseMap(el.current).setView(center, 15);
-    L.circle(center, { radius: 350, className: 'map-area' }).addTo(m);
+    const m = baseMap(el.current);
+    const radius = house.areaMeters || AREA;
+    m.fitBounds(L.latLng(house.lat, house.lng).toBounds(radius * 2), { padding: [12, 12] });
+    L.circle([house.lat, house.lng], { radius, className: 'map-area' }).addTo(m);
     return () => {
       m.remove();
     };
-  }, [house.lat, house.lng]);
+  }, [house.lat, house.lng, house.areaMeters]);
   return <div ref={el} className="map__leaflet" role="region" aria-label={label} />;
 }

@@ -8,8 +8,11 @@ import '../../features/appointments/presentation/screens/catalog_page.dart';
 import '../../features/appointments/presentation/providers/pending_visit_provider.dart';
 import '../../features/appointments/presentation/screens/request_visit_page.dart';
 import '../../features/auth/presentation/providers/session_provider.dart';
+import '../../features/auth/presentation/screens/create_password_page.dart';
 import '../../features/auth/presentation/screens/login_page.dart';
+import '../../features/auth/presentation/providers/site_link_provider.dart';
 import '../../features/auth/presentation/screens/register_page.dart';
+import '../../features/auth/presentation/screens/reset_password_page.dart';
 import '../../features/auth/presentation/screens/splash_page.dart';
 import '../../features/home/presentation/screens/home_page.dart';
 import '../../features/maintenance/presentation/screens/new_report_page.dart';
@@ -17,25 +20,54 @@ import '../../features/maintenance/presentation/screens/new_reports_page.dart';
 import '../../features/maintenance/presentation/screens/report_detail_page.dart';
 import '../../features/notifications/presentation/screens/notifications_page.dart';
 import '../../features/payments/presentation/screens/overdue_notes_page.dart';
+import '../../features/payments/presentation/screens/staff_payments_page.dart';
 import '../../features/profile/presentation/screens/profile_page.dart';
 import '../../features/property/presentation/screens/property_page.dart';
 import '../../features/property/presentation/screens/staff_property_page.dart';
 import '../../features/providers/presentation/screens/providers_page.dart';
+import '../../features/requests/presentation/new_request_page.dart';
+import '../../features/requests/presentation/request_detail_page.dart';
+import '../../features/requests/presentation/requests_page.dart';
+import '../../features/requests/presentation/requests_provider.dart';
+import '../../features/sales/presentation/purchases_page.dart';
+import '../live/live_updates.dart';
 import '../widgets/homiz_bottom_nav.dart';
 
-const _authRoutes = {'/login', '/register'};
+const _authRoutes = {'/login', '/register', '/reset'};
+const _createPassword = '/create-password';
 
 int? _intParam(GoRouterState state, String name) => int.tryParse(state.uri.queryParameters[name] ?? '');
 
 /// Decide a dónde ir según la sesión. Pura para poder probarla sin widgets.
 /// [pendingVisit]: casa elegida en el sitio; sin sesión se pide crear cuenta y al entrar se abre su visita.
+/// [resetLink]: llegó con el enlace del correo para crear su contraseña.
+/// [fromSite]: acaba de enviar un formulario del sitio; al entrar ve sus solicitudes.
+/// [mustChangePassword]: entró con la contraseña temporal del correo; antes de todo crea la suya.
+/// [start]: entró por un QR sin llenar datos; al entrar se le pregunta «¿Qué quieres hacer?» (con su casa, si la hay).
 @visibleForTesting
-String? sessionRedirect({required bool splashDone, required AsyncValue<Object?> session, required String location, String? pendingVisit}) {
+String? sessionRedirect({
+  required bool splashDone,
+  required AsyncValue<Object?> session,
+  required String location,
+  String? pendingVisit,
+  bool resetLink = false,
+  bool fromSite = false,
+  bool mustChangePassword = false,
+  bool start = false,
+}) {
   // Mientras se recupera la sesión guardada (o si no hubo red) se queda en la bienvenida.
   if (!splashDone || session.isLoading || session.hasError) return location == '/splash' ? null : '/splash';
   final signedIn = session.value != null;
-  if (!signedIn) return _authRoutes.contains(location) ? null : (pendingVisit != null ? '/register' : '/login');
-  if (location == '/splash' || _authRoutes.contains(location)) return pendingVisit != null ? '/appointments/visit/$pendingVisit' : '/home';
+  if (!signedIn) {
+    if (_authRoutes.contains(location)) return null;
+    return resetLink ? '/reset' : pendingVisit != null ? '/register' : '/login';
+  }
+  if (mustChangePassword) return location == _createPassword ? null : _createPassword;
+  if (location == '/splash' || location == _createPassword || _authRoutes.contains(location)) {
+    if (start) return '/home/requests/new?bienvenida=1${pendingVisit != null ? '&casa=$pendingVisit' : ''}';
+    if (pendingVisit != null) return '/appointments/visit/$pendingVisit';
+    return fromSite ? '/home/requests' : '/home';
+  }
   return null;
 }
 
@@ -52,18 +84,32 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
       final user = session.value;
-      return sessionRedirect(
+      final link = ref.read(siteLinkProvider);
+      // Solo los clientes solicitan visitas; el personal entra a su inicio de siempre.
+      final pendingVisit = user == null || user.isClient ? ref.read(pendingVisitProvider) : null;
+      // Cuenta nueva sin QR ni enlace del sitio: el mismo formulario de Contáctanos, para que administración asigne broker.
+      final newAccount = ref.read(sessionProvider.notifier).justRegistered && pendingVisit == null && !link.fromSite;
+      final target = sessionRedirect(
         splashDone: ref.read(splashDelayProvider).hasValue,
         session: session,
         location: state.matchedLocation,
-        // Solo los clientes solicitan visitas; el personal entra a su inicio de siempre.
-        pendingVisit: user == null || user.isClient ? ref.read(pendingVisitProvider) : null,
+        pendingVisit: pendingVisit,
+        resetLink: link.resetToken != null,
+        fromSite: link.fromSite && (user == null || user.isClient),
+        mustChangePassword: user?.mustChangePassword ?? false,
+        start: (link.start || newAccount) && (user == null || user.isClient),
       );
+      // Ya entró: el enlace del sitio o del correo no se vuelve a usar.
+      if (target == '/home/requests') Future.microtask(ref.read(siteLinkProvider.notifier).clear);
+      return target;
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterPage()),
+      GoRoute(path: '/reset', builder: (_, _) => const ResetPasswordPage()),
+      // Entró con la contraseña temporal del correo: crea la suya antes de seguir
+      GoRoute(path: _createPassword, builder: (_, _) => const CreatePasswordPage()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfilePage()),
       GoRoute(path: '/notifications', builder: (_, _) => const NotificationsPage()),
       StatefulShellRoute.indexedStack(
@@ -76,8 +122,18 @@ final routerProvider = Provider<GoRouter>((ref) {
               routes: [
                 // Personal: listas de pendientes y directorio.
                 GoRoute(path: 'overdue', builder: (_, _) => const OverdueNotesPage()),
+                GoRoute(path: 'payments', builder: (_, _) => const StaffPaymentsPage()),
                 GoRoute(path: 'reports', builder: (_, _) => const NewReportsPage()),
                 GoRoute(path: 'providers', builder: (_, _) => const ProvidersPage()),
+                // Cliente: comprobantes de las casas que compró con nosotros
+                GoRoute(path: 'purchases', builder: (_, _) => const PurchasesPage()),
+                // Solicitudes: cliente «Mis solicitudes» y «Busco casa»; personal, las del sitio y la app.
+                GoRoute(path: 'requests', builder: (_, _) => const RequestsPage()),
+                GoRoute(
+                  path: 'requests/new',
+                  builder: (_, state) => NewRequestPage(slug: state.uri.queryParameters['casa'], welcome: state.uri.queryParameters['bienvenida'] == '1'),
+                ),
+                GoRoute(path: 'requests/:id', builder: (_, state) => RequestDetailPage(requestId: state.pathParameters['id']!)),
               ],
             ),
           ]),
@@ -107,6 +163,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               ],
             ),
           ]),
+          // Pestaña «Solicitudes» del personal (leads.manage): acceso directo para los brokers.
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/requests',
+              builder: (_, _) => const RequestsPage(),
+              routes: [
+                GoRoute(path: ':id', builder: (_, state) => RequestDetailPage(requestId: state.pathParameters['id']!)),
+              ],
+            ),
+          ]),
         ],
       ),
     ],
@@ -115,17 +181,26 @@ final routerProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-class _TabsShell extends StatelessWidget {
+class _TabsShell extends ConsumerWidget {
   const _TabsShell({required this.shell});
 
   final StatefulNavigationShell shell;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Tiempo real mientras se usa la app (avisos, citas, solicitudes y pagos se actualizan solos)
+    ref.watch(liveUpdatesProvider);
+    final user = ref.watch(sessionProvider).value;
+    // Solicitudes como pestaña propia para quien las atiende (brokers y administración)
+    final showRequests = user != null && user.isStaff && user.can('leads.manage');
+    final newRequests = showRequests ? ref.watch(requestsProvider('nuevo')).value?.length ?? 0 : 0;
     return Scaffold(
       body: shell,
       bottomNavigationBar: HomizBottomNav(
         currentIndex: shell.currentIndex,
+        showRequests: showRequests,
+        newRequests: newRequests,
+        staff: user?.isStaff ?? false,
         // Tocar la pestaña activa regresa a su inicio.
         onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
       ),

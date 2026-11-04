@@ -1,9 +1,58 @@
-import { useEffect, useRef, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { apiActive, ZApi } from '../api';
+import { apiActive, ZApi, type ApiFailure } from '../api';
+import { can, currentSession, roleLabel } from '../auth';
 import { useOverlay } from '../components/Overlay';
 import { Avatar, Badge, brokerOptions, Cover, Crumbs, err, FieldError, Icon, Options, PageHead, StatusBadge, useErrors, useUrlParams } from '../components/ui';
-import { broker, brokerStats, log, norm, opLabel, plural, prop, rerender, upcoming, useStore, viewState, Z, type Broker } from '../store';
+import { broker, brokerStats, log, norm, opLabel, plural, prop, rerender, upcoming, useStore, viewState, Z, type Broker, type StaffMember } from '../store';
+
+/* Roles que decide el propietario: solo broker, solo administración o ambos */
+const ROLE_CHOICES: [string, string, string][] = [
+  ['broker', 'Solo broker', 'Atiende sus casas: citas, clientes, pagos y expediente de las casas a su cargo.'],
+  ['admin', 'Solo administración', 'Ve todas las casas; corrige y anula pagos, elimina documentos. No recibe casas.'],
+  ['both', 'Broker y administración', 'Atiende sus casas y además administra todo el inventario.'],
+];
+const choiceOf = (roles: string[]) => (roles.includes('admin') && roles.includes('broker') ? 'both' : roles.includes('admin') ? 'admin' : 'broker');
+const rolesOf = (choice: string) => (choice === 'both' ? ['broker', 'admin'] : [choice]);
+
+function RoleForm({ m, close }: { m: StaffMember; close: () => void }) {
+  const { toast } = useOverlay();
+  const [choice, setChoice] = useState(choiceOf(m.roles));
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const save = (e: FormEvent) => {
+    e.preventDefault();
+    if (choice === choiceOf(m.roles)) return close();
+    setBusy(true);
+    ZApi.staffRoles(m.id, rolesOf(choice)).then(
+      () => { close(); toast(`${m.name} ahora es: ${ROLE_CHOICES.find((c) => c[0] === choice)![1].toLowerCase()}.`); },
+      (er: ApiFailure) => { setError(er?.mensaje || 'No se pudo guardar.'); setBusy(false); },
+    );
+  };
+  return (
+    <>
+      <h2 id="dialog-title">Rol de {m.name}</h2>
+      <p className="lead">{m.roles.includes('owner') ? 'Es propietario: conserva todos los permisos y la gestión del personal.' : 'Decide qué puede hacer en el panel y en la app.'}</p>
+      <form noValidate onSubmit={save}>
+        {error && <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{error}</span></div>}
+        <fieldset className="stack" style={{ border: 0, padding: 0 }}>
+          <legend className="sr-only">Rol</legend>
+          {ROLE_CHOICES.map(([v, label, help]) => (
+            <label key={v} className="check" style={{ alignItems: 'flex-start' }}>
+              <input type="radio" name="role" value={v} checked={choice === v} onChange={() => setChoice(v)} />
+              <span><strong>{label}</strong><br /><span className="small muted">{help}</span></span>
+            </label>
+          ))}
+        </fieldset>
+        {m.properties > 0 && choice === 'admin' && <div className="callout" style={{ marginTop: '1rem' }}><strong>Tiene {m.properties} {plural(m.properties, 'casa asignada', 'casas asignadas')}</strong>Reasígnalas a otro broker antes de quitarle el rol de broker.</div>}
+        <div className="dialog__actions">
+          <button className="btn btn--secondary" type="button" onClick={close}>Cancelar</button>
+          <button className="btn" type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar rol'}</button>
+        </div>
+      </form>
+    </>
+  );
+}
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -81,6 +130,8 @@ export function Brokers() {
   });
 
   const brokerForm = (b: Broker | null) => open((close) => <BrokerForm b={b} close={close} />, { wide: true });
+  const manageStaff = can('users.manage'); // solo el propietario da de alta, desactiva y asigna roles
+  const me = currentSession()?.email.toLowerCase();
   const toggleActive = (b: Broker) => {
     if (!b.active) {
       b.active = true;
@@ -133,7 +184,7 @@ export function Brokers() {
     <>
       <Crumbs items={[['Administración', '/resumen'], ['Brokers']]} />
       <PageHead title="Un equipo cerca de cada casa." sub="Administra los perfiles y asigna un responsable a cada propiedad."
-        actions={<button className="btn" type="button" onClick={() => brokerForm(null)}><Icon id="plus" />Agregar broker</button>} />
+        actions={manageStaff ? <button className="btn" type="button" onClick={() => brokerForm(null)}><Icon id="plus" />Agregar broker</button> : undefined} />
       <div className="broker-cards">
         {D.brokers.map((b) => {
           const st = brokerStats(b.id);
@@ -147,14 +198,41 @@ export function Brokers() {
                 <div><dt className="sr-only">Teléfono</dt><dd><a href={'tel:' + b.phone.replace(/\s/g, '')} style={{ color: 'inherit' }}>{b.phone}</a></dd></div>
               </dl>
               <p className="broker-card__sum">{st.props} {plural(st.props, 'propiedad', 'propiedades')} · {st.next ? `${st.next} ${plural(st.next, 'próxima cita', 'próximas citas')}` : 'Sin citas próximas'}</p>
-              <div className="broker-card__actions">
-                <button className="link" type="button" onClick={() => brokerForm(b)}>Editar perfil</button>
-                <button className="link link--muted" type="button" onClick={() => toggleActive(b)}>{b.active ? 'Desactivar' : 'Activar'}</button>
-              </div>
+              {manageStaff && (
+                <div className="broker-card__actions">
+                  <button className="link" type="button" onClick={() => brokerForm(b)}>Editar perfil</button>
+                  <button className="link link--muted" type="button" onClick={() => toggleActive(b)}>{b.active ? 'Desactivar' : 'Activar'}</button>
+                </div>
+              )}
             </article>
           );
         })}
       </div>
+
+      {manageStaff && apiActive() && D.staff.length > 0 && (
+        <section aria-labelledby="roles-title" style={{ marginBottom: '2rem' }}>
+          <div className="section-head"><h2 id="roles-title">Equipo y roles</h2><span className="small muted">Solo el propietario decide quién es broker, administración o ambos</span></div>
+          <div className="table-wrap">
+            <table className="table">
+              <caption className="sr-only">Roles del personal</caption>
+              <thead><tr><th scope="col">Persona</th><th scope="col">Rol</th><th scope="col">Casas</th><th scope="col">Estado</th><th scope="col">Administrar</th></tr></thead>
+              <tbody>
+                {D.staff.map((m) => (
+                  <tr key={m.id}>
+                    <td><span className="strong">{m.name}</span><span className="sub">{m.email}</span></td>
+                    <td>{roleLabel(m.roles)}{m.roles.includes('owner') && m.roles.includes('broker') ? ' · broker' : ''}</td>
+                    <td>{m.properties}</td>
+                    <td>{m.active ? <Badge label="Activo" tone="ok" /> : <Badge label="Inactivo" tone="gris" />}</td>
+                    <td>{m.roles.includes('owner') && m.email.toLowerCase() === me
+                      ? <span className="sub">Tu cuenta</span>
+                      : <button className="link" type="button" aria-label={'Cambiar rol de ' + m.name} onClick={() => open((close) => <RoleForm m={m} close={close} />)}>Cambiar rol <Icon id="arrow" className="icon--sm" /></button>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section aria-labelledby="as-title">
         <div className="section-head"><h2 id="as-title">Asignación por propiedad</h2><span className="small muted">{withBroker} de {D.properties.length} casas con responsable</span></div>

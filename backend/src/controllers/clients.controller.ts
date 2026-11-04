@@ -59,7 +59,7 @@ const SELECT = `
 type Row = Record<string, unknown> & { id: string; broker_id: string | null; property_id: string | null };
 
 const present = (c: Row) => ({
-  id: c.id, kind: c.kind, label: c.label, name: c.name, email: c.email, phone: c.phone, address: c.address,
+  id: c.id, code: c.code, kind: c.kind, label: c.label, name: c.name, email: c.email, phone: c.phone, address: c.address,
   nationality: c.nationality, occupation: c.occupation, operation: c.operation, budget: c.budget, budgetAmount: c.budget_amount,
   needs: c.needs, hasPets: c.has_pets, petsCount: c.pets_count, occupants: c.occupants, followStatus: c.follow_status,
   property: c.property_id ? { id: c.property_id, code: c.property_code, name: c.property_name } : null,
@@ -99,6 +99,53 @@ export const getOne: RequestHandler = async (_req, res) => {
   res.json(present(await findScoped(currentUser(res), (res.locals.params as { id: string }).id)));
 };
 
+/**
+ * GET /clients/:id/overview — todo lo de la persona en un lugar (decisión 113): sus solicitudes, citas,
+ * contratos con el estado de sus pagarés y lo que ha hecho en la app y el sitio (bitácora).
+ */
+export const overview: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  const c = await findScoped(user, (res.locals.params as { id: string }).id);
+  const email = String(c.email ?? '');
+  const [leads, appointments, contracts, activity] = await Promise.all([
+    pool.query(
+      `SELECT l.id, l.folio, l.reason, l.status, l.created_at AS "createdAt", p.code AS "propertyCode", p.name AS "propertyName",
+              (SELECT count(*)::int FROM lead_proposals x WHERE x.lead_id = l.id) AS proposals
+         FROM leads l LEFT JOIN properties p ON p.id = l.property_id
+        WHERE l.client_id = $1 OR ($2 <> '' AND lower(l.email) = lower($2)) ORDER BY l.created_at DESC LIMIT 30`,
+      [c.id, email],
+    ),
+    pool.query(
+      `SELECT a.id, a.code, a.status, a.scheduled_at AS "scheduledAt", p.code AS "propertyCode", p.name AS "propertyName", b.name AS broker
+         FROM appointments a JOIN properties p ON p.id = a.property_id LEFT JOIN users b ON b.id = a.broker_id
+        WHERE a.client_id = $1 ORDER BY a.scheduled_at DESC LIMIT 30`,
+      [c.id],
+    ),
+    pool.query(
+      `SELECT ct.id, ct.status, to_char(ct.start_date, 'YYYY-MM-DD') AS "startDate", to_char(ct.end_date, 'YYYY-MM-DD') AS "endDate",
+              ct.monthly_rent AS "monthlyRent", ct.payment_day AS "paymentDay", p.code AS "propertyCode", p.name AS "propertyName",
+              count(n.*) FILTER (WHERE n.status <> 'cancelled')::int AS "notesTotal", count(n.*) FILTER (WHERE n.status = 'paid')::int AS "notesPaid",
+              count(n.*) FILTER (WHERE n.status = 'overdue')::int AS "notesOverdue",
+              to_char(min(n.due_date) FILTER (WHERE n.status IN ('pending', 'overdue')), 'YYYY-MM-DD') AS "nextDue",
+              (SELECT count(*)::int FROM documents d JOIN promissory_notes x ON x.id = d.promissory_note_id WHERE x.contract_id = ct.id AND d.type = 'stamp') AS stamps
+         FROM contracts ct JOIN properties p ON p.id = ct.property_id LEFT JOIN promissory_notes n ON n.contract_id = ct.id
+        WHERE ct.client_id = $1 GROUP BY ct.id, p.code, p.name ORDER BY ct.start_date DESC`,
+      [c.id],
+    ),
+    // Lo que hizo la persona (en la app o el sitio) y lo que se hizo con su expediente
+    pool.query(
+      `SELECT a.action, a.description, a.created_at AS "createdAt", u.name AS "user", (u.type = 'client') AS "byClient"
+         FROM activity_log a LEFT JOIN users u ON u.id = a.user_id
+        WHERE ($1::uuid IS NOT NULL AND a.user_id = $1) OR (a.entity = 'client' AND a.entity_id = $2)
+           OR (a.entity = 'lead' AND a.entity_id IN (SELECT id FROM leads WHERE client_id = $2))
+           OR (a.entity = 'appointment' AND a.entity_id IN (SELECT id FROM appointments WHERE client_id = $2))
+        ORDER BY a.created_at DESC LIMIT 40`,
+      [c.user_id ?? null, c.id],
+    ),
+  ]);
+  res.json({ client: present(c), leads: leads.rows, appointments: appointments.rows, contracts: contracts.rows, activity: activity.rows });
+};
+
 async function checkLinks(user: AuthUser, d: Record<string, unknown>) {
   if (d.propertyId) await assertPropertyAccess(user, d.propertyId as string);
   if (d.brokerId && !isAdmin(user) && d.brokerId !== user.id) throw new AppError(403, 'FORBIDDEN', 'Solo un administrador puede asignar el cliente a otro broker.');
@@ -108,6 +155,8 @@ export const create: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const d = res.locals.body as Record<string, unknown>;
   await checkLinks(user, d);
+  // Una persona nueva no tiene contrato: entra como prospecto (inquilino solo con «Rentarle esta casa»)
+  if (d.kind === 'inquilino' || d.followStatus === 'Contrato vigente') throw NEEDS_CONTRACT;
   if (!isAdmin(user)) d.brokerId = user.id;
   const cols: string[] = [];
   const vals: unknown[] = [];
@@ -117,12 +166,22 @@ export const create: RequestHandler = async (_req, res) => {
   res.status(201).json(present(await findScoped(user, rows[0].id)));
 };
 
+/**
+ * Inquilino = tiene contrato. Marcarlo a mano dejaría la casa publicada y sin pagarés:
+ * se hace con «Rentarle esta casa» (POST /contracts), que genera los pagarés y pausa la casa.
+ */
+const NEEDS_CONTRACT = new AppError(409, 'NEEDS_CONTRACT', 'Para hacerla inquilina registra su contrato con «Rentarle esta casa»: así se generan sus pagarés y la casa sale del sitio.');
+
 export const update: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const { id } = res.locals.params as { id: string };
   const before = await findScoped(user, id);
   const d = res.locals.body as Record<string, unknown>;
   await checkLinks(user, d);
+  if ((d.kind === 'inquilino' && before.kind !== 'inquilino') || (d.followStatus === 'Contrato vigente' && before.follow_status !== 'Contrato vigente')) {
+    const { rowCount } = await pool.query(`SELECT 1 FROM contracts WHERE client_id = $1 AND status = 'active'`, [id]);
+    if (!rowCount) throw NEEDS_CONTRACT;
+  }
   const sets: string[] = [];
   const vals: unknown[] = [];
   for (const [k, col] of Object.entries(COLS)) if (d[k] !== undefined) { vals.push(d[k]); sets.push(`${col} = $${vals.length}`); }

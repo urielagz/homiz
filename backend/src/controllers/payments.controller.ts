@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
-import { pool, withTransaction } from '../config/database.js';
+import { pool, withTransaction, type Db } from '../config/database.js';
 import { insertActivity } from '../models/activity.model.js';
 import { currentUser, type AuthUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
@@ -16,13 +16,21 @@ export const listQueryDto = pagination.extend({
   to: dateField.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
+/** Pagaré adicional de un contrato (por ejemplo, un cargo extra o un mes más). */
+export const createNoteDto = z.object({
+  contractId: z.uuid({ error: 'Indica el contrato.' }),
+  amount: positiveMoney,
+  dueDate: dateField,
+});
+export const cancelNoteDto = z.object({ reason: z.string().trim().min(5, 'Explica por qué se cancela el pagaré.').max(300) });
 export const updateNoteDto = z
   .object({ amount: positiveMoney.optional(), dueDate: dateField.optional() })
   .refine((v) => v.amount !== undefined || v.dueDate !== undefined, 'Indica el monto o la fecha.');
 export const paymentDto = z.object({
   amount: positiveMoney,
   paidAt: dateTimeField,
-  receiptFolio: z.string().trim().min(1, 'Escribe el folio del recibo.').max(40),
+  // El folio se genera solo (REC-<casa>-<pagaré>); se acepta uno escrito por compatibilidad con versiones anteriores.
+  receiptFolio: z.string().trim().min(1).max(40).optional(),
   notes: z.string().trim().max(500).optional(),
 });
 export const correctDto = z
@@ -40,6 +48,7 @@ interface NoteRow {
   paid_at: Date | null;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   property_id: string;
+  property_code: string;
   property_name: string;
   client_id: string;
   client_name: string;
@@ -50,14 +59,25 @@ interface NoteRow {
   payment_notes: string | null;
   registered_by_name: string | null;
   proof_document_id: string | null;
+  note_document_id: string | null;
+  note_document_visible: boolean | null;
+  stamps: { id: string; name: string; createdAt: string; visible: boolean }[] | null;
 }
 
 const SELECT = `
   SELECT n.id, n.contract_id, n.number, n.amount, to_char(n.due_date, 'YYYY-MM-DD') AS due_date, n.paid_at, n.status,
-         ct.property_id, p.name AS property_name, ct.client_id, c.name AS client_name,
+         ct.property_id, p.code AS property_code, p.name AS property_name, ct.client_id, c.name AS client_name,
          pay.id AS payment_id, pay.amount AS payment_amount, pay.paid_at AS payment_paid_at, pay.receipt_folio,
          pay.notes AS payment_notes, rb.name AS registered_by_name,
-         (SELECT d.id FROM documents d WHERE d.promissory_note_id = n.id AND d.visible_to_client ORDER BY d.created_at DESC LIMIT 1) AS proof_document_id
+         (SELECT d.id FROM documents d WHERE d.promissory_note_id = n.id AND d.visible_to_client AND d.type NOT IN ('promissory_note', 'stamp')
+           ORDER BY d.created_at DESC LIMIT 1) AS proof_document_id,
+         (SELECT d.id FROM documents d WHERE d.promissory_note_id = n.id AND d.type = 'promissory_note'
+           ORDER BY d.created_at DESC LIMIT 1) AS note_document_id,
+         (SELECT d.visible_to_client FROM documents d WHERE d.promissory_note_id = n.id AND d.type = 'promissory_note'
+           ORDER BY d.created_at DESC LIMIT 1) AS note_document_visible,
+         -- Fotos de los sellos (entrega en físico y digital), de la más antigua a la más reciente
+         (SELECT json_agg(json_build_object('id', d.id, 'name', d.name, 'createdAt', d.created_at, 'visible', d.visible_to_client) ORDER BY d.created_at)
+            FROM documents d WHERE d.promissory_note_id = n.id AND d.type = 'stamp') AS stamps
     FROM promissory_notes n
     JOIN contracts ct ON ct.id = n.contract_id
     JOIN properties p ON p.id = ct.property_id
@@ -75,6 +95,10 @@ function present(n: NoteRow, user: AuthUser) {
   return {
     id: n.id, contractId: n.contract_id, number: n.number, label: `Pagaré ${String(n.number).padStart(2, '0')}`, amount: n.amount,
     dueDate: n.due_date, status: n.status, paidAt: n.paid_at, payment, proofDocumentId: n.proof_document_id,
+    // PDF del pagaré firmado (el cliente solo lo ve si es visible para él)
+    documentId: user.type === 'staff' || n.note_document_visible ? n.note_document_id : null,
+    // Fotos de los sellos: el cliente ve las que son visibles para él
+    stamps: (n.stamps ?? []).filter((s) => user.type === 'staff' || s.visible).map(({ id, name, createdAt }) => ({ id, name, createdAt })),
     property: { id: n.property_id, name: n.property_name },
     ...(user.type === 'staff' ? { client: { id: n.client_id, name: n.client_name } } : {}),
   };
@@ -168,6 +192,56 @@ export const updateNote: RequestHandler = async (_req, res) => {
   res.json(present(await loadNote(user, n.id), user));
 };
 
+/** POST /promissory-notes — agrega un pagaré al contrato vigente (contracts.manage). Número siguiente del contrato. */
+export const createNote: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  const d = res.locals.body as z.infer<typeof createNoteDto>;
+  const { rows: ct } = await pool.query<{ property_id: string; status: string; client_name: string }>(
+    'SELECT ct.property_id, ct.status, c.name AS client_name FROM contracts ct JOIN clients c ON c.id = ct.client_id WHERE ct.id = $1',
+    [d.contractId],
+  );
+  if (!ct[0]) throw new AppError(404, 'NOT_FOUND', 'El contrato no existe.');
+  await assertPropertyAccess(user, ct[0].property_id);
+  if (ct[0].status !== 'active') throw new AppError(409, 'INVALID_STATUS', 'Solo se agregan pagarés a un contrato vigente.');
+  const { rows } = await pool.query<{ id: string; number: number }>(
+    `INSERT INTO promissory_notes (contract_id, number, amount, due_date, status)
+     SELECT $1, COALESCE(max(number), 0) + 1, $2, $3::date, CASE WHEN $3::date < CURRENT_DATE THEN 'overdue'::note_status ELSE 'pending'::note_status END
+       FROM promissory_notes WHERE contract_id = $1
+     RETURNING id, number`,
+    [d.contractId, d.amount, d.dueDate],
+  );
+  await insertActivity({ userId: user.id, propertyId: ct[0].property_id, entity: 'promissory_note', entityId: rows[0].id, action: 'create', description: `${user.name} agregó el pagaré ${rows[0].number} a ${ct[0].client_name}.`, newValues: d });
+  res.status(201).json(present(await loadNote(user, rows[0].id), user));
+};
+
+/** POST /promissory-notes/:id/cancel — cancela un pagaré que no se cobrará (sin pago); queda en el historial. */
+export const cancelNote: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  const n = await loadNote(user, (res.locals.params as { id: string }).id);
+  const { reason } = res.locals.body as z.infer<typeof cancelNoteDto>;
+  if (n.status === 'paid') throw new AppError(409, 'ALREADY_PAID', 'Este pagaré tiene un pago registrado: primero anula el pago.');
+  if (n.status === 'cancelled') throw new AppError(409, 'INVALID_STATUS', 'Este pagaré ya está cancelado.');
+  await pool.query(`UPDATE promissory_notes SET status = 'cancelled' WHERE id = $1`, [n.id]);
+  await insertActivity({ userId: user.id, propertyId: n.property_id, entity: 'promissory_note', entityId: n.id, action: 'cancel', description: `${user.name} canceló el pagaré ${n.number} de ${n.client_name}: ${reason}` });
+  res.json(present(await loadNote(user, n.id), user));
+};
+
+/**
+ * Folio automático: REC-<clave de la casa>-<número de pagaré>, p. ej. REC-ZUG-012-05.
+ * Si ese pagaré ya tuvo un pago (anulado), se agrega una letra: REC-ZUG-012-05-B, -C…
+ */
+async function nextFolio(db: Db, n: NoteRow): Promise<string> {
+  const base = `REC-${n.property_code}-${String(n.number).padStart(2, '0')}`;
+  const { rows } = await db.query<{ receipt_folio: string }>('SELECT receipt_folio FROM payments WHERE promissory_note_id = $1', [n.id]);
+  const used = new Set(rows.map((r) => r.receipt_folio));
+  if (!used.has(base)) return base;
+  for (let i = 1; i < 26; i++) {
+    const folio = `${base}-${String.fromCharCode(65 + i)}`;
+    if (!used.has(folio)) return folio;
+  }
+  return `${base}-${Date.now().toString(36).toUpperCase()}`;
+}
+
 /** Registro de pago en efectivo. El pago debe cubrir el pagaré completo. */
 export const registerPayment: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
@@ -180,15 +254,16 @@ export const registerPayment: RequestHandler = async (_req, res) => {
   }
   try {
     await withTransaction(async (db) => {
+      const folio = d.receiptFolio ?? (await nextFolio(db, n));
       await db.query(
         `INSERT INTO payments (promissory_note_id, amount, paid_at, receipt_folio, notes, registered_by) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [n.id, d.amount, d.paidAt, d.receiptFolio, d.notes ?? null, user.id],
+        [n.id, d.amount, d.paidAt, folio, d.notes ?? null, user.id],
       );
       await db.query(`UPDATE promissory_notes SET status = 'paid', paid_at = $2 WHERE id = $1`, [n.id, d.paidAt]);
-      await insertActivity({ userId: user.id, propertyId: n.property_id, entity: 'promissory_note', entityId: n.id, action: 'payment', description: `${user.name} registró el pago del pagaré ${n.number} de ${n.client_name} (folio ${d.receiptFolio}).`, newValues: d }, db);
+      await insertActivity({ userId: user.id, propertyId: n.property_id, entity: 'promissory_note', entityId: n.id, action: 'payment', description: `${user.name} registró el pago del pagaré ${n.number} de ${n.client_name} (folio ${folio}).`, newValues: { ...d, receiptFolio: folio } }, db);
       await notify([await userOfClient(n.client_id, db)], {
         type: 'payment_registered', title: 'Pago registrado',
-        message: `Registramos tu pago del pagaré ${String(n.number).padStart(2, '0')} por $${n.amount.toLocaleString('en-US')}. Folio ${d.receiptFolio}.`,
+        message: `Registramos tu pago del pagaré ${String(n.number).padStart(2, '0')} por $${n.amount.toLocaleString('en-US')}. Folio ${folio} (comprobante interno de pago; no es factura CFDI).`,
         entity: 'promissory_note', entityId: n.id,
       }, db);
     });

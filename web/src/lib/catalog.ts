@@ -19,20 +19,39 @@ export interface House {
   est: number;
   pets: boolean;
   amueblada: 'si' | 'semi' | 'no';
-  tipo: 'casa' | 'casa-condominio' | 'townhouse';
+  /** Clave del tipo de inmueble (lib/propertyTypes): casa, departamento, terreno, local… */
+  tipo: string;
   tipoTexto?: string;
   asesor: string;
   orden: number;
   img?: string;
   foto?: string;
   description?: string;
-  address?: string;
+  /** Radio en metros de la zona aproximada que se dibuja en el mapa (el punto real no se publica) */
+  areaMeters?: number;
   age?: number | null;
   maintenance?: string;
   amenities?: string[];
   photos?: { src: string; label: string }[];
   publishedAt?: string;
 }
+
+/** Texto sin acentos, en minúsculas y con guiones como espacios (para buscar «lagos-del-sol» o «Huayacán»). */
+const plain = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[-_,]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** ¿La casa está en esa ubicación? Texto libre de cualquier parte del mundo: colonia, ciudad, estado o país. */
+export function inPlace(c: House, place: string) {
+  const wanted = plain(place);
+  if (!wanted) return true;
+  const where = plain([c.zona, c.zonaKey, c.mapa].filter(Boolean).join(' '));
+  return wanted.split(' ').every((w) => where.includes(w));
+}
+
+/** Ubicación escrita bonita para títulos y etiquetas («lagos-del-sol» → «Lagos del sol») */
+export const placeLabel = (place: string) => {
+  const t = place.trim().replace(/[-_]+/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
 
 export const IMG = '/assets/img/';
 export const WHATSAPP = '529985550142';

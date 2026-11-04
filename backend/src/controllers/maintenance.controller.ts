@@ -7,6 +7,7 @@ import { currentUser, type AuthUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { pagination, paged, queryArray } from '../middlewares/validate.js';
 import { assertPropertyAccess, propertyScope } from '../services/access.service.js';
+import { clientReportFilter } from '../models/property-access.model.js';
 import { admins, brokerOf, notify } from '../services/notification.service.js';
 
 export const CATEGORIES = ['Plomería', 'Electricidad', 'Climatización', 'Cerrajería', 'Jardinería', 'Albercas', 'Pintura', 'Electrodomésticos', 'Otro'] as const;
@@ -90,6 +91,11 @@ async function load(user: AuthUser, id: string): Promise<ReportRow> {
   const { rows } = await pool.query<ReportRow>(`${SELECT} WHERE r.id = $1`, [id]);
   if (!rows[0]) throw new AppError(404, 'NOT_FOUND', 'El reporte no existe.');
   await assertPropertyAccess(user, rows[0].property_id);
+  // El cliente solo ve sus reportes (no los del inquilino anterior)
+  if (user.type === 'client') {
+    const own = await pool.query(`SELECT 1 FROM maintenance_reports r WHERE r.id = $1 AND ${clientReportFilter('$2')}`, [id, user.clientId]);
+    if (!own.rowCount) throw new AppError(404, 'NOT_FOUND', 'El reporte no existe.');
+  }
   return rows[0];
 }
 
@@ -108,6 +114,7 @@ export const list: RequestHandler = async (_req, res) => {
   const params: unknown[] = [];
   const where: string[] = [];
   if (scope) where.push(`r.property_id = ANY($${params.push(scope)}::uuid[])`);
+  if (user.type === 'client') where.push(clientReportFilter(`$${params.push(user.clientId)}`));
   if (q.propertyId) where.push(`r.property_id = $${params.push(q.propertyId)}`);
   if (q.status?.length) where.push(`r.status::text = ANY($${params.push(q.status)}::text[])`);
   if (q.priority) where.push(`r.priority = $${params.push(q.priority)}`);
