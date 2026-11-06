@@ -25,6 +25,7 @@ import '../../features/profile/presentation/screens/profile_page.dart';
 import '../../features/property/presentation/screens/property_page.dart';
 import '../../features/property/presentation/screens/staff_property_page.dart';
 import '../../features/providers/presentation/screens/providers_page.dart';
+import '../../features/requests/data/requests_repository.dart';
 import '../../features/requests/presentation/new_request_page.dart';
 import '../../features/requests/presentation/request_detail_page.dart';
 import '../../features/requests/presentation/requests_page.dart';
@@ -131,7 +132,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(path: 'requests', builder: (_, _) => const RequestsPage()),
                 GoRoute(
                   path: 'requests/new',
-                  builder: (_, state) => NewRequestPage(slug: state.uri.queryParameters['casa'], welcome: state.uri.queryParameters['bienvenida'] == '1'),
+                  builder: (_, state) => NewRequestPage(
+                    slug: state.uri.queryParameters['casa'],
+                    welcome: state.uri.queryParameters['bienvenida'] == '1',
+                    reason: state.uri.queryParameters['motivo'],
+                    editing: state.extra is LeadRequest ? state.extra! as LeadRequest : null,
+                  ),
                 ),
                 GoRoute(path: 'requests/:id', builder: (_, state) => RequestDetailPage(requestId: state.pathParameters['id']!)),
               ],

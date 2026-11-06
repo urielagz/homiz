@@ -13,6 +13,11 @@ import { rerender } from './store';
 
 /** Evento de ventana al que se suscriben las listas que leen directo de la API (useApiData) */
 export const LIVE_EVENT = 'zugar:changed';
+/** Evento de ventana cuando cambia el estado de la conexión o llega una actualización */
+export const LIVE_STATUS_EVENT = 'zugar:live-status';
+/** Hora de la última actualización recibida */
+export let lastUpdate: Date | null = null;
+const status = () => window.dispatchEvent(new Event(LIVE_STATUS_EVENT));
 
 let socket: WebSocket | null = null;
 let retry: ReturnType<typeof setTimeout> | null = null;
@@ -21,6 +26,19 @@ let poll: ReturnType<typeof setInterval> | null = null;
 let lastSeq = -1;
 let stopped = true;
 let attempts = 0;
+let ticks = 0;
+let loading = false;
+let dirty = false;
+
+/** Vuelve a leer los datos. Si ya hay una lectura en curso, repite al terminar: la más lenta nunca pisa a la más nueva. */
+function refresh() {
+  if (loading) { dirty = true; return; }
+  loading = true;
+  load().then(() => { lastUpdate = new Date(); rerender(); status(); }, () => {}).finally(() => {
+    loading = false;
+    if (dirty) { dirty = false; refresh(); }
+  });
+}
 
 /** Número de cambios del servidor: si avanzó desde el último que vimos, se recarga */
 function seen(seq: number) {
@@ -34,7 +52,7 @@ function changed() {
   pending = setTimeout(() => {
     pending = null;
     noticesRefresh.now();
-    load().then(rerender, () => {});
+    refresh();
     window.dispatchEvent(new Event(LIVE_EVENT));
   }, 250);
 }
@@ -50,12 +68,13 @@ function connect() {
   const s = currentSession();
   if (stopped || !API_URL || !s?.api || !s.token) return;
   const ws = (socket = new WebSocket(socketUrl(s.token)));
-  ws.onopen = () => (attempts = 0);
+  ws.onopen = () => { attempts = 0; status(); };
   ws.onmessage = (e) => {
     try { seen((JSON.parse(e.data) as { seq: number }).seq); } catch { /* mensaje desconocido */ }
   };
   ws.onclose = () => {
     if (socket === ws) socket = null;
+    status();
     if (stopped) return;
     // El token dura 15 minutos: se renueva con cualquier petición y se vuelve a conectar (espera creciente hasta 30 s)
     attempts += 1;
@@ -71,11 +90,12 @@ export const liveConnected = () => socket?.readyState === WebSocket.OPEN;
 export function startLive(): () => void {
   stopped = false;
   if (!socket) connect();
-  // Respaldo: sin WebSocket (red que lo bloquea), cada 5 s se pregunta el número de cambios
+  // Respaldo: sin WebSocket (red que lo bloquea), cada 5 s se pregunta el número de cambios.
+  // Con WebSocket se revisa cada 15 s: un túnel puede dejarlo «abierto» sin que llegue nada.
   const ask = () => request<{ seq: number }>('GET', '/events/seq').then((r) => seen(r.seq), () => {});
   if (!poll) {
     ask();
-    poll = setInterval(() => document.visibilityState === 'visible' && !liveConnected() && ask(), 5_000);
+    poll = setInterval(() => { ticks += 1; if (document.visibilityState === 'visible' && (!liveConnected() || ticks % 3 === 0)) ask(); }, 5_000);
   }
   // Al volver a la pestaña, se revisa enseguida por si algo cambió mientras estaba oculta
   const onVisible = () => document.visibilityState === 'visible' && ask();

@@ -2,10 +2,12 @@ import { Honeypot } from './Honeypot';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { sendLead, type ApiError } from '../lib/api';
-import { appLink } from '../lib/appLink';
+import { downloadLink } from '../lib/appLink';
 import { priceUnit, type House } from '../lib/catalog';
 import { fakeFolio, longDate, money, t12 } from '../lib/format';
-import { clean, emailRepeat, emailStrict, futureDate, phone, required, type Errors } from '../lib/validation';
+import { useLiveErrors } from '../lib/useLiveErrors';
+import { clean, emailRepeat, emailStrict, futureDate, personName, phone, phoneChars, required, text, words, type Errors } from '../lib/validation';
+import { budgetError } from './BudgetRange';
 import { Dialog } from './Dialog';
 import { EmailFields } from './EmailFields';
 import { MoneyInput, moneyText } from './NumberInput';
@@ -33,8 +35,6 @@ export function HouseVisitForm({ house: c }: { house: House }) {
   const toast = useToast();
   const navigate = useNavigate();
   const [f, setF] = useState<Form>(EMPTY);
-  const [errors, setErrors] = useState<Errors>({});
-  const [showErrors, setShowErrors] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [sending, setSending] = useState(false);
   const sale = c.op === 'venta';
@@ -43,28 +43,27 @@ export function HouseVisitForm({ house: c }: { house: House }) {
 
   const validate = (x: Form): Errors =>
     clean({
-      nombre: required(x.nombre), correo: emailStrict(x.correo), correo2: emailRepeat(x.correo, x.correo2), telefono: phone(x.telefono),
-      nacionalidad: required(x.nacionalidad), ocupacion: required(x.ocupacion), presupuesto: required(x.presupuesto),
+      nombre: personName(x.nombre), correo: emailStrict(x.correo), correo2: emailRepeat(x.correo, x.correo2), telefono: phone(x.telefono),
+      nacionalidad: words(x.nacionalidad, 3, 40), ocupacion: text(x.ocupacion, 3, 80), presupuesto: budgetError('', x.presupuesto, sale ? 'compra' : 'renta'),
       forma_pago: sale ? required(x.forma_pago, true) : '',
       mascotas: x.mascotas ? '' : 'Elige una opción.',
-      mascotas_detalle: x.mascotas === 'si' ? required(x.mascotas_detalle) : '',
+      mascotas_detalle: x.mascotas === 'si' ? text(x.mascotas_detalle, 3, 200) : '',
       fecha: futureDate(x.fecha) && 'Elige el día de tu cita en el calendario.', horario: x.horario ? '' : 'Elige la hora de tu cita.',
       privacidad: x.privacidad ? '' : 'Marca esta casilla para continuar.',
     });
 
-  const set = <K extends keyof Form>(k: K, v: Form[K]) =>
-    setF((x) => {
-      const next = { ...x, [k]: v };
-      if (showErrors) setErrors(validate(next));
-      return next;
-    });
+  const errors = validate(f);
+  const live = useLiveErrors(errors);
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    live.touch(k);
+    setF((x) => ({ ...x, [k]: v }));
+  };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const errs = validate(f);
-    setErrors(errs);
-    setShowErrors(true);
-    const firstError = Object.keys(errs)[0];
+    live.showAll();
+    const firstError = Object.keys(errors)[0];
     if (firstError) {
       document.getElementById(firstError === 'mascotas' ? 'mascotas-si' : `b-${firstError}`)?.focus();
       return;
@@ -103,7 +102,7 @@ export function HouseVisitForm({ house: c }: { house: House }) {
     }
   };
 
-  const err = (k: keyof Form) => (showErrors ? errors[k] : undefined);
+  const err = live.err;
   const rows: [string, string][] = [
     ['Nombre completo', f.nombre], ['Correo electrónico (tu cuenta de la app)', f.correo], ['Teléfono', f.telefono], ['Nacionalidad', f.nacionalidad],
     ['¿En qué trabajas?', f.ocupacion], ['Casa de interés', c.name + (c.code ? ' · ' + c.code : '')], ['Presupuesto máximo', f.presupuesto ? moneyText(f.presupuesto) + ' ' + priceUnit(c) : ''],
@@ -115,9 +114,9 @@ export function HouseVisitForm({ house: c }: { house: House }) {
 
   return (
     <>
-      <form className="booking-form booking-form--card" noValidate onSubmit={onSubmit}>
+      <form className="booking-form booking-form--card" noValidate onSubmit={onSubmit} onBlur={live.onBlur}>
         <Honeypot />
-        {showErrors && Object.keys(errors).length > 0 && (
+        {live.pending && (
           <div className="alert alert-error is-visible" role="alert">
             <Icon id="alert" />
             <div><strong>Revisa los campos señalados</strong>Tu solicitud aún no se ha enviado. Lo que escribiste se conserva.</div>
@@ -127,18 +126,18 @@ export function HouseVisitForm({ house: c }: { house: House }) {
           <legend>1. Tus datos</legend>
           <div className="form-grid">
             <Field id="b-nombre" label="Nombre completo *" error={err('nombre')}>
-              <input className="input" id="b-nombre" type="text" autoComplete="name" placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
+              <input className="input" id="b-nombre" type="text" autoComplete="name" maxLength={80} placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
             </Field>
             <EmailFields prefix="b" value={f.correo} repeat={f.correo2} error={err('correo')} repeatError={err('correo2')}
-              onChange={(v, r) => setF((x) => { const next = { ...x, correo: v, correo2: r }; if (showErrors) setErrors(validate(next)); return next; })} />
+              onChange={(v, r) => { if (v !== f.correo) live.touch('correo'); if (r !== f.correo2) live.touch('correo2'); setF((x) => ({ ...x, correo: v, correo2: r })); }} />
             <Field id="b-telefono" label={<>Teléfono <Opt>(opcional)</Opt></>} error={err('telefono')} help={err('telefono') ? undefined : 'Para confirmar tu visita por WhatsApp.'}>
-              <input className="input" id="b-telefono" type="tel" autoComplete="tel" placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} {...invalid('b-telefono', err('telefono'))} />
+              <input className="input" id="b-telefono" type="tel" autoComplete="tel" maxLength={17} placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', phoneChars(e.target.value))} {...invalid('b-telefono', err('telefono'))} />
             </Field>
             <Field id="b-nacionalidad" label="Nacionalidad *" error={err('nacionalidad')}>
-              <input className="input" id="b-nacionalidad" type="text" autoComplete="country-name" placeholder="Mexicana" value={f.nacionalidad} onChange={(e) => set('nacionalidad', e.target.value)} {...invalid('b-nacionalidad', err('nacionalidad'))} />
+              <input className="input" id="b-nacionalidad" type="text" autoComplete="country-name" maxLength={40} placeholder="Mexicana" value={f.nacionalidad} onChange={(e) => set('nacionalidad', e.target.value)} {...invalid('b-nacionalidad', err('nacionalidad'))} />
             </Field>
             <Field id="b-ocupacion" label="¿En qué trabajas? *" error={err('ocupacion')}>
-              <input className="input" id="b-ocupacion" type="text" autoComplete="organization-title" placeholder="Por ejemplo: diseño de interiores" value={f.ocupacion} onChange={(e) => set('ocupacion', e.target.value)} {...invalid('b-ocupacion', err('ocupacion'))} />
+              <input className="input" id="b-ocupacion" type="text" autoComplete="organization-title" maxLength={80} placeholder="Por ejemplo: diseño de interiores" value={f.ocupacion} onChange={(e) => set('ocupacion', e.target.value)} {...invalid('b-ocupacion', err('ocupacion'))} />
             </Field>
           </div>
         </fieldset>
@@ -177,7 +176,7 @@ export function HouseVisitForm({ house: c }: { house: House }) {
             </Field>
             {f.mascotas === 'si' && (
               <Field id="b-mascotas_detalle" label="¿Cuáles y cuántas mascotas? *" error={err('mascotas_detalle')} help={err('mascotas_detalle') ? undefined : c.pets ? 'Esta casa acepta mascotas.' : 'Esta casa no acepta mascotas; cuéntanos si tienes alguna.'}>
-                <input className="input" id="b-mascotas_detalle" type="text" placeholder="Por ejemplo: 1 perro pequeño" value={f.mascotas_detalle} onChange={(e) => set('mascotas_detalle', e.target.value)} {...invalid('b-mascotas_detalle', err('mascotas_detalle'))} />
+                <input className="input" id="b-mascotas_detalle" type="text" maxLength={200} placeholder="Por ejemplo: 1 perro pequeño" value={f.mascotas_detalle} onChange={(e) => set('mascotas_detalle', e.target.value)} {...invalid('b-mascotas_detalle', err('mascotas_detalle'))} />
               </Field>
             )}
           </div>
@@ -185,10 +184,10 @@ export function HouseVisitForm({ house: c }: { house: House }) {
         <fieldset>
           <legend>3. ¿Te gustaría agendar una cita?</legend>
           <VisitSlotPicker id="b" slug={c.slug} date={f.fecha} time={f.horario} dateError={err('fecha')} timeError={err('horario')}
-            onChange={(fecha, horario) => setF((x) => { const next = { ...x, fecha, horario }; if (showErrors) setErrors(validate(next)); return next; })} />
+            onChange={(fecha, horario) => { if (fecha) live.touch('fecha'); if (horario) live.touch('horario'); setF((x) => ({ ...x, fecha, horario })); }} />
           <div className="form-grid">
             <Field id="b-comentarios" label={<>Comentarios <Opt>(opcional)</Opt></>}>
-              <textarea className="textarea" id="b-comentarios" rows={3} placeholder="Por ejemplo: nos gustaría ver el jardín por la mañana." value={f.comentarios} onChange={(e) => set('comentarios', e.target.value)} />
+              <textarea className="textarea" id="b-comentarios" rows={3} maxLength={1000} placeholder="Por ejemplo: nos gustaría ver el jardín por la mañana." value={f.comentarios} onChange={(e) => set('comentarios', e.target.value)} />
             </Field>
           </div>
         </fieldset>
@@ -203,7 +202,7 @@ export function HouseVisitForm({ house: c }: { house: House }) {
           <button className="btn btn--lg btn--block" type="submit" disabled={sending} aria-busy={sending || undefined}>
             {sending ? 'Enviando…' : <>Revisar solicitud<Icon id="arrow" /></>}
           </button>
-          <a className="btn btn--secondary btn--lg btn--block" href={appLink(c.slug)} target="_blank" rel="noopener"><Icon id="phone" />Prefiero la app Homiz</a>
+          <a className="btn btn--secondary btn--lg btn--block" href={downloadLink(c.slug)} target="_blank" rel="noopener"><Icon id="download" />Descarga nuestra app</a>
         </div>
         <p className="secure"><Icon id="shield" size="sm" />Tus datos se comparten solo con tu asesora.</p>
       </form>

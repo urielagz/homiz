@@ -2,7 +2,8 @@ import { Honeypot } from './Honeypot';
 import { useMemo, useState, type FormEvent } from 'react';
 import { sendLead, type ApiError } from '../lib/api';
 import { fakeFolio, longDate, t12 } from '../lib/format';
-import { clean, emailRepeat, emailStrict, futureDate, phone, required, type Errors } from '../lib/validation';
+import { useLiveErrors } from '../lib/useLiveErrors';
+import { clean, emailRepeat, emailStrict, futureDate, personName, phone, phoneChars, text, words, type Errors } from '../lib/validation';
 import { BudgetRange, budgetError, budgetLabel, toAmount } from './BudgetRange';
 import { useCatalog } from './CatalogProvider';
 import { Dialog } from './Dialog';
@@ -34,8 +35,6 @@ export function VisitRequest() {
   const { houses, loading } = useCatalog();
   const toast = useToast();
   const [f, setF] = useState<Form>(EMPTY);
-  const [errors, setErrors] = useState<Errors>({});
-  const [showErrors, setShowErrors] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<{ folio: string; text: string; account: 'created' | 'existing' | null; editToken?: string | null } | null>(null);
@@ -45,40 +44,38 @@ export function VisitRequest() {
 
   const validate = (x: Form): Errors =>
     clean({
-      nombre: required(x.nombre),
+      nombre: personName(x.nombre),
       correo: emailStrict(x.correo),
       correo2: emailRepeat(x.correo, x.correo2),
       telefono: phone(x.telefono),
-      nacionalidad: required(x.nacionalidad),
-      ocupacion: required(x.ocupacion),
-      presupuesto_max: budgetError(x.presupuesto_min, x.presupuesto_max),
+      nacionalidad: words(x.nacionalidad, 3, 40),
+      ocupacion: text(x.ocupacion, 3, 80),
+      zona: text(x.zona, 2, 80, false),
+      presupuesto_max: budgetError(x.presupuesto_min, x.presupuesto_max, x.operacion),
       mascotas: x.mascotas ? '' : 'Elige una opción.',
-      mascotas_detalle: x.mascotas === 'si' ? required(x.mascotas_detalle) : '',
+      mascotas_detalle: x.mascotas === 'si' ? text(x.mascotas_detalle, 3, 200) : '',
       fecha: futureDate(x.fecha) && 'Elige el día de tu cita en el calendario.',
       horario: x.horario ? '' : 'Elige la hora de tu cita.',
     });
 
+  const errors = validate(f);
+  const live = useLiveErrors(errors);
+
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
-    setF((x) => {
-      const next = { ...x, [k]: v };
-      if (showErrors) setErrors(validate(next));
-      return next;
-    });
+    live.touch(k);
+    setF((x) => ({ ...x, [k]: v }));
   };
-  const setBudget = (min: string, max: string) =>
-    setF((x) => {
-      const next = { ...x, presupuesto_min: min, presupuesto_max: max };
-      if (showErrors) setErrors(validate(next));
-      return next;
-    });
+  // El máximo se revisa cuando ya lo escribió; mientras solo llena el mínimo no se le reclama
+  const setBudget = (min: string, max: string) => {
+    if (max !== f.presupuesto_max || (min && max)) live.touch('presupuesto_max');
+    setF((x) => ({ ...x, presupuesto_min: min, presupuesto_max: max }));
+  };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (loading) return; // aún se carga el catálogo
-    const errs = validate(f);
-    setErrors(errs);
-    setShowErrors(true);
-    const first = Object.keys(errs)[0];
+    live.showAll();
+    const first = Object.keys(errors)[0];
     if (first) {
       document.getElementById(first === 'mascotas' ? 'mascotas-si' : first === 'presupuesto_max' ? 'b-pres-max' : `b-${first}`)?.focus();
       return;
@@ -116,7 +113,7 @@ export function VisitRequest() {
   };
 
   const reset = () => {
-    setF(EMPTY); setErrors({}); setShowErrors(false); setDone(null);
+    setF(EMPTY); live.reset(); setDone(null);
     setTimeout(() => document.getElementById('b-nombre')?.focus(), 0);
   };
 
@@ -126,11 +123,10 @@ export function VisitRequest() {
     ['Presupuesto', budget], ['Número de recámaras', f.recamaras === '4' ? '4 o más' : f.recamaras], ['Número de baños', f.banos === '3' ? '3 o más' : f.banos],
     ['Personas que vivirán en la casa', f.personas === '5' ? '5 o más' : f.personas], ['¿Tienes mascotas?', f.mascotas === 'si' ? 'Sí' : f.mascotas === 'no' ? 'No' : ''],
     ['¿Cuáles y cuántas mascotas?', f.mascotas === 'si' ? f.mascotas_detalle : ''], ['Fecha de la cita', f.fecha ? longDate(f.fecha) : ''],
-    ['Hora', f.horario ? f.horario + ' h (15 minutos)' : ''], ['Comentarios', f.comentarios],
+    ['Hora', f.horario ? t12(f.horario) + ' (15 minutos)' : ''], ['Comentarios', f.comentarios],
   ] as [string, string][]).filter(([, v]) => v.trim());
 
-  const err = (k: keyof Form) => (showErrors ? errors[k] : undefined);
-  const hasErrors = showErrors && Object.keys(errors).length > 0;
+  const err = live.err;
 
   return (
     <div className="booking__layout">
@@ -160,7 +156,7 @@ export function VisitRequest() {
         </section>
       </aside>
 
-      <form className="booking-form" noValidate onSubmit={onSubmit}>
+      <form className="booking-form" noValidate onSubmit={onSubmit} onBlur={live.onBlur}>
         <Honeypot />
         {done ? (
           <LeadDone
@@ -170,7 +166,7 @@ export function VisitRequest() {
           />
         ) : (
           <>
-            {hasErrors && (
+            {live.pending && (
               <div className="alert alert-error is-visible" role="alert">
                 <Icon id="alert" />
                 <div><strong>Revisa los campos señalados</strong>Tu solicitud aún no se ha enviado. Lo que escribiste se conserva.</div>
@@ -181,18 +177,18 @@ export function VisitRequest() {
               <legend>1. Tus datos</legend>
               <div className="form-grid">
                 <Field id="b-nombre" label="Nombre completo *" error={err('nombre')}>
-                  <input className="input" id="b-nombre" type="text" autoComplete="name" placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
+                  <input className="input" id="b-nombre" type="text" autoComplete="name" maxLength={80} placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
                 </Field>
                 <EmailFields prefix="b" value={f.correo} repeat={f.correo2} error={err('correo')} repeatError={err('correo2')}
-                  onChange={(v, r) => setF((x) => { const next = { ...x, correo: v, correo2: r }; if (showErrors) setErrors(validate(next)); return next; })} />
+                  onChange={(v, r) => { if (v !== f.correo) live.touch('correo'); if (r !== f.correo2) live.touch('correo2'); setF((x) => ({ ...x, correo: v, correo2: r })); }} />
                 <Field id="b-telefono" label={<>Teléfono <Opt>(opcional)</Opt></>} error={err('telefono')} help={err('telefono') ? undefined : 'Para confirmar tu visita por WhatsApp.'}>
-                  <input className="input" id="b-telefono" type="tel" autoComplete="tel" placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} {...invalid('b-telefono', err('telefono'))} />
+                  <input className="input" id="b-telefono" type="tel" autoComplete="tel" maxLength={17} placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', phoneChars(e.target.value))} {...invalid('b-telefono', err('telefono'))} />
                 </Field>
                 <Field id="b-nacionalidad" label="Nacionalidad *" error={err('nacionalidad')}>
-                  <input className="input" id="b-nacionalidad" type="text" autoComplete="country-name" placeholder="Mexicana" value={f.nacionalidad} onChange={(e) => set('nacionalidad', e.target.value)} {...invalid('b-nacionalidad', err('nacionalidad'))} />
+                  <input className="input" id="b-nacionalidad" type="text" autoComplete="country-name" maxLength={40} placeholder="Mexicana" value={f.nacionalidad} onChange={(e) => set('nacionalidad', e.target.value)} {...invalid('b-nacionalidad', err('nacionalidad'))} />
                 </Field>
                 <Field id="b-ocupacion" label="¿En qué trabajas? *" error={err('ocupacion')} className="span-2">
-                  <input className="input" id="b-ocupacion" type="text" autoComplete="organization-title" placeholder="Por ejemplo: diseño de interiores" value={f.ocupacion} onChange={(e) => set('ocupacion', e.target.value)} {...invalid('b-ocupacion', err('ocupacion'))} />
+                  <input className="input" id="b-ocupacion" type="text" autoComplete="organization-title" maxLength={80} placeholder="Por ejemplo: diseño de interiores" value={f.ocupacion} onChange={(e) => set('ocupacion', e.target.value)} {...invalid('b-ocupacion', err('ocupacion'))} />
                 </Field>
               </div>
             </fieldset>
@@ -206,8 +202,8 @@ export function VisitRequest() {
                     <option value="compra">Compra</option>
                   </select>
                 </Field>
-                <Field id="b-zona" label={<>Zona de preferencia <Opt>(opcional)</Opt></>} help="Colonia, ciudad o país.">
-                  <input className="input" id="b-zona" type="text" list="b-zonas" maxLength={80} placeholder="Por ejemplo: Arbolada" value={f.zona} onChange={(e) => set('zona', e.target.value)} />
+                <Field id="b-zona" label={<>Zona de preferencia <Opt>(opcional)</Opt></>} error={err('zona')} help={err('zona') ? undefined : 'Colonia, ciudad o país.'}>
+                  <input className="input" id="b-zona" type="text" list="b-zonas" maxLength={80} placeholder="Por ejemplo: Arbolada" value={f.zona} onChange={(e) => set('zona', e.target.value)} {...invalid('b-zona', err('zona'))} />
                   <datalist id="b-zonas">{places.map((z) => <option key={z} value={z} />)}</datalist>
                 </Field>
                 <BudgetRange idPrefix="b-pres" op={f.operacion} min={f.presupuesto_min} max={f.presupuesto_max} error={err('presupuesto_max')} onChange={setBudget} />
@@ -238,7 +234,7 @@ export function VisitRequest() {
                 </Field>
                 {f.mascotas === 'si' && (
                   <Field id="b-mascotas_detalle" label="¿Cuáles y cuántas mascotas? *" error={err('mascotas_detalle')} className="span-2" help={err('mascotas_detalle') ? undefined : 'Así te mostramos solo casas donde sean bienvenidas.'}>
-                    <input className="input" id="b-mascotas_detalle" type="text" placeholder="Por ejemplo: 1 perro pequeño" value={f.mascotas_detalle} onChange={(e) => set('mascotas_detalle', e.target.value)} {...invalid('b-mascotas_detalle', err('mascotas_detalle'))} />
+                    <input className="input" id="b-mascotas_detalle" type="text" maxLength={200} placeholder="Por ejemplo: 1 perro pequeño" value={f.mascotas_detalle} onChange={(e) => set('mascotas_detalle', e.target.value)} {...invalid('b-mascotas_detalle', err('mascotas_detalle'))} />
                   </Field>
                 )}
               </div>
@@ -247,10 +243,10 @@ export function VisitRequest() {
             <fieldset>
               <legend>3. ¿Te gustaría agendar una cita?</legend>
               <VisitSlotPicker id="b" date={f.fecha} time={f.horario} dateError={err('fecha')} timeError={err('horario')}
-                onChange={(fecha, horario) => setF((x) => { const next = { ...x, fecha, horario }; if (showErrors) setErrors(validate(next)); return next; })} />
+                onChange={(fecha, horario) => { if (fecha) live.touch('fecha'); if (horario) live.touch('horario'); setF((x) => ({ ...x, fecha, horario })); }} />
               <div className="form-grid">
                 <Field id="b-comentarios" label={<>Comentarios <Opt>(opcional)</Opt></>} className="span-2">
-                  <textarea className="textarea" id="b-comentarios" placeholder="Por ejemplo: nos gustaría conocer el patio y la iluminación de la casa por la mañana." value={f.comentarios} onChange={(e) => set('comentarios', e.target.value)} />
+                  <textarea className="textarea" id="b-comentarios" maxLength={1000} placeholder="Por ejemplo: nos gustaría conocer el patio y la iluminación de la casa por la mañana." value={f.comentarios} onChange={(e) => set('comentarios', e.target.value)} />
                 </Field>
               </div>
             </fieldset>

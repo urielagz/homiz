@@ -60,8 +60,41 @@ export const emailStrict = (v: string) => {
 export const emailRepeat = (first: string, second: string) =>
   !second.trim() ? 'Escribe tu correo otra vez para confirmarlo.' : first.trim().toLowerCase() !== second.trim().toLowerCase() ? 'Los dos correos no coinciden.' : '';
 
-export const phone =(v: string, isRequired = false) =>
-  !v.trim() ? (isRequired ? 'Completa este campo.' : '') : v.replace(/\D/g, '').length < 10 ? 'El teléfono debe tener 10 dígitos.' : '';
+/** 10 dígitos; también se acepta con la lada del país: +52 998 000 0000 */
+export const phone = (v: string, isRequired = false) => {
+  if (!v.trim()) return isRequired ? 'Completa este campo.' : '';
+  const digits = v.replace(/\D/g, '').replace(/^52(?=\d{10}$)/, '');
+  return digits.length === 10 ? '' : `El teléfono debe tener 10 dígitos (llevas ${digits.length}).`;
+};
+/** Mientras se escribe el teléfono: solo números, espacios y + ( ) - */
+export const phoneChars = (v: string) => v.replace(/[^\d\s()+-]/g, '');
+
+/** Texto con mínimo y máximo de caracteres. Opcional: vacío no es error, pero lo escrito sí se revisa. */
+export const text = (v: string, min: number, max: number, isRequired = true) => {
+  const n = v.trim().length;
+  if (!n) return isRequired ? 'Completa este campo.' : '';
+  if (n < min) return `Escribe al menos ${min} caracteres.`;
+  return n > max ? `Escribe máximo ${max} caracteres.` : '';
+};
+
+/** Nombre y al menos un apellido, solo con letras */
+export const personName = (v: string) => {
+  if (!v.trim()) return 'Completa este campo.';
+  if (/[^\p{L}\s.'-]/u.test(v)) return 'Escribe solo letras.';
+  if (v.trim().split(/\s+/).length < 2) return 'Escribe tu nombre y al menos un apellido.';
+  return text(v, 5, 80);
+};
+
+/** Nacionalidad y datos parecidos: solo letras */
+export const words = (v: string, min: number, max: number) => (/[^\p{L}\s.'-]/u.test(v) ? 'Escribe solo letras.' : text(v, min, max));
+
+/** Cantidad opcional dentro de un rango (metros, precio esperado) */
+export const amount = (v: string, min: number, max: number, unit: (n: number) => string) => {
+  if (!v.trim()) return '';
+  const n = Number(v);
+  if (n < min) return `Debe ser de al menos ${unit(min)}.`;
+  return n > max ? `No puede pasar de ${unit(max)}.` : '';
+};
 
 export const futureDate = (v: string) => (!v ? 'Completa este campo.' : v < todayISO() ? 'Elige una fecha a partir de hoy.' : '');
 

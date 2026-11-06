@@ -90,7 +90,7 @@ describe('Pertenencia de propiedades (servicio)', () => {
       [email],
     );
     const u = rows[0];
-    return { id: u.id, name: u.name, email: u.email, type: u.type, roles: u.roles, permissions: new Set(), clientId: u.client_id };
+    return { id: u.id, name: u.name, email: u.email, type: u.type, roles: u.roles, permissions: new Set(['properties.manage']), clientId: u.client_id };
   };
 
   test('cliente: solo la casa que renta', async () => {

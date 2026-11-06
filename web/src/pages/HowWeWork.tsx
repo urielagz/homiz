@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Icon } from '../components/Icon';
-import { appLink } from '../lib/appLink';
+import { downloadLink } from '../lib/appLink';
 import { usePageTitle } from '../lib/usePageTitle';
 
 /** Lo que se hace en la app Homiz (sección «La app Homiz») */
@@ -109,7 +109,7 @@ export function HowWeWork() {
             <span className="eyebrow">La app Homiz</span>
             <h2 id="app-titulo">Todo tu proceso, en tu celular.</h2>
             <p className="lead">Al enviarnos tu solicitud te creamos tu cuenta: solo pones tu contraseña y desde ahí seguimos juntos.</p>
-            <a className="btn btn--lg" href={appLink()} target="_blank" rel="noopener"><Icon id="phone" />Abrir la app Homiz</a>
+            <a className="btn btn--lg" href={downloadLink()} target="_blank" rel="noopener"><Icon id="download" />Descarga nuestra app</a>
           </div>
           <ul className="app-feature__list">
             {APP_FEATURES.map(([icon, title, text]) => (
@@ -145,7 +145,7 @@ export function HowWeWork() {
               <p>Elige una casa y te acompañamos a conocerla, a tu ritmo.</p>
             </div>
             <div className="cta-band__actions">
-              <a className="btn btn--on-dark btn--lg" href={appLink()} target="_blank" rel="noopener"><Icon id="phone" />Usar la app</a>
+              <a className="btn btn--on-dark btn--lg" href={downloadLink()} target="_blank" rel="noopener"><Icon id="download" />Descarga nuestra app</a>
               <Link className="btn btn--gold btn--lg" to="/propiedades"><Icon id="home" />Elegir una casa</Link>
             </div>
           </div>

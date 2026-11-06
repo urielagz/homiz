@@ -13,8 +13,8 @@ final maintenanceReportsProvider = FutureProvider.family<List<MaintenanceReport>
 
 final maintenanceReportProvider = FutureProvider.family<MaintenanceReport, String>((ref, id) => ref.watch(maintenanceRepositoryProvider).get(id));
 
-/// Reportes recién creados en las casas del personal (estado «reported»).
-final newReportsProvider = FutureProvider<List<MaintenanceReport>>((ref) => ref.watch(maintenanceRepositoryProvider).list(status: const ['reported']));
+/// Reportes de las casas del personal que siguen abiertos: salen del inicio cuando se resuelven (o se cancelan).
+final newReportsProvider = FutureProvider<List<MaintenanceReport>>((ref) => ref.watch(maintenanceRepositoryProvider).list(status: const ['reported', 'in_review', 'in_repair']));
 
 final newReportProvider = Provider<NewReportAction>(NewReportAction.new);
 

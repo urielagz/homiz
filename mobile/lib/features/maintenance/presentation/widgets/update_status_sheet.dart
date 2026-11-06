@@ -84,6 +84,7 @@ class _UpdateStatusSheetState extends ConsumerState<UpdateStatusSheet> {
     final providers = ref.watch(providersDirectoryProvider(''));
     final options = maintenanceStatusLabels.entries.where((e) => e.key != widget.report.status).toList();
     return Form(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       key: _form,
       child: Column(
         mainAxisSize: MainAxisSize.min,

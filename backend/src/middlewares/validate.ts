@@ -49,6 +49,7 @@ export const phoneField = z
   .string()
   .trim()
   .refine((v) => v.replace(/\D/g, '').length >= 10, 'El teléfono debe tener al menos 10 dígitos.')
+  .refine((v) => v.replace(/\D/g, '').length <= 15, 'El teléfono no puede tener más de 15 dígitos.')
   .max(30);
 export const pagination = z.object({
   page: z.coerce.number().int().min(1).default(1),

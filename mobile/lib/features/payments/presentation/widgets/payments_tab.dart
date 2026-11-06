@@ -130,7 +130,7 @@ class NotesList extends ConsumerWidget {
 
   static String statusText(PromissoryNote n) => [
         switch (n.status) {
-          'paid' => n.proofDocumentId != null ? 'Comprobante' : 'Pagado el ${Fmt.dayMonthShort(n.payment?.paidAt ?? n.dueDate)}',
+          'paid' => n.proofDocumentId != null ? 'Recibo' : 'Pagado el ${Fmt.dayMonthShort(n.payment?.paidAt ?? n.dueDate)}',
           'overdue' => 'Vencido',
           _ => 'Pendiente',
         },

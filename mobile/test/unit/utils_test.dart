@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homiz/core/utils/formatters.dart';
 import 'package:homiz/core/utils/validators.dart';
+import 'package:homiz/features/requests/data/requests_repository.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
@@ -47,6 +48,11 @@ void main() {
 
     test('fechas de la API sin corrimiento de día', () {
       expect(Fmt.longDate(Fmt.parse('1995-03-15')), '15 de marzo de 1995');
+    });
+
+    test('la cita de una solicitud sale en hora de Cancún, sin importar la zona del dispositivo', () {
+      final a = RequestAppointment.fromJson({'id': '1', 'code': 'CIT-1', 'scheduledAt': '2026-11-13T08:00:00.000Z', 'status': 'por-confirmar'});
+      expect(Fmt.appointment(a.scheduledAt), 'Vie - 13 Nov 3:00 a.m.');
     });
 
     test('nombre e iniciales', () {

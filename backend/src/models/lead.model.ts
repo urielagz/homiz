@@ -11,6 +11,8 @@ export interface LeadRow {
   property_id: string | null;
   property_code: string | null;
   property_name: string | null;
+  /** Estado de la casa: rentada o vendida ya no se muestra en una solicitud abierta */
+  property_status: string | null;
   preferred_date: string | null;
   preferred_time: string | null;
   payload: Record<string, unknown>;
@@ -33,6 +35,8 @@ export interface LeadAppointmentRow {
   code: string;
   scheduled_at: Date;
   status: string;
+  /** Por confirmar: quién debe aceptar la fecha */
+  awaiting: 'staff' | 'client';
   property_id: string;
   property_code: string;
   property_name: string;
@@ -63,7 +67,8 @@ const SELECT = `
   SELECT l.id, l.folio, l.reason, l.name, l.email, l.phone, l.message, l.property_id, p.code AS property_code,
          p.name AS property_name, to_char(l.preferred_date, 'YYYY-MM-DD') AS preferred_date, l.preferred_time,
          l.payload, l.status, l.client_id, l.broker_id, ab.name AS broker_name, l.response, l.responded_at, rb.name AS responded_by_name,
-         (SELECT count(*)::int FROM lead_proposals lp WHERE lp.lead_id = l.id) AS proposals,
+         p.status::text AS property_status,
+         (SELECT count(*)::int FROM lead_proposals lp JOIN properties h ON h.id = lp.property_id WHERE lp.lead_id = l.id AND h.status NOT IN ('rentada', 'vendida')) AS proposals,
          (SELECT count(*)::int FROM appointments a WHERE a.lead_id = l.id AND a.status NOT IN ('cancelada', 'rechazada')) AS appointments,
          l.created_at
     FROM leads l LEFT JOIN properties p ON p.id = l.property_id LEFT JOIN users rb ON rb.id = l.responded_by
@@ -128,7 +133,7 @@ export async function othersOf(email: string, exceptId: string): Promise<LeadRow
 /** Citas agendadas desde una solicitud (todas, también las canceladas, como historial). */
 export async function appointmentsFor(leadId: string): Promise<LeadAppointmentRow[]> {
   const { rows } = await pool.query<LeadAppointmentRow>(
-    `SELECT a.id, a.code, a.scheduled_at, a.status, a.property_id, p.code AS property_code, p.name AS property_name, b.name AS broker_name
+    `SELECT a.id, a.code, a.scheduled_at, a.status, a.awaiting, a.property_id, p.code AS property_code, p.name AS property_name, b.name AS broker_name
        FROM appointments a JOIN properties p ON p.id = a.property_id LEFT JOIN users b ON b.id = a.broker_id
       WHERE a.lead_id = $1 ORDER BY a.scheduled_at`,
     [leadId],
@@ -162,7 +167,7 @@ export async function proposalsFor(leadIds: string[]): Promise<ProposalRow[]> {
             p.price, p.rec, p.banos, p.m2, p.pets_allowed,
             (SELECT storage_key FROM property_photos ph WHERE ph.property_id = p.id ORDER BY position LIMIT 1) AS photo
        FROM lead_proposals lp JOIN properties p ON p.id = lp.property_id
-      WHERE lp.lead_id = ANY($1::uuid[]) ORDER BY lp.created_at`,
+      WHERE lp.lead_id = ANY($1::uuid[]) AND p.status NOT IN ('rentada', 'vendida') ORDER BY lp.created_at`,
     [leadIds],
   );
   return rows;

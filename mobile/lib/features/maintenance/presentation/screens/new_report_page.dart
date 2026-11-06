@@ -79,6 +79,7 @@ class _NewReportPageState extends ConsumerState<NewReportPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Nuevo reporte')),
       body: Form(
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         key: _form,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(AppSpacing.screen, AppSpacing.sm, AppSpacing.screen, AppSpacing.xxl),

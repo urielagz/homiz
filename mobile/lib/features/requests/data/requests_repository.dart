@@ -57,13 +57,14 @@ class ProposedHouse {
 
 /// Cita agendada desde una solicitud (solo la ve el personal).
 class RequestAppointment {
-  const RequestAppointment({required this.id, required this.code, required this.scheduledAt, required this.status, this.propertyId, required this.propertyName, this.broker});
+  const RequestAppointment({required this.id, required this.code, required this.scheduledAt, required this.status, this.awaiting, this.propertyId, required this.propertyName, this.broker});
 
   factory RequestAppointment.fromJson(Map<String, dynamic> j) => RequestAppointment(
     id: j['id'] as String,
     code: j['code'] as String,
-    scheduledAt: DateTime.parse(j['scheduledAt'] as String).toLocal(),
+    scheduledAt: Fmt.parse(j['scheduledAt'] as String),
     status: j['status'] as String,
+    awaiting: j['awaiting'] as String?,
     propertyId: (j['property'] as Map<String, dynamic>?)?['id'] as String?,
     propertyName: (j['property'] as Map<String, dynamic>?)?['name'] as String? ?? '',
     broker: j['broker'] as String?,
@@ -73,6 +74,9 @@ class RequestAppointment {
   final String code;
   final DateTime scheduledAt;
   final String status;
+
+  /// Por confirmar: quién debe aceptar la fecha (`staff` o `client`).
+  final String? awaiting;
   final String? propertyId;
   final String propertyName;
 
@@ -120,7 +124,7 @@ class LeadRequest {
     message: j['message'] as String?,
     propertyName: j['property'] as String?,
     payload: {for (final e in ((j['payload'] as Map?) ?? const {}).entries) e.key as String: '${e.value}'},
-    createdAt: DateTime.parse(j['createdAt'] as String).toLocal(),
+    createdAt: Fmt.parse(j['createdAt'] as String),
   );
 
   factory LeadRequest.fromJson(Map<String, dynamic> j) => LeadRequest(
@@ -147,7 +151,7 @@ class LeadRequest {
     others: [for (final o in (j['others'] as List? ?? const [])) LeadRequest.summaryFromJson(o as Map<String, dynamic>)],
     brokerId: (j['broker'] as Map<String, dynamic>?)?['id'] as String?,
     brokerName: (j['broker'] as Map<String, dynamic>?)?['name'] as String?,
-    createdAt: DateTime.parse(j['createdAt'] as String).toLocal(),
+    createdAt: Fmt.parse(j['createdAt'] as String),
   );
 
   final String id;
@@ -204,7 +208,7 @@ class RequestMessage {
     fromStaff: j['fromStaff'] as bool? ?? false,
     mine: j['mine'] as bool? ?? false,
     sender: j['sender'] as String? ?? '',
-    createdAt: DateTime.parse(j['createdAt'] as String).toLocal(),
+    createdAt: Fmt.parse(j['createdAt'] as String),
   );
 
   final String id;
@@ -272,9 +276,23 @@ class RequestsRepository {
     return LeadRequest.fromJson(res.data!);
   });
 
+  /// El cliente corrige lo que mandó; lo que deje vacío se borra.
+  Future<void> edit(String id, {String? message, required Map<String, Object?> payload}) => apiCall(() async {
+    await _dio.patch<Map<String, dynamic>>(
+      '/requests/$id',
+      data: {
+        'message': (message ?? '').trim().isEmpty ? null : message!.trim(),
+        'payload': {
+          for (final e in payload.entries)
+            if (e.value is num) e.key: e.value else if (e.value is String && (e.value! as String).trim().isNotEmpty) e.key: (e.value! as String).trim(),
+        },
+      },
+    );
+  });
+
   /* ---------- Personal (leads.manage): contestar y proponer casas ---------- */
 
-  /// [status] "sin_asignar" = las que aún no tienen broker (solo administración).
+  /// [status] "sin_asignar" = las que aún no tienen broker.
   Future<List<LeadRequest>> staffList({String? status}) => apiCall(() async {
     final res = await _dio.get<Map<String, dynamic>>('/leads', queryParameters: {'limit': 100, if (status == 'sin_asignar') 'unassigned': 'true' else 'status': ?status});
     return dataList(res.data, LeadRequest.fromJson);
@@ -298,12 +316,18 @@ class RequestsRepository {
   });
 
   /// Agenda la visita desde la solicitud; devuelve la clave de la cita (CIT-…).
-  Future<String> schedule(String id, {required String propertyId, required DateTime at, String? note}) => apiCall(() async {
+  /// Con [agreed], el personal acepta la fecha y hora que pidió la persona y la cita queda confirmada.
+  Future<String> schedule(String id, {required String propertyId, required DateTime at, String? note, bool agreed = false}) => apiCall(() async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/leads/$id/appointment',
-      data: {'propertyId': propertyId, 'scheduledAt': cancunIso(at), if (note != null && note.trim().isNotEmpty) 'note': note.trim()},
+      data: {'propertyId': propertyId, 'scheduledAt': cancunIso(at), if (note != null && note.trim().isNotEmpty) 'note': note.trim(), if (agreed) 'agreed': true},
     );
     return (res.data!['appointment'] as Map<String, dynamic>)['code'] as String;
+  });
+
+  /// El broker toma una solicitud sin broker: se queda con su seguimiento.
+  Future<void> take(String id) => apiCall(() async {
+    await _dio.post<Map<String, dynamic>>('/leads/$id/take');
   });
 
   /// Solo administración: asigna el broker; la cita (si hay) se va con él y los datos de la persona no cambian.

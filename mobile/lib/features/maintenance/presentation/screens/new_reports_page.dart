@@ -17,12 +17,12 @@ class NewReportsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reports = ref.watch(newReportsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Reportes nuevos')),
+      appBar: AppBar(title: const Text('Reportes abiertos')),
       body: switch (reports) {
         AsyncData(:final value) when value.isEmpty => const EmptyState(
             icon: Icons.task_alt_rounded,
-            title: 'Sin reportes nuevos',
-            message: 'Todos los reportes ya están en revisión o atendidos.',
+            title: 'Sin reportes abiertos',
+            message: 'Todos los reportes ya están resueltos.',
           ),
         AsyncData(:final value) => RefreshIndicator(
             onRefresh: () => ref.refresh(newReportsProvider.future),

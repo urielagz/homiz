@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:homiz/core/widgets/primary_button.dart';
 import 'package:homiz/core/network/token_storage.dart';
 import 'package:homiz/core/theme/app_text_styles.dart';
 import 'package:homiz/core/widgets/cards.dart';
@@ -36,6 +37,31 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
   }
+
+  testWidgets('Editar mi información: el formulario sale con lo que mandó y guarda los cambios', (tester) async {
+    await startSignedIn(tester);
+    await tester.dragUntilVisible(find.text('Mis solicitudes...'), find.byType(ListView).first, const Offset(0, -250));
+    await tester.tap(find.text('Mis solicitudes...'));
+    await settle(tester);
+    await tester.tap(find.text('Quiero rentar · Z-10001'));
+    await settle(tester);
+    await tester.dragUntilVisible(find.text('Editar mi información'), find.byType(ListView).first, const Offset(0, -250));
+    await tester.tap(find.text('Editar mi información'));
+    await settle(tester);
+    expect(find.text('Corrige lo que mandaste'), findsOneWidget);
+    expect(find.text('Puerto Morelos'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextFormField, 'Zona de preferencia'), 'Mérida, Yucatán');
+    // Lo obligatorio que la solicitud de ejemplo no traía
+    await tester.enterText(find.widgetWithText(TextFormField, 'Máximo (tu límite)'), '20000');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Nacionalidad'), 'Mexicana');
+    await tester.enterText(find.widgetWithText(TextFormField, '¿En qué trabajas?'), 'Diseño');
+    await tester.pump();
+    tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'Guardar cambios')).onPressed!();
+    await settle(tester);
+    expect(((sent['PATCH /requests/lead-1']! as Map)['payload'] as Map)['zona'], 'Mérida, Yucatán');
+    expect(find.text('Guardamos tus cambios y le avisamos a tu asesor.'), findsOneWidget);
+  });
 
   testWidgets('Mis solicitudes: respuesta del asesor y casas propuestas; «Busco casa» envía lo que busca', (tester) async {
     await startSignedIn(tester);
@@ -131,7 +157,7 @@ void main() {
     expect(find.text('Esta información solo es para consulta, los pagos se realizan en persona con efectivo.'), findsOneWidget);
     expect(find.text('Pagaré 05 - 5 nov'), findsOneWidget);
     expect(find.text('Pendiente'), findsWidgets);
-    expect(find.text('Comprobante'), findsNWidgets(2));
+    expect(find.text('Recibo'), findsNWidgets(2));
     expect(find.text('Pagado'), findsNWidgets(2));
 
     await tester.tap(find.text('Fichas de cobro / Recibos'));

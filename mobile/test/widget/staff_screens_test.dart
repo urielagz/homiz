@@ -56,7 +56,7 @@ void main() {
     expect(find.text('2 citas'), findsOneWidget);
     expect(find.text('Pagarés vencidos...'), findsOneWidget);
     expect(find.text('1 pagaré'), findsOneWidget);
-    expect(find.text('Reportes nuevos...'), findsOneWidget);
+    expect(find.text('Reportes abiertos...'), findsOneWidget);
     await scrollTo(tester, find.text('Directorio de proveedores'));
     expect(find.text('Solicitudes nuevas del sitio'), findsOneWidget);
     expect(find.text('Directorio de proveedores'), findsOneWidget);
@@ -148,8 +148,8 @@ void main() {
     expect(find.text('Propiedades'), findsWidgets); // título y barra inferior
     expect(find.text('Casa Las Palmas'), findsOneWidget);
     expect(find.text('ZUG-003 · Cumbres'), findsOneWidget);
-    // La broker solo pide sus casas.
-    expect((sent['GET /properties']! as Map)['brokerId'], marianaJson['id']);
+    // La broker pide todo el inventario: ve las suyas y las disponibles de los demás
+    expect((sent['GET /properties']! as Map)['brokerId'], isNull);
 
     await tester.tap(find.text('Casa Las Palmas'));
     await settle(tester);
@@ -192,7 +192,7 @@ void main() {
     // Pagaré pagado: la broker solo puede ver el comprobante.
     await tester.tap(find.text('Pagaré 04 - 5 oct'));
     await settle(tester);
-    expect(find.text('Ver comprobante'), findsOneWidget);
+    expect(find.text('Ver recibo'), findsOneWidget);
     expect(find.text('Corregir pago'), findsNothing);
     expect(find.text('Anular pago'), findsNothing);
   });
@@ -289,6 +289,61 @@ void main() {
     expect(find.text('QUÉ BUSCA'), findsOneWidget);
   });
 
+  Future<void> abreSolicitud(WidgetTester tester, Map<String, Object?> user) async {
+    await start(tester, user: user);
+    await tapVisible(tester, find.textContaining('Solicitudes ·'));
+    await tester.tap(find.text('Laura Mendez · Z-10001'));
+    await settle(tester);
+  }
+
+  testWidgets('Sin broker: quien es broker la atiende, aunque también sea administración', (tester) async {
+    final atender = find.text('Atender esta solicitud');
+    final asignar = find.text('Sin asignar · elige un broker');
+
+    await abreSolicitud(tester, marianaJson);
+    expect(atender, findsOneWidget);
+    expect(asignar, findsNothing);
+    await tester.pumpWidget(const SizedBox());
+
+    await abreSolicitud(tester, {...ownerJson, 'roles': const ['admin', 'broker']});
+    expect(atender, findsOneWidget);
+    expect(asignar, findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+
+    await abreSolicitud(tester, ownerJson);
+    expect(atender, findsNothing);
+    expect(asignar, findsOneWidget);
+  });
+
+  testWidgets('«Hacer cita»: acepta la fecha que pidió la persona', (tester) async {
+    final pedida = {
+      ...staffRequestJson,
+      'appointments': [
+        {'id': pendingId, 'code': 'CIT-031', 'scheduledAt': DateTime.now().add(const Duration(days: 3)).toUtc().toIso8601String(), 'status': 'por-confirmar', 'awaiting': 'staff', 'property': {'id': 'p-ceiba', 'name': 'Casa Ceiba'}},
+      ],
+    };
+    sent = {};
+    tester.view.physicalSize = const Size(1080, 12000);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final storage = MemoryTokenStorage()
+      ..access = 'a1'
+      ..refresh = 'r1';
+    final adapter = FakeAdapter((o) => o.method == 'GET' && o.path == '/leads/lead-1' ? (200, pedida) : staffBackend(o, log: sent, user: ownerJson));
+    await tester.pumpWidget(testApp(testOverrides(adapter: adapter, storage: storage)));
+    await settle(tester);
+    await tester.tap(find.textContaining('Solicitudes ·'));
+    await settle(tester);
+    await tester.tap(find.text('Laura Mendez · Z-10001'));
+    await settle(tester);
+
+    expect(find.textContaining('Si estás de acuerdo con la fecha y la hora'), findsOneWidget);
+    await tester.tap(find.text('Hacer cita'));
+    await settle(tester);
+    expect(sent.containsKey('POST /appointments/$pendingId/confirm'), isTrue);
+    expect(find.textContaining('confirmada. Le avisamos al cliente.'), findsOneWidget);
+  });
+
   testWidgets('Solicitudes: «Agendar cita» crea la cita desde la solicitud', (tester) async {
     await start(tester);
     await tapVisible(tester, find.textContaining('Solicitudes ·'));
@@ -298,7 +353,12 @@ void main() {
     await tester.scrollUntilVisible(find.text('Aún no tiene cita. Agéndala y le avisamos en la app.'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('Aún no tiene cita. Agéndala y le avisamos en la app.'), findsOneWidget);
 
-    await tapVisible(tester, find.widgetWithText(PrimaryButton, 'Agendar cita'));
+    // Está en la lista aunque aún no se vea: se lleva a la pantalla y se pulsa
+    final open = find.byWidgetPredicate((w) => w is PrimaryButton && w.label == 'Agendar cita', skipOffstage: false);
+    await tester.ensureVisible(open);
+    await tester.pumpAndSettle();
+    await tester.tap(open);
+    await settle(tester);
     // Sin elegir nada no deja guardar
     await tapVisible(tester, find.widgetWithText(PrimaryButton, 'Agendar cita').last);
     expect(find.text('Elige la casa, el día y el horario.'), findsOneWidget);
@@ -312,27 +372,23 @@ void main() {
     final ok = MaterialLocalizations.of(tester.element(find.byType(DatePickerDialog))).okButtonLabel;
     await tester.tap(find.text(ok));
     await settle(tester);
-    // Hora de 1 a 12, minutos y a.m./p.m. (10:00 p.m. = 22:00)
-    await tapVisible(tester, find.widgetWithText(DropdownButtonFormField<int>, 'Hora'));
-    await tester.tap(find.text('10').last);
-    await settle(tester);
-    await tapVisible(tester, find.widgetWithText(DropdownButtonFormField<String>, 'Minutos'));
-    await tester.tap(find.text(':00').last);
-    await settle(tester);
-    await tapVisible(tester, find.widgetWithText(DropdownButtonFormField<bool>, 'a.m./p.m.'));
-    await tester.tap(find.text('p.m.').last);
+    // Reloj de 12 horas: se acepta la hora propuesta (11:00 a.m.)
+    await tapVisible(tester, find.text('Elegir hora'));
+    expect(find.text('p.m.'), findsOneWidget); // selector a.m./p.m.: formato de 12 horas
+    final okTime = MaterialLocalizations.of(tester.element(find.byType(TimePickerDialog))).okButtonLabel;
+    await tester.tap(find.text(okTime));
     await settle(tester);
     await tapVisible(tester, find.widgetWithText(PrimaryButton, 'Agendar cita').last);
 
     final body = sent['POST /leads/lead-1/appointment']! as Map;
     expect(body['propertyId'], 'p-ceiba');
-    expect(body['scheduledAt'] as String, endsWith('T22:00:00-05:00'));
+    expect(body['scheduledAt'] as String, endsWith('T11:00:00-05:00'));
     expect(find.text('Cita CIT-099 guardada. Quedó por confirmar y le avisamos al cliente.'), findsOneWidget);
   });
 
   testWidgets('Mantenimiento: UpdateStatusSheet cambia estado y asigna proveedor', (tester) async {
     await start(tester);
-    await tester.tap(find.text('Reportes nuevos...'));
+    await tester.tap(find.text('Reportes abiertos...'));
     await settle(tester);
     expect(find.text('Fuga en el baño'), findsOneWidget);
 

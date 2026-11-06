@@ -18,6 +18,6 @@ void main() {
   test('Pagaré sin PDF: solo su estado', () {
     final plain = PromissoryNote.fromJson(note(4, '2026-10-05', 'paid', proof: 'doc-n4'));
     expect(plain.documentId, isNull);
-    expect(NotesList.statusText(plain), 'Comprobante');
+    expect(NotesList.statusText(plain), 'Recibo');
   });
 }

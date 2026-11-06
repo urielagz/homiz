@@ -688,3 +688,15 @@ body.login-page { min-width: 0; background: var(--fondo); }
 .rent-cal__num { font-size: .75rem; font-weight: 600; }
 .rent-cal__ev { font-size: .6875rem; line-height: 1.25; text-align: left; white-space: normal; cursor: pointer; border: 0; overflow-wrap: anywhere; }
 @media (max-width: 640px) { .rent-cal { gap: .125rem; } .rent-cal__day { min-height: 64px; padding: .2rem; } .rent-cal__ev { font-size: .625rem; } }
+
+/* Estado del tiempo real en la barra superior */
+.live-status { display: inline-flex; align-items: center; gap: .375rem; font-size: .8125rem; color: rgba(255, 255, 255, .85); white-space: nowrap; }
+.live-status__dot { width: .5rem; height: .5rem; border-radius: 50%; background: #e0a100; }
+.live-status.is-on .live-status__dot { background: #35c46a; }
+@media (max-width: 640px) { .live-status { font-size: 0; gap: 0; } }
+
+/* Brokers recomendados para una solicitud */
+.broker-matches { margin-top: 1rem; display: grid; gap: .75rem; }
+.broker-match { border: 1px solid var(--borde, #d9e0ea); border-radius: .5rem; padding: .75rem; display: grid; gap: .375rem; }
+.broker-match__head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.broker-match ul { margin: 0; padding-left: 1rem; font-size: .8125rem; }

@@ -22,6 +22,8 @@ export async function resetDatabase(): Promise<void> {
   for (const file of files) {
     await pool.query(await readFile(path.resolve('db', file), 'utf8'));
   }
+  // En estas pruebas los brokers administran sus casas; rules.test.ts revisa la regla real sin este permiso
+  await pool.query(`INSERT INTO role_permissions (role_id, permission_id) SELECT r.id, p.id FROM roles r, permissions p WHERE r.code = 'broker' AND p.code = 'properties.manage' ON CONFLICT DO NOTHING`);
 }
 
 export async function closeDatabase(): Promise<void> {

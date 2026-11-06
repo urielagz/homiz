@@ -165,11 +165,19 @@ describe('Recuperación de contraseña', () => {
     expect((await api().post('/api/v1/auth/login').send({ email: EMAILS.laura, password: 'LauraNueva2026' })).body.user.mustChangePassword).toBe(false);
   });
 
-  test('el botón del correo abre la app (clientes, con su correo) o el panel (personal)', async () => {
+  test('quien se registra en la app recibe su correo de bienvenida', async () => {
+    const res = await api().post('/api/v1/auth/register').send({ name: 'Elena Registro', email: 'elena.registro@correo.com', phone: '9981112233', password: 'ElenaNueva2026', acceptedPrivacy: true, acceptPrivacy: true, privacyAccepted: true, consent: true });
+    expect(res.status).toBe(201);
+    expect(sentMail[sentMail.length - 1]).toMatchObject({ to: 'elena.registro@correo.com', subject: expect.stringContaining('Bienvenido') });
+  });
+
+  test('el botón del correo abre el panel solo al propietario; los demás van a la app', async () => {
     await api().post('/api/v1/auth/forgot-password').send({ email: EMAILS.laura });
     expect(sentMail[sentMail.length - 1].action!.url).toMatch(/:5600\/\?email=lau\.mendez%40correo\.com$/);
-    await api().post('/api/v1/auth/forgot-password').send({ email: EMAILS.mariana });
+    await api().post('/api/v1/auth/forgot-password').send({ email: EMAILS.admin });
     expect(sentMail[sentMail.length - 1].action!.url).toMatch(/\/admin\/#\/login$/);
+    await api().post('/api/v1/auth/forgot-password').send({ email: EMAILS.mariana });
+    expect(sentMail[sentMail.length - 1].action).toMatchObject({ label: 'Abrir la app Homiz', url: expect.stringMatching(/\?email=mariana/) });
     // Pedir otra invalida la anterior
     const first = tempOf(sentMail[sentMail.length - 1]);
     await api().post('/api/v1/auth/forgot-password').send({ email: EMAILS.mariana });

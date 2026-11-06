@@ -27,6 +27,9 @@ function smtp(): Transporter {
     port: env.SMTP_PORT,
     secure: env.SMTP_PORT === 465,
     auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
   });
   return transport;
 }
@@ -42,18 +45,36 @@ function html(m: MailMessage): string {
   return `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1B2A44;max-width:560px">${body}${button}<p style="color:#5A6A82;font-size:13px">Inmobiliaria Zugar · Homiz</p></div>`;
 }
 
-/** No lanza error: si el correo no sale, se registra (quien llama no debe revelar si la cuenta existe). */
+/** Esperas entre intentos: una caída breve de la red no debe perder el correo con la contraseña temporal. */
+const RETRY_MS = [3_000, 15_000, 60_000];
+
+async function deliver(message: MailMessage): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await smtp().sendMail({ from: env.MAIL_FROM || `Inmobiliaria Zugar <${env.SMTP_USER}>`, to: message.to, subject: message.subject, text: message.text, html: html(message) });
+      logger.info({ subject: message.subject, attempt: attempt + 1 }, 'Correo enviado');
+      return;
+    } catch (err) {
+      const e = err as { code?: string; responseCode?: number; message: string };
+      // Clave o destinatario rechazados: repetir no lo arregla
+      const permanent = e.code === 'EAUTH' || e.code === 'EENVELOPE' || (e.responseCode ?? 0) >= 500;
+      if (permanent || attempt === RETRY_MS.length) {
+        logger.error({ err: e.message, code: e.code, subject: message.subject, attempts: attempt + 1 }, 'No se pudo enviar el correo');
+        return;
+      }
+      logger.warn({ err: e.message, code: e.code, subject: message.subject, attempt: attempt + 1 }, 'Falló el envío del correo; se reintenta');
+      await new Promise((ok) => setTimeout(ok, RETRY_MS[attempt]));
+    }
+  }
+}
+
+/** No lanza error ni hace esperar a quien llama: el correo sale aparte y, si falla, se reintenta y se registra. */
 export async function sendMail(message: MailMessage): Promise<void> {
   sentMail.push(message);
   if (sentMail.length > 50) sentMail.shift();
   if (env.isTest) return;
   if (env.MAIL_DRIVER === 'smtp') {
-    try {
-      await smtp().sendMail({ from: env.MAIL_FROM || `Inmobiliaria Zugar <${env.SMTP_USER}>`, to: message.to, subject: message.subject, text: message.text, html: html(message) });
-      logger.info({ subject: message.subject }, 'Correo enviado');
-    } catch (err) {
-      logger.error({ err: (err as Error).message, subject: message.subject }, 'No se pudo enviar el correo (revisa SMTP_USER y SMTP_PASS)');
-    }
+    void deliver(message);
     return;
   }
   const dir = path.resolve(env.MAIL_OUTBOX_DIR);

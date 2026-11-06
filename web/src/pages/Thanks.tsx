@@ -4,7 +4,7 @@ import { ChangeMyData, type Contact } from '../components/ChangeMyData';
 import { useCatalog } from '../components/CatalogProvider';
 import { LAST_CONTACT_KEY } from '../components/HouseVisitForm';
 import { Icon } from '../components/Icon';
-import { appAccountLink, appLink } from '../lib/appLink';
+import { appAccountLink, downloadLink } from '../lib/appLink';
 import { AppQr } from '../components/AppQr';
 import { fichaOf, IMG, photoOf, priceUnit } from '../lib/catalog';
 import { money, t12 } from '../lib/format';
@@ -100,7 +100,7 @@ export function Thanks() {
           </div>
           <div className="thanks__actions">
             <Link className="btn btn--lg" to={house ? fichaOf(house) : '/propiedades'}><Icon id="left" />Volver a la propiedad</Link>
-            <a className="btn btn--secondary btn--lg" href={last.correo ? appAccountLink(last.correo) : appLink(house?.slug)} target="_blank" rel="noopener"><Icon id="phone" />Continuar en la app Homiz</a>
+            <a className="btn btn--secondary btn--lg" href={downloadLink(house?.slug)} target="_blank" rel="noopener"><Icon id="download" />Descarga nuestra app</a>
           </div>
           <p className="thanks__foot">¿No recibiste respuesta? Llámanos al <a href="tel:+529985550142">+52 998 555 0142</a>.</p>
         </div>

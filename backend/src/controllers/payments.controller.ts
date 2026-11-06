@@ -7,6 +7,7 @@ import { AppError } from '../middlewares/error-handler.js';
 import { dateField, dateTimeField, pagination, paged, positiveMoney, queryArray } from '../middlewares/validate.js';
 import { assertPropertyAccess, propertyScope } from '../services/access.service.js';
 import { notify, userOfClient } from '../services/notification.service.js';
+import { hideReceipts, tryIssueReceipt } from '../services/payment-receipt.service.js';
 
 export const listQueryDto = pagination.extend({
   contractId: z.uuid().optional(),
@@ -271,6 +272,7 @@ export const registerPayment: RequestHandler = async (_req, res) => {
     if ((err as { code?: string }).code === '23505') throw new AppError(409, 'ALREADY_PAID', 'Este pagaré ya tiene un pago registrado.');
     throw err;
   }
+  await tryIssueReceipt(n.id, user.id);
   res.status(201).json(present(await loadNote(user, n.id), user));
 };
 
@@ -296,6 +298,7 @@ export const correctPayment: RequestHandler = async (_req, res) => {
     if (d.paidAt) await db.query('UPDATE promissory_notes SET paid_at = $2 WHERE id = $1', [id, d.paidAt]);
     await insertActivity({ userId: user.id, propertyId: n.property_id, entity: 'payment', entityId: paymentId, action: 'correct', description: `${user.name} corrigió el pago del pagaré ${n.number} de ${n.client_name}.`, oldValues: { amount: p.amount, paidAt: p.paid_at, receiptFolio: p.receipt_folio, notes: p.notes }, newValues: d }, db);
   });
+  await tryIssueReceipt(id, user.id); // el recibo debe decir lo mismo que el pago corregido
   res.json(present(await loadNote(user, id), user));
 };
 
@@ -313,5 +316,6 @@ export const voidPayment: RequestHandler = async (_req, res) => {
     );
     await insertActivity({ userId: user.id, propertyId: n.property_id, entity: 'payment', entityId: paymentId, action: 'void', description: `${user.name} anuló el pago del pagaré ${n.number} de ${n.client_name}: ${reason}` }, db);
   });
+  await hideReceipts(id);
   res.json(present(await loadNote(user, id), user));
 };

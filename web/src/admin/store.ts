@@ -143,7 +143,7 @@ export const dateFull = (iso: string) => { const d = parseDate(iso); return d.ge
 export const dayShort = (d: Date) => DAYS_SHORT[d.getDay()];
 export const monthName = (d: Date) => cap(MONTHS[d.getMonth()]);
 export const monthShort = (d: Date) => MONTHS_SHORT[d.getMonth()];
-export const nowTime = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+export const nowTime = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Cancun', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 export function addMinutes(hhmm: string, min: number) {
   const p = hhmm.split(':');
   const t = +p[0] * 60 + +p[1] + min;

@@ -206,7 +206,8 @@ export async function load() {
   ]);
   if (me) refreshAccess(me.roles, me.permissions);
   D.staff = (staffOrNull || []).map((u: any) => ({ id: u.id, name: u.name, email: u.email, roles: u.roles || [], active: u.active !== false, properties: u.properties || 0 }));
-  let users = staffOrNull && staffOrNull.filter((u: any) => (u.roles || []).includes('broker'));
+  // Reciben casas y solicitudes: brokers y administradores (el propietario solo si también es broker)
+  let users = staffOrNull && staffOrNull.filter((u: any) => { const r = u.roles || []; return r.includes('broker') || (r.includes('admin') && !r.includes('owner')); });
   if (!users) {
     // sin permiso para ver al personal: los brokers salen de las casas
     const seen = new Set<string>();

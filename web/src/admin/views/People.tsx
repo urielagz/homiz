@@ -16,7 +16,7 @@ const nextFor = (p: Person) => upcoming((a) => a.person === p.id)[0];
 function PersonForm({ person, close }: { person: Person | null; close: () => void }) {
   const D = useStore();
   const { toast } = useOverlay();
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const p = person || { name: '', email: '', phone: '', type: 'cliente', property: '', broker: '', follow: 'Nuevo contacto', op: 'Renta', budget: '', needs: '', job: '' };
   const [brokerId, setBrokerId] = useState(p.broker);
 
@@ -62,9 +62,9 @@ function PersonForm({ person, close }: { person: Person | null; close: () => voi
     <>
       <h2 id="dialog-title">{person ? 'Editar expediente' : 'Agregar persona'}</h2>
       <p className="lead">{person ? `Actualiza los datos de ${p.name}.` : 'Registra a un cliente o inquilino y asígnale una casa y un broker.'} Los campos con * son obligatorios.</p>
-      <form id="person-form" noValidate onSubmit={onSubmit}>
+      <form id="person-form" noValidate {...live} onSubmit={onSubmit}>
         <div className="form-grid">
-          {input('pf-name', 'Nombre completo *', { required: true, defaultValue: p.name, autoComplete: 'off' }, true)}
+          {input('pf-name', 'Nombre completo *', { required: true, minLength: 3, maxLength: 120, defaultValue: p.name, autoComplete: 'off' }, true)}
           {input('pf-email', 'Correo electrónico *', { type: 'email', required: true, defaultValue: p.email })}
           {input('pf-phone', 'Teléfono *', { type: 'tel', required: true, defaultValue: p.phone, placeholder: '998 000 0000' })}
           {/* Inquilino solo con contrato: se hace con «Rentarle esta casa» (genera pagarés y pausa la casa) */}

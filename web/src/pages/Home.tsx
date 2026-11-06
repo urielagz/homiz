@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { toAmount } from '../components/BudgetRange';
+import { toAmount, BUDGET_LIMITS } from '../components/BudgetRange';
 import { useCatalog } from '../components/CatalogProvider';
 import { MapPicker, type PickedPlace } from '../components/MapPicker';
 import { MoneyInput } from '../components/NumberInput';
@@ -24,7 +24,7 @@ type Tab = 'todas' | 'renta' | 'venta';
 
 export function Home() {
   usePageTitle('Casas en renta y venta en Cancún | Zugar Inmobiliaria');
-  const { bySlug } = useCatalog();
+  const { bySlug, houses } = useCatalog();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('todas');
   const [search, setSearch] = useState({ operacion: 'renta', min: '', max: '' });
@@ -32,12 +32,20 @@ export function Home() {
   const [place, setPlace] = useState<PickedPlace | null>(null);
   const [picking, setPicking] = useState(false);
 
-  const featured = FEATURED.map(([slug, alt]) => ({ house: bySlug[slug], alt })).filter((x) => x.house);
+  // Las destacadas que sigan publicadas; si alguna se rentó, su lugar lo toma otra casa disponible
+  const chosen = FEATURED.map(([slug, alt]) => ({ house: bySlug[slug], alt })).filter((x) => x.house);
+  const featured = [...chosen, ...houses.filter((h) => !chosen.some((x) => x.house.slug === h.slug)).map((house) => ({ house, alt: `${house.name} en ${house.zona}` }))].slice(0, FEATURED.length);
   const visible = featured.filter((x) => tab === 'todas' || x.house.op === tab);
   const rentCount = featured.filter((x) => x.house.op === 'renta').length;
 
+  const lowest = BUDGET_LIMITS[search.operacion === 'renta' ? 'renta' : 'compra'][0];
+  const tooLow = (v: string) => (toAmount(v) && toAmount(v)! < lowest ? `Escribe al menos $${lowest.toLocaleString('en-US')}.` : '');
+  const minError = tooLow(search.min);
+  const maxError = tooLow(search.max) || (toAmount(search.min) && toAmount(search.max) && toAmount(search.min)! > toAmount(search.max)! ? 'El máximo no puede ser menor que el mínimo.' : '');
+
   const onSearch = (e: FormEvent) => {
     e.preventDefault();
+    if (minError || maxError) return document.getElementById(minError ? 'h-min' : 'h-max')?.focus();
     const q = new URLSearchParams({ operacion: search.operacion });
     const min = toAmount(search.min), max = toAmount(search.max);
     if (min) q.set('precio_min', String(min));
@@ -79,11 +87,13 @@ export function Home() {
                 {/* Mínimo y máximo en campos separados (antes iban juntos en una sola columna) */}
                 <div className="field">
                   <label className="field__label" htmlFor="h-min">Presupuesto desde{search.operacion === 'renta' ? ' (al mes)' : ''}</label>
-                  <MoneyInput id="h-min" placeholder="$0" value={search.min} onChange={(min) => setSearch({ ...search, min })} suggestions={amounts} />
+                  <MoneyInput id="h-min" placeholder="$0" value={search.min} onChange={(min) => setSearch({ ...search, min })} suggestions={amounts} aria-invalid={!!minError} />
+                  {minError && <p className="field__error flex" role="alert"><Icon id="alert" size="sm" />{minError}</p>}
                 </div>
                 <div className="field">
                   <label className="field__label" htmlFor="h-max">Presupuesto hasta{search.operacion === 'renta' ? ' (al mes)' : ''}</label>
-                  <MoneyInput id="h-max" placeholder="Sin límite" value={search.max} onChange={(max) => setSearch({ ...search, max })} suggestions={amounts} />
+                  <MoneyInput id="h-max" placeholder="Sin límite" value={search.max} onChange={(max) => setSearch({ ...search, max })} suggestions={amounts} aria-invalid={!!maxError} />
+                  {maxError && <p className="field__error flex" role="alert"><Icon id="alert" size="sm" />{maxError}</p>}
                 </div>
                 <div className="hero-search__actions">
                   <button className="btn btn--gold btn--lg" type="submit"><Icon id="search" />Buscar propiedades</button>

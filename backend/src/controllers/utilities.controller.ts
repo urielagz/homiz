@@ -62,6 +62,8 @@ export const receiptQueryDto = pagination.extend({
   status: queryArray,
   kind: z.enum(['bill', 'charge_slip']).optional(),
   type: z.enum(['electricity', 'water']).optional(),
+  /** App: además de agua y luz, los recibos de los pagarés pagados y las fichas de cobro de lo que toca pagar */
+  pagares: z.enum(['1']).optional(),
 });
 export const receiptCreateDto = z.object({
   propertyId: z.uuid(),
@@ -134,8 +136,34 @@ export const listReceipts: RequestHandler = async (_req, res) => {
     `${SELECT} ${w} ORDER BY (r.status <> 'paid') DESC, r.due_date DESC NULLS LAST LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, q.limit, (q.page - 1) * q.limit],
   );
-  res.json(paged(rows.map(presentReceipt), Number(total.rows[0].n), q));
+  const notes = q.pagares ? await noteReceipts(user, scope, q.propertyId) : [];
+  res.json(paged([...notes, ...rows.map(presentReceipt)], Number(total.rows[0].n) + notes.length, q));
 };
+
+/** Pagarés como recibos (pagados) y fichas de cobro (vencidos y el siguiente por pagar). */
+async function noteReceipts(user: AuthUser, scope: string[] | null, propertyId?: string) {
+  const params: unknown[] = [];
+  const where = ["n.status <> 'cancelled'", "ct.status = 'active'"];
+  if (user.type === 'client') where.push(`ct.client_id = $${params.push(user.clientId)}`);
+  else if (scope) where.push(`ct.property_id = ANY($${params.push(scope)}::uuid[])`);
+  if (propertyId) where.push(`ct.property_id = $${params.push(propertyId)}`);
+  const { rows } = await pool.query<{ id: string; property_id: string; property_name: string; number: number; amount: string; due_date: string; paid_at: Date | null; status: string; document_id: string | null; next: boolean }>(
+    `SELECT n.id, p.id AS property_id, p.name AS property_name, n.number, n.amount, to_char(n.due_date, 'YYYY-MM-DD') AS due_date, n.paid_at, n.status::text AS status,
+            (SELECT d.id FROM documents d WHERE d.promissory_note_id = n.id AND d.type = 'receipt' AND d.visible_to_client ORDER BY d.created_at DESC LIMIT 1) AS document_id,
+            n.status = 'pending' AND n.due_date = (SELECT min(x.due_date) FROM promissory_notes x WHERE x.contract_id = n.contract_id AND x.status = 'pending') AS next
+       FROM promissory_notes n JOIN contracts ct ON ct.id = n.contract_id JOIN properties p ON p.id = ct.property_id
+      WHERE ${where.join(' AND ')} ORDER BY (n.status = 'paid'), n.due_date DESC`,
+    params,
+  );
+  return rows.filter((n) => n.status !== 'pending' || n.next).map((n) => {
+    const paid = n.status === 'paid';
+    return {
+      id: n.id, property: { id: n.property_id, name: n.property_name }, kind: paid ? 'bill' : 'charge_slip',
+      concept: `${paid ? 'Recibo' : 'Ficha de cobro'} · Pagaré ${String(n.number).padStart(2, '0')}`, utility: null, periodStart: null, periodEnd: null, periodLabel: null,
+      amount: Number(n.amount), dueDate: n.due_date, paidAt: n.paid_at, status: n.status, documentId: n.document_id,
+    };
+  });
+}
 
 export const getReceipt: RequestHandler = async (_req, res) => {
   res.json(presentReceipt(await loadReceipt(currentUser(res), (res.locals.params as { id: string }).id)));

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { request } from '../lib/api';
 import { longDate, t12 } from '../lib/format';
 import { Icon } from './Icon';
@@ -6,8 +6,8 @@ import { Icon } from './Icon';
 /* ==========================================================================
    «¿Te gustaría agendar una cita?»: calendario y reloj siempre visibles.
    - Calendario del mes: cualquier día, desde hoy y hasta 60 días.
-   - Hora de 1 a 12 con a.m./p.m. (cualquier hora del día) y minutos en bloques de 15 (:00, :15, :30, :45);
-     la visita dura 15 min. Hoy, solo desde una hora después de ahora. El valor sigue siendo «HH:MM» de 24 h.
+   - Hora de 1 a 12 con a.m./p.m. en el horario de la inmobiliaria (7:00 a.m. a 11:00 p.m.) y minutos en
+     bloques de 15 (:00, :15, :30, :45); la visita dura 15 min. Hoy, solo desde una hora después de ahora. El valor sigue siendo «HH:MM» de 24 h.
    - Con `slug`, se piden al servidor las horas que el broker ya tiene ocupadas ese día.
    - El reloj muestra la hora elegida.
    ========================================================================== */
@@ -24,31 +24,45 @@ function cancunNow() {
   return { date: `${p.year}-${p.month}-${p.day}`, minutes: (+p.hour % 24) * 60 + +p.minute };
 }
 
-/** Bloques de 15 minutos de todo el día (00:00 a 23:45) */
+/** Bloques de 15 minutos del horario de visitas: de 7:00 a.m. a 10:45 p.m. (termina a las 11:00 p.m.) */
 export function slotsFor(date: string): string[] {
   const now = cancunNow();
   const out: string[] = [];
-  for (let m = 0; m < 24 * 60; m += 15) {
+  for (let m = 7 * 60; m < 23 * 60; m += 15) {
     if (date === now.date && m < now.minutes + 60) continue;
     out.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
   }
   return out;
 }
 
-function Clock({ time }: { time: string }) {
-  const [h, m] = time ? time.split(':').map(Number) : [10, 10];
-  const hourAngle = ((h % 12) + m / 60) * 30;
-  const minuteAngle = m * 6;
+/** Reloj que gira, como el de Android: se toca o se arrastra sobre la hora y después sobre los minutos. */
+function DialClock({ mode, value, options, onPick, onDone }: {
+  mode: 'hour' | 'minute'; value: number | null; options: { value: number; label: string; off: boolean; name: string }[];
+  onPick: (value: number) => void; onDone: () => void;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const turns = mode === 'hour' ? 12 : 60;
+  const fromPointer = (e: PointerEvent<HTMLDivElement>) => {
+    const r = box.current!.getBoundingClientRect();
+    const angle = (Math.atan2(e.clientX - r.left - r.width / 2, r.top + r.height / 2 - e.clientY) * 180) / Math.PI;
+    const at = (angle + 360) % 360;
+    // La opción libre más cercana a donde está el dedo
+    const near = options.filter((o) => !o.off).map((o) => { const d = Math.abs(((o.value % turns) * 360) / turns - at); return { o, d: Math.min(d, 360 - d) }; }).sort((x, y) => x.d - y.d)[0];
+    if (near && near.o.value !== value) onPick(near.o.value);
+  };
   return (
-    <svg className={'slot-clock' + (time ? '' : ' is-empty')} viewBox="0 0 100 100" role="img" aria-label={time ? `Reloj marcando las ${t12(time)}` : 'Reloj: aún no eliges hora'}>
-      <circle cx="50" cy="50" r="46" className="slot-clock__face" />
-      {Array.from({ length: 12 }, (_, i) => (
-        <line key={i} x1="50" y1="8" x2="50" y2={i % 3 === 0 ? 15 : 12} className="slot-clock__tick" transform={`rotate(${i * 30} 50 50)`} />
-      ))}
-      <line x1="50" y1="50" x2="50" y2="28" className="slot-clock__hour" transform={`rotate(${hourAngle} 50 50)`} />
-      <line x1="50" y1="50" x2="50" y2="16" className="slot-clock__minute" transform={`rotate(${minuteAngle} 50 50)`} />
-      <circle cx="50" cy="50" r="3" className="slot-clock__pin" />
-    </svg>
+    <div className="dial" ref={box} role="group" aria-label={mode === 'hour' ? 'Reloj: elige la hora' : 'Reloj: elige los minutos'}
+      onPointerDown={fromPointer} onPointerMove={(e) => { if (e.buttons) fromPointer(e); }} onPointerUp={onDone}>
+      {value !== null && <span className="dial__hand" style={{ transform: `rotate(${((value % turns) * 360) / turns}deg)` }} aria-hidden="true" />}
+      <span className="dial__pin" aria-hidden="true" />
+      {options.map((o) => {
+        const rad = (((o.value % turns) * 360) / turns - 90) * (Math.PI / 180);
+        return (
+          <button key={o.value} type="button" className="dial__n" disabled={o.off} aria-pressed={o.value === value} aria-label={o.name}
+            style={{ left: `${50 + 40 * Math.cos(rad)}%`, top: `${50 + 40 * Math.sin(rad)}%` }} onClick={() => { onPick(o.value); onDone(); }}>{o.label}</button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -95,22 +109,36 @@ export function VisitSlotPicker({ id, date, time, onChange, slug, dateError, tim
   const slots = date ? slotsFor(date) : [];
   const free = slots.filter((s) => !busy.includes(s));
   const pick = (d: string) => onChange(d, slotsFor(d).includes(time) ? time : '');
-  // a.m./p.m., luego la hora (1 a 12) y luego los minutos; una hora se apaga si ya pasó o está ocupada completa.
-  // `hour` guarda la hora de 24 h ('00'–'23'); en pantalla se ve de 1 a 12.
-  const [hour, setHour] = useState(time ? time.slice(0, 2) : '');
-  const [ap, setAp] = useState<'am' | 'pm'>(time && +time.slice(0, 2) >= 12 ? 'pm' : 'am');
-  useEffect(() => { if (time) { setHour(time.slice(0, 2)); setAp(+time.slice(0, 2) >= 12 ? 'pm' : 'am'); } }, [time]);
+  // Hora y minutos se escriben en sus casillas (1 a 12) y se elige a.m. o p.m.; la hora solo vale si está libre
+  const parts = (t: string) => (t ? { h: String(+t.slice(0, 2) % 12 || 12), m: t.slice(3, 5), ap: (+t.slice(0, 2) >= 12 ? 'pm' : 'am') as 'am' | 'pm' } : null);
+  const [hh, setHh] = useState(parts(time)?.h ?? '');
+  const [mm, setMm] = useState(parts(time)?.m ?? '00');
+  const [ap, setAp] = useState<'am' | 'pm'>(parts(time)?.ap ?? 'am');
+  const [problem, setProblem] = useState('');
+  useEffect(() => { const p = parts(time); if (p) { setHh(p.h); setMm(p.m); setAp(p.ap); } }, [time]);
   // Si ya no quedan horas en la mañana (hoy), se abre en p.m.
   useEffect(() => { if (!time && date && !free.some((s) => +s.slice(0, 2) < 12)) setAp('pm'); }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
-  // 12 primero (12 a.m. = 00 h, 12 p.m. = 12 h), luego 1 a 11
-  const hours = Array.from({ length: 12 }, (_, i) => String(i + (ap === 'pm' ? 12 : 0)).padStart(2, '0'));
-  const label12 = (h: string) => String(+h % 12 || 12);
-  const chooseHour = (h: string) => {
-    setHour(h);
-    const first = free.find((s) => s.startsWith(h + ':'));
-    if (first) onChange(date, time.startsWith(h + ':') && free.includes(time) ? time : first);
+  const commit = (h: string, m: string, a: 'am' | 'pm') => {
+    const n = +h;
+    if (!n) { setProblem(''); return onChange(date, ''); }
+    if (n > 12) { setProblem('Escribe una hora de 1 a 12.'); return onChange(date, ''); }
+    const t = `${String((n % 12) + (a === 'pm' ? 12 : 0)).padStart(2, '0')}:${m.padStart(2, '0')}`;
+    const inHours = t >= '07:00' && t <= '22:45';
+    setProblem(free.includes(t) ? '' : !inHours ? 'Las visitas son de 7:00 a.m. a 11:00 p.m.' : busy.includes(t) ? 'Esa hora ya está ocupada. Elige otra.' : 'Esa hora ya pasó. Elige otra.');
+    onChange(date, free.includes(t) ? t : '');
   };
-  const chooseAp = (v: 'am' | 'pm') => { setAp(v); setHour(''); };
+  const [dial, setDial] = useState<'hour' | 'minute'>('hour');
+  // Al soltar el reloj la hora elegida aún no llega al estado: se consulta aquí para pasar a los minutos
+  const hourChosen = useRef('');
+  const to24 = (h: number, a: 'am' | 'pm') => String((h % 12) + (a === 'pm' ? 12 : 0)).padStart(2, '0');
+  const pickHour = (h: number) => {
+    const hour = to24(h, ap);
+    // Si esos minutos no están libres en esa hora, se toma el primer horario libre
+    const m = free.includes(`${hour}:${mm}`) ? mm : free.find((x) => x.startsWith(hour + ':'))?.slice(3) ?? mm;
+    hourChosen.current = String(h);
+    setHh(String(h)); setMm(m); commit(String(h), m, ap);
+  };
+  const pickMinute = (m: number) => { const v = String(m).padStart(2, '0'); setMm(v); commit(hh, v, ap); };
 
   return (
     <div className="slot-picker">
@@ -139,13 +167,12 @@ export function VisitSlotPicker({ id, date, time, onChange, slug, dateError, tim
 
       <div className={'slot-time' + (timeError ? ' is-error' : '')} id={`${id}-horario`} tabIndex={-1} role="group" aria-labelledby={`${id}-horario-label`}>
         <div className="slot-time__head">
-          <Clock time={time} />
           <div>
             <p className="slot-picker__label" id={`${id}-horario-label`}><Icon id="clock" size="sm" />Hora *</p>
             <p className="slot-time__chosen" aria-live="polite">
               {date ? (time ? `${longDate(date)} · ${t12(time)}` : longDate(date)) : 'Primero elige el día en el calendario'}
             </p>
-            <p className="small muted">Elige a.m. o p.m., la hora y los minutos · la visita dura 15 minutos.</p>
+            <p className="small muted">Gira el reloj: primero la hora y luego los minutos. Horario de visitas: 7:00 a.m. a 11:00 p.m.</p>
           </div>
         </div>
         {date && (free.length ? (
@@ -154,38 +181,26 @@ export function VisitSlotPicker({ id, date, time, onChange, slug, dateError, tim
               {(['am', 'pm'] as const).map((v) => {
                 const open = free.some((s) => (+s.slice(0, 2) < 12) === (v === 'am'));
                 return (
-                  <button key={v} type="button" className="slot" aria-pressed={ap === v} disabled={!open} onClick={() => chooseAp(v)}>
+                  <button key={v} type="button" className="slot" aria-pressed={ap === v} disabled={!open} onClick={() => { setAp(v); setDial('hour'); commit(hh, mm, v); }}>
                     {v === 'am' ? 'a.m. · mañana' : 'p.m. · tarde y noche'}
                   </button>
                 );
               })}
             </div>
-            <p className="slot-time__group" id={`${id}-hora-label`}>Hora (1 a 12)</p>
-            <div className="slot-time__grid slot-time__grid--hours" role="group" aria-labelledby={`${id}-hora-label`}>
-              {hours.map((h) => {
-                const open = free.some((s) => s.startsWith(h + ':'));
-                const name = `${label12(h)} ${ap === 'am' ? 'a.m.' : 'p.m.'}`;
-                return (
-                  <button key={h} type="button" className="slot" aria-pressed={hour === h} disabled={!open} onClick={() => chooseHour(h)}
-                    aria-label={open ? name : `${name}, no disponible`}>{label12(h)}</button>
-                );
-              })}
+            <div className="dial-read" aria-live="polite">
+              <button type="button" className="dial-read__part" aria-pressed={dial === 'hour'} onClick={() => setDial('hour')}>{hh || '--'}</button>
+              <span aria-hidden="true">:</span>
+              <button type="button" className="dial-read__part" aria-pressed={dial === 'minute'} disabled={!hh} onClick={() => setDial('minute')}>{mm}</button>
+              <span className="dial-read__ap">{ap === 'am' ? 'a.m.' : 'p.m.'}</span>
             </div>
-            {hour && (
-              <>
-                <p className="slot-time__group" id={`${id}-min-label`}>Minutos</p>
-                <div className="slot-time__grid" role="group" aria-labelledby={`${id}-min-label`}>
-                  {['00', '15', '30', '45'].map((m) => {
-                    const s = `${hour}:${m}`;
-                    const taken = busy.includes(s), past = !slots.includes(s);
-                    return (
-                      <button key={m} type="button" className="slot" aria-pressed={time === s} disabled={taken || past} onClick={() => onChange(date, s)}
-                        aria-label={taken ? `${t12(s)}, ocupado` : past ? `${t12(s)}, ya pasó` : t12(s)}>{label12(hour)}:{m}</button>
-                    );
-                  })}
-                </div>
-              </>
+            {dial === 'hour' ? (
+              <DialClock mode="hour" value={hh ? +hh % 12 || 12 : null} onPick={pickHour} onDone={() => { if (hh || hourChosen.current) setDial('minute'); }}
+                options={Array.from({ length: 12 }, (_, i) => { const h = i + 1, open = free.some((x) => x.startsWith(to24(h, ap) + ':')); return { value: h, label: String(h), off: !open, name: `${h} ${ap === 'am' ? 'a.m.' : 'p.m.'}${open ? '' : ', no disponible'}` }; })} />
+            ) : (
+              <DialClock mode="minute" value={+mm} onPick={pickMinute} onDone={() => {}}
+                options={[0, 15, 30, 45].map((m) => { const t = `${to24(+hh || 12, ap)}:${String(m).padStart(2, '0')}`; return { value: m, label: String(m).padStart(2, '0'), off: !free.includes(t), name: t12(t) }; })} />
             )}
+            {problem && <p className="field__error flex" role="alert"><Icon id="alert" size="sm" />{problem}</p>}
           </>
         ) : (
           <p className="small muted">Ya no quedan horarios este día. Elige otro.</p>

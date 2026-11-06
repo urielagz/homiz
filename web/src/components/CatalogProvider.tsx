@@ -37,8 +37,8 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     const fromApi = !!houses && houses.length > 0;
     // Mientras responde la API, el listado espera (no se muestra el respaldo y luego otras casas)
     const list = loading ? [] : fromApi ? houses! : FALLBACK_CATALOG;
-    // Por slug siempre hay datos (portada, formularios y enlaces viejos); los de la API tienen prioridad
-    return { houses: list, bySlug: { ...index(FALLBACK_CATALOG), ...index(list) }, loading, fromApi };
+    // Con la API solo existe lo publicado: una casa rentada o pausada no sale en la portada ni en los formularios
+    return { houses: list, bySlug: index(list), loading, fromApi };
   }, [houses]);
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;

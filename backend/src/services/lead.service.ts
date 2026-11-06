@@ -1,4 +1,4 @@
-import { withTransaction, type Db } from '../config/database.js';
+import { pool, withTransaction, type Db } from '../config/database.js';
 import { env } from '../config/env.js';
 import * as Leads from '../models/lead.model.js';
 import * as Properties from '../models/property.model.js';
@@ -6,7 +6,7 @@ import { insertActivity } from '../models/activity.model.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { ensureClientAccount } from './auth.service.js';
 import { nextFolio } from './codes.service.js';
-import { placeVisit } from './appointment.service.js';
+import { assertVisitable, placeVisit, VISIT_HOURS_TEXT, visitTimeOk } from './appointment.service.js';
 import { correctionToken } from './lead-correction.service.js';
 import { notify, staffWithPermission } from './notification.service.js';
 
@@ -77,6 +77,20 @@ export async function createLead(l: LeadInput): Promise<{ folio: string; appoint
   if ((l.propertySlug || l.propertyCode) && !property) throw new AppError(404, 'NOT_FOUND', 'La casa indicada no existe.');
   if (l.reason === 'visita' && !property) throw new AppError(400, 'VALIDATION_ERROR', 'Indica la casa que quieres visitar.', { propertySlug: ['Indica la casa que quieres visitar.'] });
 
+  // Antes de crear la cuenta: si la visita no procede, no debe salir ningún correo
+  if (l.reason === 'visita' && property) await assertVisitable(pool, property.id);
+  if (l.preferredTime && !visitTimeOk(l.preferredTime.slice(0, 5))) throw new AppError(400, 'VALIDATION_ERROR', VISIT_HOURS_TEXT, { preferredTime: [VISIT_HOURS_TEXT] });
+  // Se pueden enviar varias solicitudes, pero no una segunda cita de la misma casa desde el sitio (se cambia en la app)
+  if (l.reason === 'visita' && property && l.preferredDate && !l.clientId) {
+    const { rowCount } = await pool.query(
+      `SELECT 1 FROM appointments a JOIN clients c ON c.id = a.client_id LEFT JOIN users u ON u.id = c.user_id
+        WHERE a.property_id = $1 AND a.status IN ('por-confirmar', 'confirmada') AND a.scheduled_at > now()
+          AND (lower(c.email) = lower($2) OR lower(u.email) = lower($2)) LIMIT 1`,
+      [property.id, l.email],
+    );
+    if (rowCount) throw new AppError(409, 'ALREADY_SCHEDULED', 'Este correo ya tiene una cita para esta casa. Si quieres cambiar el día o la hora, hazlo en la app Homiz.');
+  }
+
   return withTransaction(async (db) => {
     const folio = await nextFolio(db);
     let clientId = l.clientId ?? (l.reason === 'publicar' || l.reason === 'otro' ? null : await findOrCreateClient(db, l, property?.id ?? null, l.brokerId ?? null));
@@ -89,10 +103,13 @@ export async function createLead(l: LeadInput): Promise<{ folio: string; appoint
       accountUser = acc.userId;
       clientId ??= acc.clientId || null;
     }
+    // Quien ya tiene broker sigue con él; si no, la toma el primero que la atienda
+    const { rows: [own] } = clientId ? await db.query<{ broker_id: string | null }>('SELECT broker_id FROM clients WHERE id = $1', [clientId]) : { rows: [] as { broker_id: string | null }[] };
+    const brokerId = l.brokerId ?? own?.broker_id ?? null;
     const leadId = await Leads.insert(db, {
       folio, reason: l.reason, name: l.name, email: l.email, phone: l.phone ?? null, message: l.message ?? null,
       propertyId: property?.id ?? null, preferredDate: l.preferredDate ?? null, preferredTime: l.preferredTime ?? null,
-      payload: l.payload ?? {}, clientId, brokerId: l.brokerId ?? null,
+      payload: l.payload ?? {}, clientId, brokerId,
     });
 
     let appointmentCode: string | null = null;
@@ -101,7 +118,7 @@ export async function createLead(l: LeadInput): Promise<{ folio: string; appoint
       try {
         const { rows: [t] } = await db.query<{ at: Date }>(`SELECT ($1::date + $2::time) AT TIME ZONE $3 AS at`, [l.preferredDate, l.preferredTime, env.TZ_APP]);
         // Una cita vigente por persona: si ya tenía una, se cambia a esta casa, fecha y hora
-        const placed = await placeVisit(db, { clientId, propertyId: property.id, brokerId: l.brokerId ?? null, scheduledAt: t.at, note: l.message ?? null, leadId });
+        const placed = await placeVisit(db, { clientId, propertyId: property.id, brokerId, scheduledAt: t.at, note: l.message ?? null, leadId });
         appointmentCode = placed.code;
       } catch (err) {
         // Si el broker ya tiene una cita a esa hora, la solicitud se guarda igual y él propondrá otro horario.
@@ -115,8 +132,8 @@ export async function createLead(l: LeadInput): Promise<{ folio: string; appoint
       description: `${l.name} ${REASON_TEXT[l.reason]}${property ? ` ${property.name}` : ''} (folio ${folio}).`,
     }, db);
 
-    // Llega sin broker: administración la asigna (y la cita se va con ese broker)
-    const recipients = l.brokerId ? [] : await staffWithPermission('properties.reassign', db);
+    // Con broker le llega a él (si la registró él mismo, no hace falta); sin broker, a todos: la toma el primero que la atienda
+    const recipients = l.brokerId ? [] : brokerId ? [brokerId] : await staffWithPermission('leads.manage', db);
     await notify(recipients, {
       type: l.reason === 'visita' ? 'appointment_requested' : 'lead_received',
       title: l.reason === 'visita' ? 'Nueva solicitud de visita' : 'Nueva solicitud del sitio',

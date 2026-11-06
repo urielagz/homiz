@@ -5,6 +5,7 @@ import 'helpers.dart';
 
 /// Respuestas de la API para el personal: Mariana (broker de Casa Las Palmas) con los permisos del rol broker.
 const brokerPermissions = [
+  'properties.manage',
   'properties.read_all', 'properties.create', 'properties.update', 'clients.manage', 'contracts.manage', 'appointments.manage',
   'payments.register', 'receipts.manage', 'maintenance.manage', 'providers.manage', 'expenses.manage', 'documents.manage',
   'dossier.read', 'activity.read', 'leads.manage',
@@ -69,7 +70,7 @@ Map<String, Object?> get pendingAppointmentJson => {
       'id': pendingId,
       'code': 'CIT-020',
       'status': 'por-confirmar',
-      'property': {'id': 'p-ceiba', 'code': 'ZUG-003', 'name': 'Casa Ceiba', 'zone': 'Cumbres', 'address': null, 'photo': null},
+      'property': {'id': 'p-ceiba', 'broker': {'id': marianaJson['id'], 'name': 'Mariana Solís'}, 'code': 'ZUG-003', 'name': 'Casa Ceiba', 'zone': 'Cumbres', 'address': null, 'photo': null},
       'client': {'id': 'c-medina', 'name': 'Laura Medina', 'email': 'laura.m@example.com', 'phone': '998 555 0128'},
       'broker': {'id': marianaJson['id'], 'name': 'Mariana Solís', 'phone': '998 100 0002'},
       'confirmedBy': null,

@@ -5,6 +5,7 @@ import { currentSession } from '../auth';
 import { useOverlay } from '../components/Overlay';
 import { ApptBadge, Badge, brokerOptions, Crumbs, err, FieldError, Icon, Options, PageHead, Tabs, TimeInput, useErrors, useUrlParams } from '../components/ui';
 import { dateFull, dateShort, money, opLabel, plural, rerender, t12, useStore, Z, type Property } from '../store';
+import { brokerMatches } from '../brokerMatch';
 import { NeedsServer, useApiData } from './Payments';
 
 /* ==========================================================================
@@ -109,16 +110,40 @@ function visitable(D: { properties: Property[] }, l?: Lead) {
     .sort((a, b) => Number(first.has(b.id)) - Number(first.has(a.id)) || a.name.localeCompare(b.name));
 }
 
+/** Quién tiene casas que encajan con lo que pidió la persona, para elegir al broker con esa información */
+function BrokerMatches({ l, busy, onAssign }: { l: Lead; busy: boolean; onAssign: (id: string, name: string) => void }) {
+  const list = brokerMatches(l);
+  if (!list) return null;
+  return (
+    <div className="broker-matches">
+      <h3 className="label-xs">Brokers recomendados</h3>
+      {list.length ? list.slice(0, 4).map(({ broker: b, houses, requested, visits }) => (
+        <div className="broker-match" key={b.id}>
+          <div className="broker-match__head">
+            <strong>{b.name}</strong>
+            {l.broker?.id === b.id ? <Badge label="Asignado" tone="ok" /> : <button className="btn btn--sm btn--secondary" type="button" disabled={busy} onClick={() => onAssign(b.id, b.name)}>Asignar</button>}
+          </div>
+          <p className="small muted">{requested ? 'Atiende la casa que pidió · ' : ''}{houses.length} {plural(houses.length, 'casa encaja', 'casas encajan')} · {visits} {plural(visits, 'cita pendiente', 'citas pendientes')}</p>
+          {houses.length > 0 && <ul>{houses.slice(0, 3).map(({ house: h, why }) => <li key={h.id}>{h.name} · {money(h.price)}{h.op === 'renta' ? ' / mes' : ''}{why.length ? ' · ' + why.join(', ') : ''}</li>)}</ul>}
+        </div>
+      )) : <p className="small muted">Ningún broker tiene casas disponibles que encajen con lo que pidió. Asigna a quien pueda conseguirle una.</p>}
+    </div>
+  );
+}
+
 /** Cita vigente (por confirmar o confirmada) agendada desde la solicitud */
 const activeAppt = (l: Lead) => (l.appointments ?? []).find((a) => a.status === 'por-confirmar' || a.status === 'confirmada');
 
 /** Agendar la visita desde la solicitud (diálogo): la cita queda «por confirmar» y ligada a la solicitud. */
 function ScheduleForm({ l, close, onDone }: { l: Lead; close: () => void; onDone: (msg: string) => void }) {
   const D = useStore();
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const houses = visitable(D, l);
+  // La casa que mandó el cliente no se cambia aquí: otra se le propone desde la app
+  const fixedId = activeAppt(l)?.property.code ?? (l.property && houses.some((p) => p.id === l.property!.code) ? l.property.code : '');
+  const fixed = fixedId ? D.properties.find((p) => p.id === fixedId) : undefined;
   // Cita vigente de la solicitud: se reprograma esa (no se crea otra)
   const active = activeAppt(l);
   const suggested = new Set([...(active ? [active.property.code] : []), ...(l.proposals ?? []).map((p) => p.property.code), ...(l.property ? [l.property.code] : [])]);
@@ -137,16 +162,26 @@ function ScheduleForm({ l, close, onDone }: { l: Lead; close: () => void; onDone
       <span className="dialog__icon dialog__icon--info"><Icon id="cal-clock" className="icon--lg" /></span>
       <h2 id="dialog-title">{active ? `Cambiar la cita de ${l.name}` : `Agendar cita para ${l.name}`}</h2>
       <p className="lead">{active
-        ? `Ya tiene la cita ${active.code} (${active.property.name}). Elige el nuevo día y horario: se mueve esa misma cita y queda por confirmar. Si eliges otra casa, se agenda una cita aparte.`
-        : 'Visita presencial de 45 minutos. Aparece en Citas como «por confirmar» y a la persona le llega el aviso en la app.'}</p>
-      <form noValidate onSubmit={submit}>
+        ? `Ya tiene la cita ${active.code} (${active.property.name}). Elige el nuevo día y horario: se mueve esa misma cita y queda por confirmar.`
+        : 'Visita presencial de 15 minutos. Aparece en Citas como «por confirmar» y a la persona le llega el aviso en la app.'}</p>
+      <form noValidate {...live} onSubmit={submit}>
         {error && <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{error}</span></div>}
         <div className="form-grid">
-          <div className="field span-all"><label className="field__label" htmlFor="sc-prop">Casa *</label>
-            <select className="select" id="sc-prop" required defaultValue={houses.find((p) => suggested.has(p.id))?.id ?? ''} onChange={() => clear('sc-prop')} {...err(errors, 'sc-prop')}>
-              <Options list={houses.map((p): [string, string] => [p.id, `${suggested.has(p.id) ? '★ ' : ''}${p.name} · ${p.zone} · ${opLabel(p)} ${money(p.price)}`])} placeholder="Elige la casa a visitar" />
-            </select>
-            <p className="field__hint">★ = la casa que pidió o las que le propusiste.</p><FieldError errors={errors} id="sc-prop" /></div>
+          <div className="field span-all"><label className="field__label" htmlFor={fixed ? 'sc-prop-name' : 'sc-prop'}>Casa *</label>
+            {fixed ? (
+              <>
+                <input type="hidden" id="sc-prop" value={fixed.id} />
+                <input className="input" id="sc-prop-name" readOnly value={`${fixed.name} · ${fixed.zone}`} />
+                <p className="field__hint">Es la casa que eligió la persona. Para sugerirle otra, propónsela desde la app.</p>
+              </>
+            ) : (
+              <>
+                <select className="select" id="sc-prop" required defaultValue={houses.find((p) => suggested.has(p.id))?.id ?? ''} onChange={() => clear('sc-prop')} {...err(errors, 'sc-prop')}>
+                  <Options list={houses.map((p): [string, string] => [p.id, `${suggested.has(p.id) ? '★ ' : ''}${p.name} · ${p.zone} · ${opLabel(p)} ${money(p.price)}`])} placeholder="Elige la casa a visitar" />
+                </select>
+                <p className="field__hint">{l.property ? `${l.property.name} ya no está disponible. ` : ''}★ = las casas que le propusiste.</p>
+              </>
+            )}<FieldError errors={errors} id="sc-prop" /></div>
           <div className="field"><label className="field__label" htmlFor="sc-date">Fecha *</label>
             <input className="input" id="sc-date" type="date" required min={Z.TODAY} defaultValue={l.preferredDate && l.preferredDate >= Z.TODAY ? l.preferredDate : ''} onInput={() => clear('sc-date')} {...err(errors, 'sc-date')} /><FieldError errors={errors} id="sc-date" /></div>
           <div className="field"><label className="field__label" htmlFor="sc-time-h">Horario *</label>
@@ -165,7 +200,7 @@ function ScheduleForm({ l, close, onDone }: { l: Lead; close: () => void; onDone
 /** Nueva solicitud (llamada, WhatsApp, oficina) o corregir una existente (diálogo). */
 function LeadForm({ l, close, onDone }: { l?: Lead; close: () => void; onDone: (lead: Lead, msg: string) => void }) {
   const D = useStore();
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState<Lead['reason']>(l?.reason ?? 'rentar');
@@ -195,7 +230,7 @@ function LeadForm({ l, close, onDone }: { l?: Lead; close: () => void; onDone: (
     <>
       <h2 id="dialog-title">{l ? `Editar solicitud ${l.folio}` : 'Nueva solicitud'}</h2>
       <p className="lead">{l ? 'Corrige los datos que llegaron mal escritos.' : 'Para quien llamó, escribió por WhatsApp o vino a la oficina. Se le crea la cuenta de la app con su correo.'}</p>
-      <form noValidate onSubmit={submit}>
+      <form noValidate {...live} onSubmit={submit}>
         {error && <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{error}</span></div>}
         <div className="form-grid">
           <div className="field"><label className="field__label" htmlFor="lf-name">Nombre *</label>
@@ -290,11 +325,9 @@ function Detail({ id, onChanged, onDeleted, onOpen }: { id: string; onChanged: (
   const D = useStore();
   const { toast, confirm, open } = useOverlay();
   const lead = useApiData(() => Requests.get(id), [id]);
-  const [pick, setPick] = useState('');
-  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { setPick(''); setNote(''); titleRef.current?.focus(); }, [id]);
+  useEffect(() => { titleRef.current?.focus(); }, [id]);
 
   if (lead.loading && !lead.data) return <p className="muted" role="status">Cargando solicitud…</p>;
   if (lead.error || !lead.data) return <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{lead.error}</span></div>;
@@ -303,12 +336,6 @@ function Detail({ id, onChanged, onDeleted, onOpen }: { id: string; onChanged: (
     setBusy(true);
     p.then(() => { toast(msg); after?.(); lead.reload(); onChanged(); }, (e) => toast(failMsg(e))).finally(() => setBusy(false));
   };
-  const wantsSale = l.reason === 'comprar' || l.payload.operacion === 'compra';
-  // Casas que se pueden proponer: publicadas y disponibles (primero las de la operación que busca), sin las ya propuestas
-  const taken = new Set((l.proposals || []).map((p) => p.property.code));
-  const options = D.properties
-    .filter((p) => p.visibility === 'publicada' && (p.status === 'disponible' || p.status === 'reservada') && !taken.has(p.id))
-    .sort((a, b) => Number((b.op === 'venta') === wantsSale) - Number((a.op === 'venta') === wantsSale) || a.price - b.price);
   const appts = l.appointments ?? [];
   const schedule = () => open((close) => <ScheduleForm l={l} close={close} onDone={(m) => { toast(m); lead.reload(); onChanged(); load().then(rerender, () => {}); }} />, { wide: true });
   const edit = () => open((close) => <LeadForm l={l} close={close} onDone={(_x, m) => { toast(m); lead.reload(); onChanged(); }} />, { wide: true });
@@ -367,7 +394,7 @@ function Detail({ id, onChanged, onDeleted, onOpen }: { id: string; onChanged: (
                 </li>
               ))}
             </ul>
-          ) : <p className="muted">Aún no tiene cita. Con «Agendar cita» eliges la casa, el día y la hora; aparece en Citas y le avisamos en la app.</p>}
+          ) : <p className="muted">Aún no tiene cita. Con «Agendar cita» eliges el día y la hora; aparece en Citas y le avisamos en la app.</p>}
         </section>
 
         <section className="card card--pad" aria-labelledby="rq-props">
@@ -383,17 +410,7 @@ function Detail({ id, onChanged, onDeleted, onOpen }: { id: string; onChanged: (
                 </li>
               ))}
             </ul>
-          ) : <p className="muted">Aún no le propones casas. Elige una del inventario; si no hay, contéstale que se la conseguirás.</p>}
-          <form className="proposal-form" onSubmit={(e) => { e.preventDefault(); if (!pick) return toast('Elige una casa para proponer.'); run(Requests.propose(l.id, D.properties.find((p) => p.id === pick)!._id!, note), 'Casa propuesta. Le avisamos al cliente en la app.', () => { setPick(''); setNote(''); }); }}>
-            <div className="field"><label className="field__label" htmlFor="rq-pick">Proponer una casa</label>
-              <select className="select" id="rq-pick" value={pick} onChange={(e) => setPick(e.target.value)}>
-                <option value="">Elige una casa del inventario</option>
-                {options.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.zone} · {opLabel(p)} {money(p.price)}</option>)}
-              </select></div>
-            <div className="field"><label className="field__label" htmlFor="rq-note">Nota para el cliente <span className="muted">(opcional)</span></label>
-              <input className="input" id="rq-note" maxLength={300} placeholder="Por ejemplo: tiene jardín y acepta mascotas" value={note} onChange={(e) => setNote(e.target.value)} /></div>
-            <button className="btn" type="submit" disabled={busy || !apiActive()}><Icon id="plus" />Proponer</button>
-          </form>
+          ) : <p className="muted">Aún no hay casas propuestas. Los brokers las proponen desde la app, en esta misma solicitud.</p>}
         </section>
       </div>
 
@@ -409,6 +426,7 @@ function Detail({ id, onChanged, onDeleted, onOpen }: { id: string; onChanged: (
                 <Options list={brokerOptions(D.brokers, l.broker?.id ?? '')} />
               </select>
               <p className="small muted" style={{ marginTop: '.5rem' }}>{l.broker ? 'Puedes cambiarlo: la cita vigente pasa al nuevo broker. Los datos de la persona no cambian.' : 'Llegó sin broker. Elige quién la atiende: le avisamos y la cita (si pidió una) queda con él.'}</p>
+              <BrokerMatches l={l} busy={busy} onAssign={(bid, name) => run(Requests.assign(l.id, bid), `Solicitud ${l.folio} asignada a ${name}. Le avisamos y su cita se va con ${name}.`)} />
             </>
           ) : <p>{l.broker?.name ?? 'Sin asignar'}</p>}
         </section>

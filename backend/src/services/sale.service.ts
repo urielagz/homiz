@@ -148,9 +148,9 @@ export const money = (n: number) => `$${n.toLocaleString('es-MX', { minimumFract
 const LONG_DATE = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 /** Las fuentes estándar del PDF solo tienen caracteres latinos: el resto se reemplaza. */
-const safe = (t: string) => t.replace(/[^\x20-\x7E -ÿ–—‘’“”•…]/g, '?');
+export const safe = (t: string) => t.replace(/[^\x20-\x7E -ÿ–—‘’“”•…]/g, '?');
 
-function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
+export function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const lines: string[] = [];
   let line = '';
   for (const word of safe(text).split(/\s+/)) {

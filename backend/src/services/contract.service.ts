@@ -3,7 +3,8 @@ import { env } from '../config/env.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { AuthUser } from '../middlewares/authenticate.js';
 import { insertActivity } from '../models/activity.model.js';
-import { assertPropertyAccess } from './access.service.js';
+import { assertPropertyAccess, isOwner } from './access.service.js';
+import { cancelVisitsOfHouse } from './appointment.service.js';
 import { notify, staffWithPermission, userOfClient } from './notification.service.js';
 
 export interface ContractInput {
@@ -22,11 +23,29 @@ export interface ContractInput {
  * (o del siguiente si ese día ya pasó) y el último, el que cae antes del fin del contrato.
  */
 export async function createContract(user: AuthUser, c: ContractInput): Promise<string> {
+  // Rentar lo decide el dueño de la empresa; administración solo da seguimiento a la casa ya rentada
+  if (!isOwner(user)) throw new AppError(403, 'OWNER_ONLY', 'Solo el dueño puede rentar una casa.');
   await assertPropertyAccess(user, c.propertyId);
   const prop = await pool.query<{ name: string; operation: string; broker_id: string | null }>('SELECT name, operation, broker_id FROM properties WHERE id = $1', [c.propertyId]);
   if (prop.rows[0].operation !== 'renta') throw new AppError(409, 'NOT_FOR_RENT', 'Solo se registran contratos de renta en casas en renta.');
   const client = await pool.query<{ name: string }>('SELECT name FROM clients WHERE id = $1 AND active', [c.clientId]);
   if (!client.rows[0]) throw new AppError(404, 'NOT_FOUND', 'El cliente no existe.');
+
+  // La renta no empieza en una fecha que ya pasó, ni antes de la visita de esa persona a esa casa
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: env.TZ_APP });
+  if (c.startDate < today) {
+    const msg = 'La renta no puede empezar en una fecha que ya pasó.';
+    throw new AppError(400, 'VALIDATION_ERROR', msg, { startDate: [msg] });
+  }
+  const { rows: [visit] } = await pool.query<{ day: string | null }>(
+    `SELECT to_char(max(scheduled_at AT TIME ZONE $3), 'YYYY-MM-DD') AS day FROM appointments
+      WHERE client_id = $1 AND property_id = $2 AND status IN ('realizada', 'confirmada', 'por-confirmar')`,
+    [c.clientId, c.propertyId, env.TZ_APP],
+  );
+  if (visit?.day && c.startDate < visit.day) {
+    const msg = `La renta no puede empezar antes de la visita a la casa (${visit.day.split('-').reverse().join('/')}).`;
+    throw new AppError(400, 'VALIDATION_ERROR', msg, { startDate: [msg] });
+  }
 
   try {
     return await withTransaction(async (db) => {
@@ -50,6 +69,9 @@ export async function createContract(user: AuthUser, c: ContractInput): Promise<
       );
       if (!notes.rowCount) throw new AppError(400, 'VALIDATION_ERROR', 'Con esas fechas no cae ningún día de pago. Revisa el inicio, el fin y el día de pago.');
       await db.query(`UPDATE properties SET status = 'rentada', visibility = 'pausada', updated_at = now() WHERE id = $1`, [c.propertyId]);
+      await cancelVisitsOfHouse(db, c.propertyId, 'La casa ya se rentó.');
+      // Quien la rentó ya no busca esa casa: su solicitud termina aquí
+      await db.query(`UPDATE leads SET status = 'cerrado' WHERE property_id = $1 AND client_id = $2 AND status <> 'cerrado'`, [c.propertyId, c.clientId]);
       await db.query(
         `UPDATE clients SET kind = 'inquilino', follow_status = 'Contrato vigente', property_id = $2, operation = 'Renta' WHERE id = $1`,
         [c.clientId, c.propertyId],

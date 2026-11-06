@@ -51,14 +51,16 @@ export const NeedsServer = ({ what }: { what: string }) => (
 );
 
 /* ---------- Diálogos ---------- */
-function DialogForm({ title, lead, children, submit, danger, onSubmit, close, error }: {
+function DialogForm({ title, lead, children, submit, danger, onSubmit, close, error, live }: {
   title: string; lead: ReactNode; children: ReactNode; submit: string; danger?: boolean; error: string; close: () => void; onSubmit: (form: HTMLFormElement) => void;
+  /** Errores en tiempo real (de useErrors) */
+  live?: ReturnType<typeof useErrors>['live'];
 }) {
   return (
     <>
       <h2 id="dialog-title">{title}</h2>
       <p className="lead">{lead}</p>
-      <form noValidate onSubmit={(e: FormEvent<HTMLFormElement>) => { e.preventDefault(); onSubmit(e.currentTarget); }}>
+      <form noValidate {...live} onSubmit={(e: FormEvent<HTMLFormElement>) => { e.preventDefault(); onSubmit(e.currentTarget); }}>
         {error && <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{error}</span></div>}
         <div className="form-grid">{children}</div>
         <div className="dialog__actions">
@@ -74,7 +76,7 @@ const value = (id: string) => (document.getElementById(id) as HTMLInputElement).
 const noteTitle = (n: Note) => `${n.label} · ${n.client ? n.client.name + ' · ' : ''}${n.property.name}`;
 
 function RegisterPayment({ n, close, done }: { n: Note; close: () => void; done: (msg: string) => void }) {
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const files = (id: string) => Array.from((document.getElementById(id) as HTMLInputElement | null)?.files ?? []);
@@ -108,7 +110,7 @@ function RegisterPayment({ n, close, done }: { n: Note; close: () => void; done:
     }
   };
   return (
-    <DialogForm title="Registrar pago" lead={<>{noteTitle(n)}<br />El pago cubre el pagaré completo: <strong>{money(n.amount)} MXN</strong>. El folio del recibo se genera solo. Sube aquí el pagaré firmado y la foto del sello: todo queda en un paso.</>}
+    <DialogForm live={live} title="Registrar pago" lead={<>{noteTitle(n)}<br />El pago cubre el pagaré completo: <strong>{money(n.amount)} MXN</strong>. El recibo se genera solo y el inquilino lo ve en su app. Sube aquí el pagaré firmado y la foto del sello: todo queda en un paso.</>}
       submit={busy || 'Marcar como pagado'} error={error} close={close} onSubmit={(f) => void submit(f)}>
       <div className="field"><label className="field__label" htmlFor="rp-date">Fecha del pago *</label><input className="input" id="rp-date" type="date" required max={Z.TODAY} defaultValue={Z.TODAY} onInput={() => clear('rp-date')} {...err(errors, 'rp-date')} /><FieldError errors={errors} id="rp-date" /></div>
       <div className="field"><label className="field__label" htmlFor="rp-pdf">Pagaré firmado (PDF){n.documentId ? <span className="muted"> · ya tiene uno</span> : ''}</label>
@@ -122,7 +124,7 @@ function RegisterPayment({ n, close, done }: { n: Note; close: () => void; done:
 }
 
 function EditNote({ n, close, done }: { n: Note; close: () => void; done: (msg: string) => void }) {
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const submit = (form: HTMLFormElement) => {
     if (!check(form)) return;
@@ -133,7 +135,7 @@ function EditNote({ n, close, done }: { n: Note; close: () => void; done: (msg: 
     Finance.updateNote(n, body).then(() => { close(); done(`Se actualizó el ${n.label}.`); }, (e) => setError(failMsg(e)));
   };
   return (
-    <DialogForm title="Editar pagaré" lead={<>{noteTitle(n)}<br />Solo se editan pagarés pendientes o vencidos.</>} submit="Guardar cambios" error={error} close={close} onSubmit={submit}>
+    <DialogForm live={live} title="Editar pagaré" lead={<>{noteTitle(n)}<br />Solo se editan pagarés pendientes o vencidos.</>} submit="Guardar cambios" error={error} close={close} onSubmit={submit}>
       <div className="field"><label className="field__label" htmlFor="en-amount">Monto (MXN) *</label><input className="input" id="en-amount" required data-number="" inputMode="decimal" defaultValue={n.amount} onInput={() => clear('en-amount')} {...err(errors, 'en-amount')} /><FieldError errors={errors} id="en-amount" /></div>
       <div className="field"><label className="field__label" htmlFor="en-date">Fecha de vencimiento *</label><input className="input" id="en-date" type="date" required defaultValue={n.dueDate} onInput={() => clear('en-date')} {...err(errors, 'en-date')} /><FieldError errors={errors} id="en-date" /></div>
     </DialogForm>
@@ -142,7 +144,7 @@ function EditNote({ n, close, done }: { n: Note; close: () => void; done: (msg: 
 
 function CorrectPayment({ n, close, done }: { n: Note; close: () => void; done: (msg: string) => void }) {
   const p = n.payment!;
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const submit = (form: HTMLFormElement) => {
     if (!check(form)) return;
@@ -160,7 +162,7 @@ function CorrectPayment({ n, close, done }: { n: Note; close: () => void; done: 
     Finance.correctPayment(n, body).then(() => { close(); done(`Se corrigió el pago del ${n.label}. El cambio queda en el historial.`); }, (e) => setError(failMsg(e)));
   };
   return (
-    <DialogForm title="Corregir pago" lead={<>{noteTitle(n)}<br />Registrado por {p.registeredBy ?? 'el personal'}. La corrección queda en el historial.</>} submit="Guardar corrección" error={error} close={close} onSubmit={submit}>
+    <DialogForm live={live} title="Corregir pago" lead={<>{noteTitle(n)}<br />Registrado por {p.registeredBy ?? 'el personal'}. La corrección queda en el historial.</>} submit="Guardar corrección" error={error} close={close} onSubmit={submit}>
       <div className="field"><label className="field__label" htmlFor="cp-amount">Monto (MXN) *</label><input className="input" id="cp-amount" required data-number="" inputMode="decimal" defaultValue={p.amount} onInput={() => clear('cp-amount')} {...err(errors, 'cp-amount')} /><FieldError errors={errors} id="cp-amount" /></div>
       <div className="field"><label className="field__label" htmlFor="cp-date">Fecha del pago *</label><input className="input" id="cp-date" type="date" required max={Z.TODAY} defaultValue={day(p.paidAt)} onInput={() => clear('cp-date')} {...err(errors, 'cp-date')} /><FieldError errors={errors} id="cp-date" /></div>
       <div className="field"><label className="field__label" htmlFor="cp-folio">Folio del recibo *</label><input className="input" id="cp-folio" required maxLength={40} defaultValue={p.receiptFolio} onInput={() => clear('cp-folio')} {...err(errors, 'cp-folio')} /><FieldError errors={errors} id="cp-folio" /></div>
@@ -170,7 +172,7 @@ function CorrectPayment({ n, close, done }: { n: Note; close: () => void; done: 
 }
 
 function VoidPayment({ n, close, done }: { n: Note; close: () => void; done: (msg: string) => void }) {
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const submit = (form: HTMLFormElement) => {
     const short = value('vp-reason').length < 5 ? [{ id: 'vp-reason', msg: 'Explica por qué se anula el pago (al menos 5 letras).' }] : [];
@@ -178,7 +180,7 @@ function VoidPayment({ n, close, done }: { n: Note; close: () => void; done: (ms
     Finance.voidPayment(n, value('vp-reason')).then(() => { close(); done(`Se anuló el pago del ${n.label}; el pagaré vuelve a estar por cobrar.`); }, (e) => setError(failMsg(e)));
   };
   return (
-    <DialogForm title="¿Anular este pago?" danger lead={<>{noteTitle(n)} · folio {n.payment!.receiptFolio}<br />El pagaré vuelve a pendiente (o vencido) y el pago anulado queda en el historial.</>} submit="Sí, anular pago" error={error} close={close} onSubmit={submit}>
+    <DialogForm live={live} title="¿Anular este pago?" danger lead={<>{noteTitle(n)} · folio {n.payment!.receiptFolio}<br />El pagaré vuelve a pendiente (o vencido) y el pago anulado queda en el historial.</>} submit="Sí, anular pago" error={error} close={close} onSubmit={submit}>
       <div className="field span-all"><label className="field__label" htmlFor="vp-reason">Motivo de la anulación *</label><textarea className="textarea" id="vp-reason" required maxLength={300} placeholder="Por ejemplo: se registró en el pagaré equivocado." onInput={() => clear('vp-reason')} {...err(errors, 'vp-reason')} /><FieldError errors={errors} id="vp-reason" /></div>
     </DialogForm>
   );
@@ -186,7 +188,7 @@ function VoidPayment({ n, close, done }: { n: Note; close: () => void; done: (ms
 
 /** «Nuevo pagaré»: un cargo o mes adicional del contrato vigente. El monto es un número. */
 function NewNote({ contractId, rent, close, done }: { contractId: string; rent: number; close: () => void; done: (msg: string) => void }) {
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const submit = (form: HTMLFormElement) => {
     if (!check(form)) return;
@@ -194,7 +196,7 @@ function NewNote({ contractId, rent, close, done }: { contractId: string; rent: 
     Finance.createNote(contractId, amount, value('nn-date')).then((n) => { close(); done(`Se agregó el ${n.label} por ${money(n.amount)}. El cliente lo verá en su app.`); }, (e) => setError(failMsg(e)));
   };
   return (
-    <DialogForm title="Nuevo pagaré" lead="Agrega un pagaré al contrato vigente (por ejemplo, un mes más o un cargo acordado)." submit="Agregar pagaré" error={error} close={close} onSubmit={submit}>
+    <DialogForm live={live} title="Nuevo pagaré" lead="Agrega un pagaré al contrato vigente (por ejemplo, un mes más o un cargo acordado)." submit="Agregar pagaré" error={error} close={close} onSubmit={submit}>
       <div className="field"><label className="field__label" htmlFor="nn-amount">Monto (MXN) *</label><input className="input" id="nn-amount" required data-number="" inputMode="decimal" defaultValue={rent} onInput={() => clear('nn-amount')} {...err(errors, 'nn-amount')} /><FieldError errors={errors} id="nn-amount" /></div>
       <div className="field"><label className="field__label" htmlFor="nn-date">Fecha de vencimiento *</label><input className="input" id="nn-date" type="date" required min={Z.TODAY} onInput={() => clear('nn-date')} {...err(errors, 'nn-date')} /><FieldError errors={errors} id="nn-date" /></div>
     </DialogForm>
@@ -202,7 +204,7 @@ function NewNote({ contractId, rent, close, done }: { contractId: string; rent: 
 }
 
 function CancelNote({ n, close, done }: { n: Note; close: () => void; done: (msg: string) => void }) {
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const submit = (form: HTMLFormElement) => {
     const short = value('cn-reason').length < 5 ? [{ id: 'cn-reason', msg: 'Explica por qué se cancela (al menos 5 letras).' }] : [];
@@ -210,7 +212,7 @@ function CancelNote({ n, close, done }: { n: Note; close: () => void; done: (msg
     Finance.cancelNote(n, value('cn-reason')).then(() => { close(); done(`Se canceló el ${n.label}; queda en el historial.`); }, (e) => setError(failMsg(e)));
   };
   return (
-    <DialogForm title={`¿Cancelar el ${n.label}?`} danger lead={<>{noteTitle(n)} · {money(n.amount)}<br />Ya no se cobrará; queda en el historial.</>} submit="Sí, cancelar pagaré" error={error} close={close} onSubmit={submit}>
+    <DialogForm live={live} title={`¿Cancelar el ${n.label}?`} danger lead={<>{noteTitle(n)} · {money(n.amount)}<br />Ya no se cobrará; queda en el historial.</>} submit="Sí, cancelar pagaré" error={error} close={close} onSubmit={submit}>
       <div className="field span-all"><label className="field__label" htmlFor="cn-reason">Motivo *</label><textarea className="textarea" id="cn-reason" required maxLength={300} placeholder="Por ejemplo: se acordó no cobrar este cargo." onInput={() => clear('cn-reason')} {...err(errors, 'cn-reason')} /><FieldError errors={errors} id="cn-reason" /></div>
     </DialogForm>
   );
@@ -298,7 +300,7 @@ export function NotesTable({ notes, showProperty, onChanged, empty }: { notes: N
     }
     if (n.documentId) list.push(<button key="pdf" className="link" type="button" onClick={() => Finance.openDocument(n.documentId!).catch((e) => toast(failMsg(e)))}>Ver pagaré</button>);
     if (can('documents.manage')) list.push(<button key="up" className="link" type="button" onClick={() => uploadNotePdf(n)}>{n.documentId ? 'Reemplazar PDF' : 'Subir PDF'}</button>);
-    if (n.proofDocumentId) list.push(<button key="proof" className="link" type="button" onClick={() => Finance.openDocument(n.proofDocumentId!).catch((e) => toast(failMsg(e)))}>Comprobante</button>);
+    if (n.proofDocumentId) list.push(<button key="proof" className="link" type="button" onClick={() => Finance.openDocument(n.proofDocumentId!).catch((e) => toast(failMsg(e)))}>Ver recibo</button>);
     // Sellos: fotos de la entrega del pagaré en físico y digital
     if (n.stamps.length || can('documents.manage')) {
       list.push(<button key="stamps" className="link" type="button" onClick={() => dialog((c) => <Stamps n={n} close={c} done={done} />)}>

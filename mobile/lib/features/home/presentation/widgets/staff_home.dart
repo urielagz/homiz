@@ -69,8 +69,8 @@ class StaffDashboardView extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         DashboardCard(
-          title: 'Reportes nuevos...',
-          value: _count(c.newReports, 'reporte', 'reportes'),
+          title: 'Reportes abiertos...',
+          value: _count(c.openReports, 'reporte', 'reportes'),
           detail: report == null ? null : '${report.title} · ${report.propertyName}',
           illustration: 'assets/illustrations/reportes.svg',
           onTap: () => context.go('/home/reports'),
@@ -106,7 +106,7 @@ class StaffDashboardView extends StatelessWidget {
         ),
         // Como «Pagos» del panel: todos los pagarés con registrar, corregir o anular el pago, sellos y PDF
         PermissionGate(
-          permission: 'payments.register',
+          permission: 'properties.manage',
           child: Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.md),
             child: PrimaryButton(label: 'Pagos y pagarés', icon: Icons.payments_outlined, onPressed: () => context.go('/home/payments')),

@@ -29,11 +29,19 @@ export function budgetLabel(min: string, max: string, op: 'renta' | 'compra') {
   return '';
 }
 
+/** Montos con sentido para cada operación: una renta al mes y una compra no se miden igual */
+export const BUDGET_LIMITS = { renta: [1_000, 1_000_000], compra: [100_000, 999_999_999] } as const;
+
 /** Error del rango (para la validación del formulario) */
-export function budgetError(min: string, max: string): string {
-  if (!toAmount(max)) return 'Escribe tu presupuesto máximo (solo números).';
-  if (min.trim() && !toAmount(min)) return 'Escribe el mínimo solo con números.';
-  if (toAmount(min) && toAmount(min)! > toAmount(max)!) return 'El mínimo no puede ser mayor que el máximo.';
+export function budgetError(min: string, max: string, op: 'renta' | 'compra'): string {
+  const [low, high] = BUDGET_LIMITS[op];
+  const a = toAmount(min), b = toAmount(max);
+  if (min.trim() && !a) return 'Escribe el mínimo solo con números.';
+  if (a && a < low) return `El mínimo debe ser de al menos ${fmt(low)}.`;
+  if (!b) return 'Escribe tu presupuesto máximo (solo números).';
+  if (b < low) return `El presupuesto debe ser de al menos ${fmt(low)}.`;
+  if (b > high) return `El presupuesto no puede pasar de ${fmt(high)}.`;
+  if (a && a > b) return 'El mínimo no puede ser mayor que el máximo.';
   return '';
 }
 

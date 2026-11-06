@@ -137,6 +137,15 @@ export async function register(data: { name: string; email: string; phone: strin
     if (err?.code === '23505') throw new AppError(409, 'EMAIL_TAKEN', 'Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');
     throw err;
   });
+  await sendMail({
+    to: user.email,
+    subject: 'Bienvenido a Homiz · Inmobiliaria Zugar',
+    text:
+      `Hola, ${user.name.split(' ')[0]}:\n\n` +
+      'Tu cuenta de la app Homiz ya está lista. Entra con tu correo y la contraseña que elegiste para enviar tus solicitudes y agendar tus visitas.\n\n' +
+      'Si no creaste esta cuenta, escríbenos para darla de baja.\n\nInmobiliaria Zugar',
+    action: { label: 'Abrir la app Homiz', url: await loginLink(user) },
+  });
   return issueSession(user);
 }
 
@@ -198,13 +207,14 @@ export function temporaryPassword(): string {
 /** Hash de la contraseña temporal ligado al usuario (en password_resets.code_hash) */
 const temporaryHash = (userId: string, password: string) => hashOpaqueToken(`${userId}:${password}`);
 
-/** Enlace del correo: al inicio de sesión de la app (clientes, con el correo escrito) o del panel (personal). */
-function loginLink(user: { type: string; email: string }): string {
-  if (user.type === 'client') {
-    const base = env.APP_CLIENT_URL;
-    return `${base}${base.includes('?') ? '&' : '?'}email=${encodeURIComponent(user.email)}`;
-  }
-  return env.APP_RESET_URL;
+/** Solo el propietario entra al panel; brokers y administradores usan la app. */
+const entersPanel = async (user: { id: string; type: string }) => user.type === 'staff' && (await Users.loadAccess(user.id)).roles.includes('owner');
+
+/** Enlace del correo: al panel (propietario) o al inicio de sesión de la app, con el correo escrito (los demás). */
+async function loginLink(user: { id: string; type: string; email: string }): Promise<string> {
+  if (await entersPanel(user)) return env.APP_RESET_URL;
+  const base = env.APP_CLIENT_URL;
+  return `${base}${base.includes('?') ? '&' : '?'}email=${encodeURIComponent(user.email)}`;
 }
 
 /**
@@ -227,7 +237,7 @@ export async function forgotPassword(email: string): Promise<void> {
       `Recibimos una solicitud para recuperar tu contraseña. Entra con esta contraseña temporal (vale ${env.PASSWORD_RESET_MINUTES} minutos):\n\n` +
       `${temp}\n\nAl entrar te pediremos crear tu propia contraseña.\n\n` +
       'Si no fuiste tú, ignora este correo: tu contraseña de siempre sigue funcionando.\n\nInmobiliaria Zugar',
-    action: { label: user.type === 'client' ? 'Abrir la app Homiz' : 'Entrar al panel', url: loginLink(user) },
+    action: { label: (await entersPanel(user)) ? 'Entrar al panel' : 'Abrir la app Homiz', url: await loginLink(user) },
   });
 }
 
@@ -263,7 +273,7 @@ export async function sendAccountReady(user: { id: string; name: string; email: 
       'Recibimos tu solicitud y te creamos una cuenta en la app Homiz para que la sigas: ahí tu asesor te contesta, te propone casas y agendas tus visitas.\n\n' +
       `Entra con tu correo (${user.email}) y esta contraseña temporal:\n\n${temp}\n\n` +
       'Al entrar te pediremos crear tu propia contraseña.\n\nInmobiliaria Zugar',
-    action: { label: 'Abrir la app Homiz', url: loginLink(user) },
+    action: { label: 'Abrir la app Homiz', url: await loginLink(user) },
   });
 }
 

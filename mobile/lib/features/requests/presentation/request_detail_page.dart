@@ -28,6 +28,20 @@ class RequestDetailPage extends ConsumerWidget {
 
   final String requestId;
 
+  /// Cita que pidió la persona y espera que el personal la acepte.
+  static RequestAppointment? _askedVisit(LeadRequest r) =>
+      r.appointments.where((a) => a.status == 'por-confirmar' && a.awaiting == 'staff' && a.scheduledAt.isAfter(Fmt.now())).firstOrNull;
+
+  /// Fecha y hora que pidió en su solicitud, si aún no hay cita y la casa sigue disponible.
+  static DateTime? _askedDate(LeadRequest r) {
+    final day = r.preferredDate, time = r.preferredTime;
+    if (r.propertyId == null || day == null || time == null || time.length < 5 || r.appointments.any((a) => a.isActive)) return null;
+    final at = DateTime.tryParse('${day.substring(0, 10)}T${time.substring(0, 5)}:00');
+    if (at == null || !at.isAfter(Fmt.now())) return null;
+    final minutes = at.hour * 60 + at.minute;
+    return minutes >= 7 * 60 && minutes <= 22 * 60 + 45 ? at : null; // horario de visitas
+  }
+
   Future<void> _run(BuildContext context, Future<void> Function() action, String done) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -42,6 +56,7 @@ class RequestDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final staff = ref.watch(sessionProvider.select((s) => s.value?.isStaff ?? false));
     final admin = ref.watch(sessionProvider.select((s) => s.value?.isAdmin ?? false));
+    final broker = ref.watch(sessionProvider.select((s) => s.value?.isBroker ?? false));
     final request = ref.watch(requestProvider(requestId));
     final actions = ref.read(requestActionsProvider);
     return Scaffold(
@@ -83,10 +98,19 @@ class RequestDetailPage extends ConsumerWidget {
                 ),
                 if (staff) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _BrokerCard(request: value, admin: admin, onAssign: (id, name) => _run(context, () => actions.assign(value.id, id), 'Solicitud asignada a $name. Le avisamos y su cita se va con $name.')),
+                  _BrokerCard(request: value, admin: admin, broker: broker, onTake: () => _run(context, () => actions.take(value.id), 'Tomaste esta solicitud. Ahora su seguimiento es tuyo.'), onAssign: (id, name) => _run(context, () => actions.assign(value.id, id), 'Solicitud asignada a $name. Le avisamos y su cita se va con $name.')),
                 ],
                 const SizedBox(height: AppSpacing.md),
                 RequestFormSections(request: value, staff: staff),
+                // El cliente corrige lo que mandó mientras la solicitud siga abierta
+                if (!staff && value.status != 'cerrado') ...[
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push('/home/requests/new', extra: value),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Editar mi información'),
+                  ),
+                ],
                 if (staff && value.others.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.lg),
                   Text('Otras solicitudes de esta persona · ${value.others.length}', style: AppTextStyles.cardTitle),
@@ -114,6 +138,28 @@ class RequestDetailPage extends ConsumerWidget {
                       subtitle: [Fmt.appointment(a.scheduledAt), if (a.broker != null) a.broker!].join('\n'),
                       trailing: StatusBadge.fromStatus(a.status),
                       onTap: () => context.push('/appointments/${a.id}'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  if (_askedVisit(value) case final a?) ...[
+                    Text('Pidió ${Fmt.appointment(a.scheduledAt)}. Si estás de acuerdo con la fecha y la hora, haz la cita.', style: AppTextStyles.body),
+                    const SizedBox(height: AppSpacing.sm),
+                    PrimaryButton(
+                      label: 'Hacer cita',
+                      icon: Icons.check_rounded,
+                      onPressed: () => _run(context, () async {
+                        await ref.read(appointmentActionsProvider).confirm(a.id);
+                        ref.invalidate(requestProvider(requestId));
+                      }, 'Cita ${a.code} confirmada. Le avisamos al cliente.'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ] else if (_askedDate(value) case final at?) ...[
+                    Text('Pidió ${Fmt.appointment(at)}. Si estás de acuerdo con la fecha y la hora, haz la cita.', style: AppTextStyles.body),
+                    const SizedBox(height: AppSpacing.sm),
+                    PrimaryButton(
+                      label: 'Hacer cita',
+                      icon: Icons.check_rounded,
+                      onPressed: () => _run(context, () => actions.schedule(value.id, propertyId: value.propertyId!, at: at, agreed: true), 'Cita confirmada. Le avisamos al cliente.'),
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
@@ -204,7 +250,7 @@ class RequestDetailPage extends ConsumerWidget {
   /// Personal: elige una casa publicada del inventario y una nota opcional.
   Future<void> _pickHouse(BuildContext context, WidgetRef ref, LeadRequest r) async {
     final taken = r.proposals.map((p) => p.propertyId).toSet();
-    final houses = (await ref.read(inventoryProvider('').future))
+    final houses = (await ref.read(allHousesProvider.future))
         .where((h) => h.visibility == 'publicada' && (h.status == 'disponible' || h.status == 'reservada') && !taken.contains(h.id))
         .toList();
     if (!context.mounted) return;
@@ -355,11 +401,15 @@ Future<String?> _askText(BuildContext context, {required String title, required 
 /// Broker que atiende la solicitud. Llega sin broker y administración lo asigna (o lo cambia);
 /// los datos de la persona no cambian y su cita pasa al broker elegido.
 class _BrokerCard extends ConsumerWidget {
-  const _BrokerCard({required this.request, required this.admin, required this.onAssign});
+  const _BrokerCard({required this.request, required this.admin, required this.broker, required this.onAssign, required this.onTake});
 
   final LeadRequest request;
   final bool admin;
+
+  /// También es broker (puede ser administración y broker a la vez): puede tomar la solicitud.
+  final bool broker;
   final void Function(String id, String name) onAssign;
+  final VoidCallback onTake;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -377,9 +427,14 @@ class _BrokerCard extends ConsumerWidget {
         children: [
           Text('Broker asignado', style: AppTextStyles.cardTitle),
           const SizedBox(height: AppSpacing.xs),
-          if (!admin)
-            Text(request.brokerName ?? 'Sin asignar', style: AppTextStyles.body)
-          else ...[
+          if (unassigned && broker) ...[
+            Text('Nadie la atiende todavía. El primero que la toma se queda con su seguimiento.', style: AppTextStyles.body),
+            const SizedBox(height: AppSpacing.sm),
+            PrimaryButton(label: 'Atender esta solicitud', icon: Icons.handshake_outlined, onPressed: onTake),
+            if (admin) const SizedBox(height: AppSpacing.md),
+          ] else if (!admin)
+            Text(request.brokerName ?? 'Sin asignar', style: AppTextStyles.body),
+          if (admin) ...[
             DropdownButtonFormField<String>(
               key: ValueKey(request.brokerId),
               initialValue: brokers.any((b) => b.id == request.brokerId) ? request.brokerId : null,

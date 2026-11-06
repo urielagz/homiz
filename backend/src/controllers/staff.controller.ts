@@ -115,7 +115,7 @@ export const update: RequestHandler = async (_req, res) => {
   if (d.active === false && (id === admin.id || before.roles.includes('owner'))) {
     throw new AppError(409, 'SELF_LOCKOUT', 'No se puede desactivar la cuenta del propietario.');
   }
-  if (d.roles && !d.roles.includes('broker') && before.roles.includes('broker') && before.properties > 0) {
+  if (d.roles && !d.roles.includes('broker') && !d.roles.includes('admin') && before.properties > 0) {
     throw new AppError(409, 'HAS_PROPERTIES', `Tiene ${before.properties} casas asignadas. Reasígnalas antes de quitarle el rol de broker.`);
   }
   await withTransaction(async (db) => {

@@ -5,14 +5,13 @@ import { MoneyInput } from '../../components/NumberInput';
 import { FormSections } from './Requests';
 import { can, isAdminSession } from '../auth';
 import { useOverlay } from '../components/Overlay';
-import { ApptBadge, brokerOptions, Cover, Crumbs, err, FieldError, Icon, Metric, Options, PageHead, Tabs, TimeInput, useErrors, useUrlParams } from '../components/ui';
+import { ApptBadge, brokerOptions, Cover, Crumbs, err, FieldError, Icon, Metric, Options, PageHead, Tabs, TimeInput, useErrors, useUrlParams, VISIT_TIMES } from '../components/ui';
 import {
   addMinutes, appt, broker, D as Data, money, dateLong, dateShort, dayShort, downloadCSV, isoDate, log, monthName, monthShort, norm, nowTime, parseDate, person,
   plural, prop, rerender, sortAppts, upcoming, useStore, viewState, Z, type Appointment, t12 } from '../store';
 
-/** Bloques de 15 minutos de todo el día (valor «HH:MM» de 24 h para la API; se muestran con t12): la visita dura 15 min */
+/** La visita dura 15 minutos */
 export const VISIT_MINUTES = 15;
-export const TIMES = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`);
 const S = viewState.citas;
 /** «Prospecto CLI-0012» / «Inquilino CLI-0004» para distinguir a las personas con el mismo nombre */
 export const personLabel = (id: string) => {
@@ -45,7 +44,7 @@ function goToWeekOf(iso: string) {
 /** Reprogramar una cita (diálogo) */
 function Reschedule({ a, close }: { a: Appointment; close: () => void }) {
   const { toast } = useOverlay();
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const p = prop(a.property);
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -71,7 +70,7 @@ function Reschedule({ a, close }: { a: Appointment; close: () => void }) {
       <span className="dialog__icon dialog__icon--info"><Icon id="cal-clock" className="icon--lg" /></span>
       <h2 id="dialog-title">Reprogramar cita</h2>
       <p className="lead">{person(a.person).name} · {p?.name ?? ''}. Le avisamos al cliente y la cita queda por confirmar hasta que acepte la nueva fecha en su app (o proponga otra).</p>
-      <form id="rs-form" noValidate onSubmit={onSubmit}>
+      <form id="rs-form" noValidate {...live} onSubmit={onSubmit}>
         <div className="form-grid">
           <div className="field"><label className="field__label" htmlFor="rs-date">Nueva fecha *</label>
             <input className="input" id="rs-date" type="date" required min={Z.TODAY} defaultValue={a.date} onInput={() => clear('rs-date')} {...err(errors, 'rs-date')} /><FieldError errors={errors} id="rs-date" /></div>
@@ -89,11 +88,19 @@ function Reschedule({ a, close }: { a: Appointment; close: () => void }) {
 function NewAppointment({ personId, close, onDone }: { personId: string | null; close: () => void; onDone: () => void }) {
   const D = useStore();
   const { toast } = useOverlay();
-  const { errors, check, clear } = useErrors();
-  const per = personId ? D.people.find((x) => x.id === personId) : undefined;
-  const prop0 = per?.property ?? '';
-  const [propId, setPropId] = useState(prop0);
-  const [brokerId, setBrokerId] = useState(prop(prop0)?.broker ?? '');
+  const { errors, check, live, clear } = useErrors();
+  /** Casa ya elegida por la persona: la de su cita vigente o la de su expediente, si no está rentada ni vendida */
+  const chosenHouse = (id: string) => {
+    const pr = D.people.find((x) => x.id === id);
+    const active = D.appointments.find((x) => x.person === id && (x.status === 'por-confirmar' || x.status === 'confirmada') && x.date >= Z.TODAY);
+    const h = prop(active?.property ?? pr?.property ?? '');
+    return h && h.status !== 'rentada' && h.status !== 'vendida' ? h.id : '';
+  };
+  const [chosen, setChosen] = useState(personId ? chosenHouse(personId) : '');
+  const [picked, setPicked] = useState('');
+  const propId = chosen || picked;
+  // El broker lo pone la casa (y lo cambia la asignación de la solicitud), no este formulario
+  const brokerId = prop(propId)?.broker ?? '';
   const v = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -132,16 +139,14 @@ function NewAppointment({ personId, close, onDone }: { personId: string | null; 
   return (
     <>
       <h2 id="dialog-title">Nueva cita</h2>
-      <p className="lead">Agenda una visita presencial de 15 minutos. Quedará por confirmar hasta que el cliente acepte. Cada persona tiene una sola cita vigente: si ya tiene una, se cambia a esta.</p>
-      <form id="nc-form" noValidate onSubmit={onSubmit}>
+      <p className="lead">Agenda una visita presencial de 15 minutos. Quedará por confirmar hasta que el cliente acepte. Cada persona tiene una sola cita vigente: si ya tiene una, solo cambia su fecha.</p>
+      <form id="nc-form" noValidate {...live} onSubmit={onSubmit}>
         <div className="form-grid">
           <div className="field"><label className="field__label" htmlFor="nc-person">Persona (ID · nombre · tipo) *</label>
             <select className="select" id="nc-person" required defaultValue={personId || ''} {...err(errors, 'nc-person')}
               onChange={(e) => {
                 clear('nc-person');
-                const pr = D.people.find((x) => x.id === e.target.value);
-                const pp = pr && prop(pr.property);
-                if (pp && pp.status !== 'rentada' && pp.status !== 'vendida') { setPropId(pp.id); setBrokerId(pp.broker); }
+                setChosen(chosenHouse(e.target.value));
               }}>
               {(['cliente', 'inquilino'] as const).map((t) => (
                 <optgroup key={t} label={t === 'inquilino' ? 'Inquilinos' : 'Prospectos'}>
@@ -151,19 +156,22 @@ function NewAppointment({ personId, close, onDone }: { personId: string | null; 
               {!personId && <option value="" disabled hidden>Elige a una persona</option>}
             </select><FieldError errors={errors} id="nc-person" /></div>
           <div className="field"><label className="field__label" htmlFor="nc-prop">Propiedad *</label>
-            <select className="select" id="nc-prop" required value={propId} {...err(errors, 'nc-prop')}
-              onChange={(e) => { clear('nc-prop'); setPropId(e.target.value); const pp = prop(e.target.value); if (pp) setBrokerId(pp.broker); }}>
-              <Options list={D.properties.filter((p) => p.status !== 'rentada' && p.status !== 'vendida').map((p): [string, string] => [p.id, p.id + ' · ' + p.name])} placeholder="Elige una propiedad" />
-            </select><FieldError errors={errors} id="nc-prop" /></div>
+            {chosen ? (
+              <>
+                <input className="input" id="nc-prop" readOnly value={chosen + ' · ' + (prop(chosen)?.name ?? '')} />
+                <p className="field__hint">Es la casa que eligió la persona. Para sugerirle otra, propónsela desde la app.</p>
+              </>
+            ) : (
+              <select className="select" id="nc-prop" required value={picked} {...err(errors, 'nc-prop')} onChange={(e) => { clear('nc-prop'); setPicked(e.target.value); }}>
+                <Options list={D.properties.filter((p) => p.status !== 'rentada' && p.status !== 'vendida').map((p): [string, string] => [p.id, p.id + ' · ' + p.name])} placeholder="Elige una propiedad" />
+              </select>
+            )}<FieldError errors={errors} id="nc-prop" /></div>
           <div className="field"><label className="field__label" htmlFor="nc-date">Fecha *</label>
             <input className="input" id="nc-date" type="date" required min={Z.TODAY} onInput={() => clear('nc-date')} {...err(errors, 'nc-date')} /><FieldError errors={errors} id="nc-date" /></div>
           <div className="field"><label className="field__label" htmlFor="nc-time-h">Horario *</label>
             <TimeInput id="nc-time" required invalid={!!errors['nc-time']} onChange={() => clear('nc-time')} /><FieldError errors={errors} id="nc-time" /></div>
-          <div className="field span-all"><label className="field__label" htmlFor="nc-broker">Broker responsable *</label>
-            <select className="select" id="nc-broker" required value={brokerId} onChange={(e) => { clear('nc-broker'); setBrokerId(e.target.value); }} {...err(errors, 'nc-broker')}>
-              <Options list={brokerOptions(D.brokers, brokerId)} placeholder="Elige un broker" />
-            </select>
-            <p className="field__hint">Por defecto, el responsable de la casa.</p><FieldError errors={errors} id="nc-broker" /></div>
+          <div className="field span-all"><span className="field__label">Broker responsable</span>
+            <p>{brokerId ? broker(brokerId).name : 'Se define con la casa'}</p></div>
           <div className="field span-all"><label className="field__label" htmlFor="nc-note">Nota del cliente</label><textarea className="textarea" id="nc-note" placeholder="Lo que le interesa ver en la visita" /></div>
         </div>
         <div className="dialog__actions"><button className="btn btn--secondary" type="button" onClick={close}>Cancelar</button><button className="btn" type="submit">Agendar cita</button></div>
@@ -318,7 +326,7 @@ export function Appointments() {
             <div className="field"><label className="field__label" htmlFor="ct-hour">Horario</label>
               <select className="select" id="ct-hour" value={S.hour} onChange={(e) => { S.hour = e.target.value; rerender(); }}>
                 <option value="">Todo el día</option><option value="manana">Mañana (06:00–11:59)</option><option value="tarde">Tarde (12:00–18:59)</option><option value="noche">Noche (19:00–05:59)</option>
-                <optgroup label="Hora exacta">{TIMES.map((t) => <option key={t} value={t}>{t12(t)}</option>)}</optgroup>
+                <optgroup label="Hora exacta">{VISIT_TIMES.map((t) => <option key={t} value={t}>{t12(t)}</option>)}</optgroup>
               </select></div>
             <div className="field"><label className="field__label" htmlFor="ct-prop">Propiedad visitada</label>
               <select className="select" id="ct-prop" value={S.prop} onChange={(e) => { S.prop = e.target.value; rerender(); }}>
@@ -453,14 +461,17 @@ export function TenantForm({ a, close, onDone }: { a: { property?: string; perso
 function TenantFields({ a, close, onDone, picker }: { a: Pick<Appointment, 'property' | 'person'>; close: () => void; onDone: (msg: string) => void; picker: React.ReactNode }) {
   const p = prop(a.property)!;
   const per = person(a.person);
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   /** Fin del contrato: N meses después del inicio (un día antes) */
   const plusMonths = (iso: string, months: number) => { const d = new Date(iso + 'T12:00:00'); d.setMonth(d.getMonth() + months); d.setDate(d.getDate() - 1); return isoDate(d); };
   const year = (iso: string) => plusMonths(iso, 12);
+  // La renta no empieza antes de la visita de esa persona a esa casa
+  const visitDay = Data.appointments.filter((x) => x.person === a.person && x.property === a.property && ['realizada', 'confirmada', 'por-confirmar'].includes(x.status)).map((x) => x.date).sort().at(-1) ?? '';
+  const firstDay = visitDay > Z.TODAY ? visitDay : Z.TODAY;
   const [f, setF] = useState({
-    start: Z.TODAY, end: year(Z.TODAY), day: String(Math.min(28, Number(Z.TODAY.slice(8)))), rent: String(p.price || ''), deposit: String(p.deposit || p.price || ''),
+    start: firstDay, end: year(firstDay), day: String(Math.min(28, Number(firstDay.slice(8)))), rent: String(p.price || ''), deposit: String(p.deposit || p.price || ''),
     cfe: p.utilities?.electricity ?? '', water: p.utilities?.water ?? '',
   });
   const [months, setMonths] = useState(12);
@@ -471,6 +482,8 @@ function TenantFields({ a, close, onDone, picker }: { a: Pick<Appointment, 'prop
     e.preventDefault();
     const contractPdf = pdf();
     const extra = [
+      ...(f.start < Z.TODAY ? [{ id: 'tf-start', msg: 'La renta no puede empezar en una fecha que ya pasó.' }] : []),
+      ...(visitDay && f.start < visitDay ? [{ id: 'tf-start', msg: `La renta no puede empezar antes de la visita (${dateShort(visitDay)}).` }] : []),
       ...(f.end <= f.start ? [{ id: 'tf-end', msg: 'La fecha de fin debe ser posterior al inicio.' }] : []),
       ...(!rent ? [{ id: 'tf-rent', msg: 'Escribe la renta mensual.' }] : []),
       ...(f.end > f.start && !dates.length ? [{ id: 'tf-day', msg: 'Con esas fechas no cae ningún día de pago.' }] : []),
@@ -511,11 +524,11 @@ function TenantFields({ a, close, onDone, picker }: { a: Pick<Appointment, 'prop
     <>
       <h2 id="dialog-title">Rentar {p.name} a {per.name}</h2>
       <p className="lead">Un solo paso: al guardar, {per.name.split(' ')[0]} pasa a inquilino, se generan sus pagarés mensuales y {p.name} sale del sitio (se pausa sola).</p>
-      <form noValidate onSubmit={submit}>
+      <form noValidate {...live} onSubmit={submit}>
         {error && <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{error}</span></div>}
         <div className="form-grid">
           {picker}
-          <div className="field"><label className="field__label" htmlFor="tf-start">Inicio de la renta *</label><input className="input" id="tf-start" type="date" required value={f.start} onChange={(e) => { clear('tf-start'); setF({ ...f, start: e.target.value, end: e.target.value ? plusMonths(e.target.value, months) : f.end }); }} {...err(errors, 'tf-start')} /><FieldError errors={errors} id="tf-start" /></div>
+          <div className="field"><label className="field__label" htmlFor="tf-start">Inicio de la renta *</label><input className="input" id="tf-start" type="date" required min={firstDay} value={f.start} onChange={(e) => { clear('tf-start'); setF({ ...f, start: e.target.value, end: e.target.value ? plusMonths(e.target.value, months) : f.end }); }} {...err(errors, 'tf-start')} /><FieldError errors={errors} id="tf-start" /></div>
           <div className="field"><label className="field__label" htmlFor="tf-end">Fin de la renta *</label><input className="input" id="tf-end" type="date" required min={f.start} value={f.end} onChange={(e) => set('end')(e.target.value)} {...err(errors, 'tf-end')} />
             <div className="choice-row" style={{ marginTop: '.375rem' }} role="group" aria-label="Duración">
               {[6, 12, 24].map((m) => <button key={m} type="button" className={'btn btn--sm' + (months === m && f.end === plusMonths(f.start, m) ? '' : ' btn--secondary')} onClick={() => duration(m)}>{m} meses</button>)}

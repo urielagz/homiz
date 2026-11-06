@@ -16,4 +16,10 @@ export const APP_URL: string = (import.meta.env.VITE_APP_URL as string | undefin
 export const appLink = (slug?: string | null) => APP_URL + '?empezar=1' + (slug ? '&casa=' + encodeURIComponent(slug) : '');
 
 /** Después de enviar un formulario: la app abre el acceso con su correo ya escrito y al entrar muestra sus solicitudes. */
+/**
+ * Botones del sitio: «Descarga nuestra app». Con la app publicada, VITE_PLAY_STORE_URL lleva a Google Play;
+ * mientras tanto abre el QR en la computadora y la app en el celular.
+ */
+export const downloadLink = (slug?: string | null) => (import.meta.env.VITE_PLAY_STORE_URL as string | undefined) || appLink(slug);
+
 export const appAccountLink = (email: string) => APP_URL + '?email=' + encodeURIComponent(email.trim().toLowerCase());

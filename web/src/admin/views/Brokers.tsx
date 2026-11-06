@@ -8,9 +8,9 @@ import { broker, brokerStats, log, norm, opLabel, plural, prop, rerender, upcomi
 
 /* Roles que decide el propietario: solo broker, solo administración o ambos */
 const ROLE_CHOICES: [string, string, string][] = [
-  ['broker', 'Solo broker', 'Atiende sus casas: citas, clientes, pagos y expediente de las casas a su cargo.'],
-  ['admin', 'Solo administración', 'Ve todas las casas; corrige y anula pagos, elimina documentos. No recibe casas.'],
-  ['both', 'Broker y administración', 'Atiende sus casas y además administra todo el inventario.'],
+  ['broker', 'Solo broker', 'Ve, propone y agenda las casas disponibles y atiende a sus clientes. No lleva expedientes ni pagos.'],
+  ['admin', 'Solo administración', 'Lleva expediente, pagos y contratos de las casas que tiene asignadas; corrige y anula pagos.'],
+  ['both', 'Broker y administración', 'Atiende clientes y además lleva expediente, pagos y contratos de las casas que tiene asignadas.'],
 ];
 const choiceOf = (roles: string[]) => (roles.includes('admin') && roles.includes('broker') ? 'both' : roles.includes('admin') ? 'admin' : 'broker');
 const rolesOf = (choice: string) => (choice === 'both' ? ['broker', 'admin'] : [choice]);
@@ -32,7 +32,7 @@ function RoleForm({ m, close }: { m: StaffMember; close: () => void }) {
   return (
     <>
       <h2 id="dialog-title">Rol de {m.name}</h2>
-      <p className="lead">{m.roles.includes('owner') ? 'Es propietario: conserva todos los permisos y la gestión del personal.' : 'Decide qué puede hacer en el panel y en la app.'}</p>
+      <p className="lead">{m.roles.includes('owner') ? 'Es propietario: conserva todos los permisos y la gestión del personal.' : 'Decide qué puede hacer en la app. El panel es solo del propietario.'}</p>
       <form noValidate onSubmit={save}>
         {error && <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{error}</span></div>}
         <fieldset className="stack" style={{ border: 0, padding: 0 }}>
@@ -60,7 +60,7 @@ const initials = (name: string) => name.split(/\s+/).filter(Boolean).map((w) => 
 function BrokerForm({ b, close }: { b: Broker | null; close: () => void }) {
   const D = useStore();
   const { toast } = useOverlay();
-  const { errors, check, clear } = useErrors();
+  const { errors, check, live, clear } = useErrors();
   const x = b || { name: '', zones: '', role: '', email: '', phone: '' };
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -92,7 +92,7 @@ function BrokerForm({ b, close }: { b: Broker | null; close: () => void }) {
     <>
       <h2 id="dialog-title">{b ? 'Editar perfil' : 'Agregar broker'}</h2>
       <p className="lead">{b ? `Actualiza los datos de contacto y zonas de ${b.name}.` : 'Suma a una persona del equipo para asignarle casas y citas.'}</p>
-      <form id="broker-form" noValidate onSubmit={onSubmit}>
+      <form id="broker-form" noValidate {...live} onSubmit={onSubmit}>
         <div className="form-grid">
           {field('bf-name', 'Nombre completo *', { required: true, defaultValue: x.name }, true)}
           {field('bf-zones', 'Zonas que atiende *', { required: true, defaultValue: x.zones, placeholder: 'Arbolada · Aqua Residencial' }, true)}
@@ -114,7 +114,7 @@ export function Brokers() {
   const D = useStore();
   const S = viewState.brokers;
   const { toast, open, confirm } = useOverlay();
-  const { errors, check } = useErrors();
+  const { errors, check, live } = useErrors();
   const assignRef = useRef<HTMLSelectElement>(null);
   const focusAssign = useRef(false);
 
@@ -265,7 +265,7 @@ export function Brokers() {
       {current && (
         <section className="card card--pad assign" id="assign" aria-labelledby="ch-title">
           <h2 className="card__title" id="ch-title" style={{ marginBottom: '1.25rem' }}>Cambiar responsable · {current.name}</h2>
-          <form id="assign-form" noValidate onSubmit={onAssign} key={current.id}>
+          <form id="assign-form" noValidate {...live} onSubmit={onAssign} key={current.id}>
             <div className="assign__row">
               <div className="assign__current">
                 <span>Responsable actual</span><strong>{broker(current.broker).name}</strong>

@@ -132,6 +132,8 @@ Las diferencias entre el prompt del monorepo y el sitio existente están en `doc
 
 ### Roles: qué puede hacer cada quien
 
+El **panel** es solo del propietario; brokers y administradores usan la app.
+
 El **propietario** decide si cada persona del personal es *solo broker*, *solo administración* o *ambos*
 (panel → Brokers → «Equipo y roles»). Con una base existente, aplica antes las migraciones nuevas:
 `npx tsx src/config/run-sql.ts db/005_propietario.sql db/006_pagare_pdf.sql`.

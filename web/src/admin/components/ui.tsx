@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { IMG, Z, type Broker, type Property } from '../store';
+import { IMG, t12, Z, type Broker, type Property } from '../store';
 
 /* Componentes reutilizables del panel (mismas clases que el panel HTML) */
 
@@ -112,30 +112,21 @@ export function Options({ list, placeholder }: { list: (string | [string, string
  * Hora de 1 a 12, minutos y a.m./p.m. El valor («HH:MM» de 24 h, el que manda la API) queda en un campo
  * oculto con el `id`, así que `validateForm` y `document.getElementById(id).value` funcionan igual que con un <select>.
  */
-export function TimeInput({ id, defaultValue = '', required, invalid, onChange }: { id: string; defaultValue?: string; required?: boolean; invalid?: boolean; onChange?: (hhmm: string) => void }) {
-  const [h0, m0] = /^\d{2}:\d{2}/.test(defaultValue) ? defaultValue.split(':').map(Number) : [NaN, 0];
-  const [hour, setHour] = useState(Number.isNaN(h0) ? '' : String(h0 % 12 || 12));
-  const [min, setMin] = useState(String(m0 - (m0 % 15)).padStart(2, '0'));
-  const [ap, setAp] = useState(!Number.isNaN(h0) && h0 >= 12 ? 'pm' : 'am');
-  const value = hour ? `${String((Number(hour) % 12) + (ap === 'pm' ? 12 : 0)).padStart(2, '0')}:${min}` : '';
-  const first = useRef(true);
-  useEffect(() => { if (first.current) { first.current = false; return; } onChange?.(value); }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+/** Horario de visitas de la inmobiliaria: de 7:00 a.m. a 10:45 p.m., en bloques de 15 minutos (termina a las 11:00 p.m.) */
+export const VISIT_TIMES = Array.from({ length: 64 }, (_, i) => { const m = 420 + i * 15; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; });
+
+export function TimeInput({ id, defaultValue = '', required, invalid, onChange }: { id: string; defaultValue?: string; required?: boolean; invalid?: boolean; onChange?: (value: string) => void }) {
+  const start = defaultValue.slice(0, 5);
+  const [value, setValue] = useState(VISIT_TIMES.includes(start) ? start : '');
   const bad = invalid ? { 'aria-invalid': true as const, 'aria-describedby': id + '-error' } : {};
   return (
-    <div className="time-input" role="group" aria-label="Hora">
-      <select className="select" id={id + '-h'} aria-label="Hora" value={hour} onChange={(e) => setHour(e.target.value)} {...bad}>
-        <option value="">Hora</option>
-        {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((h) => <option key={h} value={h}>{h}</option>)}
-      </select>
-      <span aria-hidden="true">:</span>
-      <select className="select" aria-label="Minutos" value={min} onChange={(e) => setMin(e.target.value)}>
-        {['00', '15', '30', '45'].map((m) => <option key={m} value={m}>{m}</option>)}
-      </select>
-      <select className="select" aria-label="a.m. o p.m." value={ap} onChange={(e) => setAp(e.target.value)}>
-        <option value="am">a.m.</option><option value="pm">p.m.</option>
+    <>
+      <select className="select" id={id + '-h'} aria-label="Hora" value={value} onChange={(e) => { setValue(e.target.value); onChange?.(e.target.value); }} {...bad}>
+        <option value="">Elige la hora</option>
+        {VISIT_TIMES.map((t) => <option key={t} value={t}>{t12(t)}</option>)}
       </select>
       <input id={id} name="Hora" hidden readOnly required={required} value={value} />
-    </div>
+    </>
   );
 }
 
@@ -161,19 +152,36 @@ export function useUrlParams(apply: (p: URLSearchParams) => void) {
 export type FormErrors = Record<string, string>;
 export interface ExtraError { id: string; msg: string }
 
-/** Revisa los campos de un formulario (required, correo, números y teléfono). Devuelve { id: mensaje }. */
+type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+/** El mensaje de un campo, o '' si está bien: required, correo, números, teléfono, largo y fechas. */
+function controlError(el: Control, form: HTMLFormElement): string {
+  if (el.disabled || el.type === 'hidden' || el.type === 'file' || !el.id) return '';
+  const v = el.value.trim();
+  const label = (form.querySelector(`label[for="${el.id}"]`)?.textContent || el.name).replace(/\s*\*\s*$/, '').trim();
+  const digits = v.replace(/\D/g, '').length;
+  const minLength = 'minLength' in el ? el.minLength : -1;
+  const input = el as HTMLInputElement;
+  if (el.required && el.type === 'checkbox' && !input.checked) return 'Marca esta casilla para continuar.';
+  if (el.required && !v) return `Completa «${label}».`;
+  if (!v) return '';
+  if (el.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return 'Escribe un correo válido, por ejemplo nombre@correo.com.';
+  if (el.dataset.number != null && !/^\$?\s*[\d,]+(\.\d+)?$/.test(v)) return `Escribe solo números en «${label}».`;
+  if (el.type === 'tel' && digits < 10) return `El teléfono debe tener al menos 10 dígitos (lleva ${digits}).`;
+  if (el.type === 'tel' && digits > 15) return 'El teléfono no puede tener más de 15 dígitos.';
+  if (minLength > 0 && v.length < minLength) return `«${label}» debe tener al menos ${minLength} caracteres.`;
+  if (el.type === 'date' && input.min && v < input.min) return 'Elige una fecha a partir de la indicada.';
+  if (el.type === 'date' && input.max && v > input.max) return 'Elige una fecha anterior.';
+  if (el.type === 'number' && input.min !== '' && Number(v) < Number(input.min)) return `El mínimo es ${input.min}.`;
+  if (el.type === 'number' && input.max !== '' && Number(v) > Number(input.max)) return `El máximo es ${input.max}.`;
+  return '';
+}
+
+/** Revisa los campos de un formulario. Devuelve { id: mensaje }. */
 export function validateForm(form: HTMLFormElement, extra: ExtraError[] = []): FormErrors {
   const errors: FormErrors = {};
-  form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach((el) => {
-    if (el.disabled || el.type === 'hidden' || el.type === 'file' || !el.id) return;
-    const v = el.value.trim();
-    const label = (form.querySelector(`label[for="${el.id}"]`)?.textContent || el.name).replace(/\s*\*\s*$/, '').trim();
-    let msg = '';
-    if (el.required && el.type === 'checkbox' && !(el as HTMLInputElement).checked) msg = 'Marca esta casilla para continuar.';
-    else if (el.required && !v) msg = `Completa «${label}».`;
-    else if (v && el.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) msg = 'Escribe un correo válido, por ejemplo nombre@correo.com.';
-    else if (v && el.dataset.number != null && !/^\$?\s*[\d,]+(\.\d+)?$/.test(v)) msg = `Escribe solo números en «${label}».`;
-    else if (v && el.type === 'tel' && v.replace(/\D/g, '').length < 10) msg = 'El teléfono debe tener al menos 10 dígitos.';
+  form.querySelectorAll<Control>('input, select, textarea').forEach((el) => {
+    const msg = controlError(el, form);
     if (msg) errors[el.id] = msg;
   });
   extra.forEach((e) => (errors[e.id] = e.msg));
@@ -185,8 +193,21 @@ export function validateForm(form: HTMLFormElement, extra: ExtraError[] = []): F
 
 export function useErrors() {
   const [errors, setErrors] = useState<FormErrors>({});
+  /** En el <form>: cada campo muestra su error al escribir o al salir de él, sin esperar a enviar */
+  const check1 = (e: SyntheticEvent<HTMLFormElement>) => {
+    const el = e.target as Control;
+    if (!el.id || !el.matches('input, select, textarea')) return;
+    const msg = controlError(el, e.currentTarget);
+    setErrors((x) => {
+      if ((x[el.id] ?? '') === msg) return x;
+      const next = { ...x };
+      if (msg) next[el.id] = msg; else delete next[el.id];
+      return next;
+    });
+  };
   return {
     errors,
+    live: { onInput: check1, onChange: check1, onBlur: check1 },
     check: (form: HTMLFormElement, extra?: ExtraError[]) => {
       const e = validateForm(form, extra);
       setErrors(e);

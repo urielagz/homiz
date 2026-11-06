@@ -101,9 +101,21 @@ final liveUpdatesProvider = Provider<void>((ref) {
     retry = Timer(Duration(seconds: min(30, 1 << min(attempts, 5))), connect);
   };
 
+  // Solicitudes y citas se cargan desde el inicio: por una conexión lenta, abrirlas ya no hace esperar
+  if (useSocket) {
+    final user = ref.read(sessionProvider).value;
+    if (user != null) {
+      ref.read(requestsProvider(user.isStaff ? 'sin_asignar' : null).future).ignore();
+      ref.read(appointmentsProvider.future).ignore();
+    }
+  }
+
   connect();
+  // Con WebSocket también se revisa de vez en cuando: un túnel puede dejarlo «abierto» sin que llegue nada
+  var ticks = 0;
   final poll = Timer.periodic(livePollInterval, (_) {
-    if (channel == null) ask();
+    ticks++;
+    if (channel == null || ticks % 3 == 0) ask();
   });
   ref.onDispose(() {
     disposed = true;
@@ -133,6 +145,9 @@ void _refresh(Ref ref) {
     ..invalidate(receiptsProvider)
     ..invalidate(dossierProvider)
     ..invalidate(propertyDetailProvider)
+    ..invalidate(inventoryProvider)
+    ..invalidate(allHousesProvider)
+    ..invalidate(catalogProvider)
     ..invalidate(newReportsProvider)
     ..invalidate(maintenanceReportsProvider)
     ..invalidate(maintenanceReportProvider);

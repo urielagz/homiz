@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import { apiActive, load, request } from '../api';
 import { currentSession, loggedOut, logout } from '../auth';
-import { startLive } from '../live';
+import { lastUpdate, LIVE_STATUS_EVENT, liveConnected, startLive } from '../live';
 import { pushSupported, registerBrowser } from '../push';
 import { rerender } from '../store';
 import { NotificationsBell, noticesRefresh } from './Notifications';
@@ -19,6 +19,23 @@ const NAV: [string, string, string][] = [
   ['rentas', 'folder', 'Rentas y ventas'],
   ['pagos', 'cash', 'Pagos'],
 ];
+
+/** Dice si el panel está recibiendo los cambios al momento y cuándo fue la última actualización */
+function LiveStatus() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const on = () => setTick((n) => n + 1);
+    window.addEventListener(LIVE_STATUS_EVENT, on);
+    return () => window.removeEventListener(LIVE_STATUS_EVENT, on);
+  }, []);
+  const on = liveConnected();
+  const at = lastUpdate?.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', hourCycle: 'h12' });
+  return (
+    <span className={'live-status' + (on ? ' is-on' : '')} role="status" title={on ? 'Los cambios llegan al momento' : 'Sin conexión en vivo: los cambios llegan cada pocos segundos'}>
+      <span className="live-status__dot" aria-hidden="true" />{on ? 'En vivo' : 'Reconectando…'}{at ? ` · ${at}` : ''}
+    </span>
+  );
+}
 
 /** Marco del panel: encabezado, menú lateral y la sección activa. Sin sesión, manda al acceso. */
 export function Shell() {
@@ -151,6 +168,7 @@ export function Shell() {
           <Link className="topnav__extra" to="/resumen" aria-current="page">Panel administrativo</Link>
           <a className="topnav__extra" href="/" target="_blank" rel="noopener">Ver sitio público <Icon id="arrow-ur" className="icon--sm" /></a>
           <a className="topnav__extra" href="#" onClick={(e) => { e.preventDefault(); help(); }}>Ayuda</a>
+          <LiveStatus />
           <NotificationsBell />
           <div className="user">
             <button ref={userBtn} className="user__btn" type="button" aria-expanded={userOpen} aria-controls="user-menu" id="user-btn" onClick={(e) => { e.stopPropagation(); setUserOpen(!userOpen); }}>

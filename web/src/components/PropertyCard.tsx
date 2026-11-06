@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { appLink } from '../lib/appLink';
+import { downloadLink } from '../lib/appLink';
 import { fichaOf, photoOf, priceUnit, type House } from '../lib/catalog';
 import { money } from '../lib/format';
 import { useFavorites } from '../lib/favorites';
@@ -39,9 +39,9 @@ export function PropertyCard({ house: c, alt }: { house: House; alt?: string }) 
         <div className="card__actions">
           <Link className="btn" to={fichaOf(c) + '#contactar'}>Contactar</Link>
           {/* La app recibe la casa: la persona se registra y agenda la visita ahí */}
-          <a className="btn btn--secondary" href={appLink(c.slug)} target="_blank" rel="noopener">
-            <Icon id="phone" />
-            Usar la app
+          <a className="btn btn--secondary" href={downloadLink(c.slug)} target="_blank" rel="noopener">
+            <Icon id="download" />
+            Descargar la app
           </a>
         </div>
       </div>

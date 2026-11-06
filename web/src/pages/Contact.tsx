@@ -18,7 +18,8 @@ import { sendLead, type ApiError } from '../lib/api';
 import { photoOf, priceUnit } from '../lib/catalog';
 import { fakeFolio, money } from '../lib/format';
 import { usePageTitle } from '../lib/usePageTitle';
-import { clean, emailRepeat, emailStrict, phone, required, type Errors } from '../lib/validation';
+import { useLiveErrors } from '../lib/useLiveErrors';
+import { amount, clean, emailRepeat, emailStrict, personName, phone, phoneChars, required, text, words, type Errors } from '../lib/validation';
 
 /* ==========================================================================
    Contáctanos: el formulario se adapta al motivo (rentar, comprar, publicar u otro).
@@ -55,8 +56,6 @@ export function Contact() {
   const toast = useToast();
   const [reason, setReason] = useState<Reason>('rentar');
   const [f, setF] = useState<Form>(EMPTY);
-  const [errors, setErrors] = useState<Errors>({});
-  const [showErrors, setShowErrors] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState<{ title: string; text: string; folio: string; account: 'created' | 'existing' | null; editToken?: string | null } | null>(null);
@@ -76,54 +75,52 @@ export function Contact() {
   const messageRequired = reason === 'otro';
   const options = useMemo(() => houses.filter((h) => (buying ? h.op === 'venta' : h.op === 'renta')), [houses, buying]);
   const budget = budgetLabel(f.presupuesto_min, f.presupuesto_max, buying ? 'compra' : 'renta');
-  const setBudget = (min: string, max: string) =>
-    setF((x) => {
-      const next = { ...x, presupuesto_min: min, presupuesto_max: max };
-      if (showErrors) setErrors(validate(next));
-      return next;
-    });
 
   const validate = (x: Form, r = reason): Errors =>
     clean({
-      nombre: required(x.nombre), correo: emailStrict(x.correo), correo2: emailRepeat(x.correo, x.correo2), telefono: phone(x.telefono),
-      nacionalidad: r === 'rentar' ? required(x.nacionalidad) : '',
-      ocupacion: r === 'rentar' ? required(x.ocupacion) : '',
+      nombre: personName(x.nombre), correo: emailStrict(x.correo), correo2: emailRepeat(x.correo, x.correo2), telefono: phone(x.telefono),
+      nacionalidad: r === 'rentar' ? words(x.nacionalidad, 3, 40) : '',
+      ocupacion: r === 'rentar' ? text(x.ocupacion, 3, 80) : '',
       casa: r === 'rentar' || r === 'comprar' ? required(x.casa, true) : '',
       // Con una casa elegida la zona ya se conoce
-      zona: (r === 'rentar' || r === 'comprar') && x.casa === 'sin-definir' ? required(x.zona) : '',
-      presupuesto_max: r === 'rentar' || r === 'comprar' ? budgetError(x.presupuesto_min, x.presupuesto_max) : '',
+      zona: r === 'rentar' || r === 'comprar' ? text(x.zona, 2, 80, x.casa === 'sin-definir') : '',
+      presupuesto_max: r === 'rentar' || r === 'comprar' ? budgetError(x.presupuesto_min, x.presupuesto_max, r === 'comprar' ? 'compra' : 'renta') : '',
       mascotas: (r === 'rentar' || r === 'comprar') && !x.mascotas ? 'Elige una opción.' : '',
-      mascotas_detalle: (r === 'rentar' || r === 'comprar') && x.mascotas === 'si' ? required(x.mascotas_detalle) : '',
-      inmueble_zona: r === 'publicar' ? required(x.inmueble_zona) : '',
-      mensaje: r === 'otro' ? required(x.mensaje) : '',
+      mascotas_detalle: (r === 'rentar' || r === 'comprar') && x.mascotas === 'si' ? text(x.mascotas_detalle, 3, 200) : '',
+      inmueble_zona: r === 'publicar' ? text(x.inmueble_zona, 2, 80) : '',
+      inmueble_m2: r === 'publicar' ? amount(x.inmueble_m2, 10, 100_000, (n) => `${n.toLocaleString('en-US')} m²`) : '',
+      inmueble_precio: r === 'publicar' ? amount(x.inmueble_precio, 1_000, 999_999_999, (n) => moneyText(n)) : '',
+      mensaje: text(x.mensaje, 10, 2000, r === 'otro'),
     });
 
-  const set = <K extends keyof Form>(k: K, v: Form[K]) =>
-    setF((x) => {
-      const next = { ...x, [k]: v };
-      if (showErrors) setErrors(validate(next));
-      return next;
-    });
+  const errors = validate(f);
+  const live = useLiveErrors(errors);
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    live.touch(k);
+    setF((x) => ({ ...x, [k]: v }));
+  };
+  // El máximo se revisa cuando ya lo escribió; mientras solo llena el mínimo no se le reclama
+  const setBudget = (min: string, max: string) => {
+    if (max !== f.presupuesto_max || (min && max)) live.touch('presupuesto_max');
+    setF((x) => ({ ...x, presupuesto_min: min, presupuesto_max: max }));
+  };
 
   const changeReason = (r: Reason) => {
     setReason(r);
     setF((x) => {
       // La lista de casas solo tiene las de la operación del motivo
       const c = bySlug[x.casa];
-      const next = c && (c.op === 'venta') !== (r === 'comprar') ? { ...x, casa: 'sin-definir' } : x;
-      if (showErrors) setErrors(validate(next, r));
-      return next;
+      return c && (c.op === 'venta') !== (r === 'comprar') ? { ...x, casa: 'sin-definir' } : x;
     });
   };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const errs = validate(f);
-    setErrors(errs);
-    setShowErrors(true);
-    const first = Object.keys(errs)[0];
+    live.showAll();
+    const first = Object.keys(errors)[0];
     if (first) {
-      document.getElementById(first === 'mascotas' ? 'mascotas-si' : first === 'presupuesto_max' ? 'b-pres-max' : first.startsWith('inmueble_') ? 'p-zona' : `b-${first}`)?.focus();
+      document.getElementById(first === 'mascotas' ? 'mascotas-si' : first === 'presupuesto_max' ? 'b-pres-max' : first.startsWith('inmueble_') ? 'p-' + first.slice(9) : `b-${first}`)?.focus();
       return;
     }
     setReviewing(true); // siempre se muestran los datos para confirmarlos antes de enviar
@@ -169,11 +166,11 @@ export function Contact() {
   };
 
   const reset = () => {
-    setF(EMPTY); setErrors({}); setShowErrors(false); setDone(null);
+    setF(EMPTY); live.reset(); setDone(null);
     setTimeout(() => document.getElementById('b-nombre')?.focus(), 0);
   };
 
-  const err = (k: keyof Form) => (showErrors ? errors[k] : undefined);
+  const err = live.err;
   // Los bloques visibles se numeran: 1. Tus datos, 2. …, 3. Tu mensaje
   const legends = ['Tus datos', lookingFor ? 'La casa que buscas' : reason === 'publicar' ? 'Tu propiedad' : null, 'Tu mensaje'].filter(Boolean) as string[];
   const n = (title: string) => `${legends.indexOf(title) + 1}. ${title}`;
@@ -245,7 +242,7 @@ export function Contact() {
 
           <section aria-labelledby="form-titulo">
             <h2 className="form-title" id="form-titulo">Nos encantará conocerte</h2>
-            <form className="booking-form" noValidate onSubmit={onSubmit}>
+            <form className="booking-form" noValidate onSubmit={onSubmit} onBlur={live.onBlur}>
         <Honeypot />
               {done ? (
                 <LeadDone
@@ -254,7 +251,7 @@ export function Contact() {
                 />
               ) : (
                 <>
-                  {showErrors && Object.keys(errors).length > 0 && (
+                  {live.pending && (
                     <div className="alert alert-error is-visible" role="alert">
                       <Icon id="alert" />
                       <div><strong>Revisa los campos señalados</strong>Tu mensaje aún no se ha enviado. Corrige estos datos e inténtalo de nuevo; lo que escribiste se conserva.</div>
@@ -276,20 +273,20 @@ export function Contact() {
                     <legend>{n('Tus datos')}</legend>
                     <div className="form-grid">
                       <Field id="b-nombre" label="Nombre completo *" error={err('nombre')}>
-                        <input className="input" id="b-nombre" type="text" autoComplete="name" placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
+                        <input className="input" id="b-nombre" type="text" autoComplete="name" maxLength={80} placeholder="Nombre y apellidos" value={f.nombre} onChange={(e) => set('nombre', e.target.value)} {...invalid('b-nombre', err('nombre'))} />
                       </Field>
                       <EmailFields prefix="b" value={f.correo} repeat={f.correo2} error={err('correo')} repeatError={err('correo2')}
-                        onChange={(v, r) => setF((x) => { const next = { ...x, correo: v, correo2: r }; if (showErrors) setErrors(validate(next)); return next; })} />
+                        onChange={(v, r) => { if (v !== f.correo) live.touch('correo'); if (r !== f.correo2) live.touch('correo2'); setF((x) => ({ ...x, correo: v, correo2: r })); }} />
                       <Field id="b-telefono" label={<>Teléfono <Opt>(opcional)</Opt></>} error={err('telefono')} help={err('telefono') ? undefined : 'Para responderte por WhatsApp.'}>
-                        <input className="input" id="b-telefono" type="tel" autoComplete="tel" placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} {...invalid('b-telefono', err('telefono'))} />
+                        <input className="input" id="b-telefono" type="tel" autoComplete="tel" maxLength={17} placeholder="998 000 0000" value={f.telefono} onChange={(e) => set('telefono', phoneChars(e.target.value))} {...invalid('b-telefono', err('telefono'))} />
                       </Field>
                       {reason === 'rentar' && (
                         <>
                           <Field id="b-nacionalidad" label="Nacionalidad *" error={err('nacionalidad')}>
-                            <input className="input" id="b-nacionalidad" type="text" autoComplete="country-name" placeholder="Mexicana" value={f.nacionalidad} onChange={(e) => set('nacionalidad', e.target.value)} {...invalid('b-nacionalidad', err('nacionalidad'))} />
+                            <input className="input" id="b-nacionalidad" type="text" autoComplete="country-name" maxLength={40} placeholder="Mexicana" value={f.nacionalidad} onChange={(e) => set('nacionalidad', e.target.value)} {...invalid('b-nacionalidad', err('nacionalidad'))} />
                           </Field>
                           <Field id="b-ocupacion" label="¿En qué trabajas? *" error={err('ocupacion')} className="span-2">
-                            <input className="input" id="b-ocupacion" type="text" autoComplete="organization-title" placeholder="Por ejemplo: diseño de interiores" value={f.ocupacion} onChange={(e) => set('ocupacion', e.target.value)} {...invalid('b-ocupacion', err('ocupacion'))} />
+                            <input className="input" id="b-ocupacion" type="text" autoComplete="organization-title" maxLength={80} placeholder="Por ejemplo: diseño de interiores" value={f.ocupacion} onChange={(e) => set('ocupacion', e.target.value)} {...invalid('b-ocupacion', err('ocupacion'))} />
                           </Field>
                         </>
                       )}
@@ -316,7 +313,7 @@ export function Contact() {
                           </select>
                         </Field>
                         <Field id="b-zona" label={f.casa === 'sin-definir' ? 'Zona de preferencia *' : <>Otra zona de preferencia <Opt>(opcional)</Opt></>} error={err('zona')} className="span-2">
-                          <input className="input" id="b-zona" type="text" placeholder="Colonia, ciudad o país" value={f.zona} onChange={(e) => set('zona', e.target.value)} {...invalid('b-zona', err('zona'))} />
+                          <input className="input" id="b-zona" type="text" maxLength={80} placeholder="Colonia, ciudad o país" value={f.zona} onChange={(e) => set('zona', e.target.value)} {...invalid('b-zona', err('zona'))} />
                         </Field>
                         <BudgetRange idPrefix="b-pres" op={buying ? 'compra' : 'renta'} min={f.presupuesto_min} max={f.presupuesto_max} error={err('presupuesto_max')} onChange={setBudget} />
                         <Field id="b-recamaras" label="Número de recámaras *">
@@ -346,7 +343,7 @@ export function Contact() {
                         </Field>
                         {f.mascotas === 'si' && (
                           <Field id="b-mascotas_detalle" label="¿Cuáles y cuántas mascotas? *" error={err('mascotas_detalle')} className="span-2" help={err('mascotas_detalle') ? undefined : 'Así te mostramos solo casas donde sean bienvenidas.'}>
-                            <input className="input" id="b-mascotas_detalle" type="text" placeholder="Por ejemplo: 1 perro pequeño" value={f.mascotas_detalle} onChange={(e) => set('mascotas_detalle', e.target.value)} {...invalid('b-mascotas_detalle', err('mascotas_detalle'))} />
+                            <input className="input" id="b-mascotas_detalle" type="text" maxLength={200} placeholder="Por ejemplo: 1 perro pequeño" value={f.mascotas_detalle} onChange={(e) => set('mascotas_detalle', e.target.value)} {...invalid('b-mascotas_detalle', err('mascotas_detalle'))} />
                           </Field>
                         )}
                         <Field id="b-mudanza" label={<>¿Cuándo te gustaría mudarte? <Opt>(opcional)</Opt></>}>
@@ -389,7 +386,7 @@ export function Contact() {
                           </select>
                         </Field>
                         <Field id="p-zona" label="Colonia o residencial *" error={err('inmueble_zona')}>
-                          <input className="input" id="p-zona" type="text" placeholder="Por ejemplo: Residencial Cumbres" value={f.inmueble_zona} onChange={(e) => set('inmueble_zona', e.target.value)} {...invalid('p-zona', err('inmueble_zona'))} />
+                          <input className="input" id="p-zona" type="text" maxLength={80} placeholder="Por ejemplo: Residencial Cumbres" value={f.inmueble_zona} onChange={(e) => set('inmueble_zona', e.target.value)} {...invalid('p-zona', err('inmueble_zona'))} />
                         </Field>
                         <Field id="p-rec" label="Recámaras *">
                           <select className="select" id="p-rec" value={f.inmueble_recamaras} onChange={(e) => set('inmueble_recamaras', e.target.value)}>
@@ -401,8 +398,8 @@ export function Contact() {
                             <option value="1">1</option><option value="2">2</option><option value="3">3 o más</option>
                           </select>
                         </Field>
-                        <Field id="p-m2" label={<>Metros cuadrados <Opt>(opcional)</Opt></>}>
-                          <input className="input" id="p-m2" type="text" inputMode="numeric" maxLength={7} placeholder="Por ejemplo: 180" value={f.inmueble_m2} onChange={(e) => set('inmueble_m2', e.target.value.replace(/\D/g, ''))} />
+                        <Field id="p-m2" label={<>Metros cuadrados <Opt>(opcional)</Opt></>} error={err('inmueble_m2')}>
+                          <input className="input" id="p-m2" type="text" inputMode="numeric" maxLength={7} placeholder="Por ejemplo: 180" value={f.inmueble_m2} onChange={(e) => set('inmueble_m2', e.target.value.replace(/\D/g, ''))} {...invalid('p-m2', err('inmueble_m2'))} />
                         </Field>
                         <Field id="p-disponible" label={<>¿Cuándo está disponible? <Opt>(opcional)</Opt></>}>
                           <select className="select" id="p-disponible" value={f.inmueble_disponible} onChange={(e) => set('inmueble_disponible', e.target.value)}>
@@ -410,8 +407,8 @@ export function Contact() {
                             <Options list={AVAILABLE} />
                           </select>
                         </Field>
-                        <Field id="p-precio" label={<>Precio esperado <Opt>(opcional)</Opt></>} className="span-2">
-                          <MoneyInput id="p-precio" placeholder="Te ayudamos a definirlo si aún no lo sabes" value={f.inmueble_precio} onChange={(v) => set('inmueble_precio', v)} />
+                        <Field id="p-precio" label={<>Precio esperado <Opt>(opcional)</Opt></>} className="span-2" error={err('inmueble_precio')}>
+                          <MoneyInput id="p-precio" placeholder="Te ayudamos a definirlo si aún no lo sabes" value={f.inmueble_precio} onChange={(v) => set('inmueble_precio', v)} {...invalid('p-precio', err('inmueble_precio'))} />
                         </Field>
                       </div>
                     </fieldset>
@@ -428,7 +425,7 @@ export function Contact() {
                       </Field>
                     )}
                     <Field id="b-mensaje" label={messageRequired ? 'Mensaje *' : <>Comentarios <Opt>(opcional)</Opt></>} error={err('mensaje')}>
-                      <textarea className="textarea" id="b-mensaje" placeholder={reason === 'publicar' ? 'Estado de la propiedad, cuándo la podemos visitar…' : reason === 'otro' ? 'Cuéntanos en qué te ayudamos.' : 'Por ejemplo: cerca de escuelas, con jardín…'} value={f.mensaje} onChange={(e) => set('mensaje', e.target.value)} {...invalid('b-mensaje', err('mensaje'))} />
+                      <textarea className="textarea" id="b-mensaje" maxLength={2000} placeholder={reason === 'publicar' ? 'Estado de la propiedad, cuándo la podemos visitar…' : reason === 'otro' ? 'Cuéntanos en qué te ayudamos.' : 'Por ejemplo: cerca de escuelas, con jardín…'} value={f.mensaje} onChange={(e) => set('mensaje', e.target.value)} {...invalid('b-mensaje', err('mensaje'))} />
                     </Field>
                   </fieldset>
 

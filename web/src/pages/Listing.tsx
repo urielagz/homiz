@@ -1,3 +1,4 @@
+import { BUDGET_LIMITS } from '../components/BudgetRange';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useCatalog } from '../components/CatalogProvider';
@@ -150,15 +151,20 @@ export function Listing() {
   }, []);
   useEffect(() => setSelected(null), [params.toString()]);
 
+  // El máximo nunca puede quedar por debajo del mínimo
+  const lowest = BUDGET_LIMITS[draftOp === 'venta' ? 'compra' : 'renta'][0];
+  const tooLow = (v: string) => (v && +v < lowest ? `Escribe al menos $${lowest.toLocaleString('en-US')}.` : '');
+  const priceMinError = tooLow(draft.precio_min);
+  const priceError = tooLow(draft.precio_max) || (draft.precio_min && draft.precio_max && +draft.precio_min > +draft.precio_max ? 'El máximo no puede ser menor que el mínimo.' : '');
+  const areaError = draft.superficie && draft.superficie_max && +draft.superficie > +draft.superficie_max ? 'El máximo no puede ser menor que el mínimo.' : '';
+
   const onFilter = (e: FormEvent) => {
     e.preventDefault();
+    if (priceMinError || priceError || areaError) return document.getElementById(priceMinError ? 'f-precio-min' : priceError ? 'f-precio-max' : 'f-superficie-max')?.focus();
     setPanelOpen(false);
     const u = new URLSearchParams();
     if (draftOp) u.set('operacion', draftOp);
-    // Mínimo mayor que el máximo: se intercambian en lugar de dar cero resultados
     const d = { ...draft };
-    if (d.precio_min && d.precio_max && +d.precio_min > +d.precio_max) [d.precio_min, d.precio_max] = [d.precio_max, d.precio_min];
-    if (d.superficie && d.superficie_max && +d.superficie > +d.superficie_max) [d.superficie, d.superficie_max] = [d.superficie_max, d.superficie];
     FILTERS.forEach((k) => d[k] && u.set(k, d[k]));
     // Se conserva el lugar elegido en el mapa de la portada
     ['lat', 'lng', 'radio', 'lugar'].forEach((k) => params.get(k) && u.set(k, params.get(k)!));
@@ -249,7 +255,8 @@ export function Listing() {
                     return (
                       <div key={k} className="field">
                         <label className="field__label" htmlFor={id}>{labels[k]}</label>
-                        <MoneyInput id={id} placeholder={k === 'precio_min' ? '$0' : 'Sin límite'} value={draft[k]} onChange={set} suggestions={list} />
+                        <MoneyInput id={id} placeholder={k === 'precio_min' ? '$0' : 'Sin límite'} value={draft[k]} onChange={set} suggestions={list} aria-invalid={!!(k === 'precio_max' ? priceError : priceMinError)} />
+                        {(k === 'precio_max' ? priceError : priceMinError) && <p className="field__error flex" role="alert"><Icon id="alert" size="sm" />{k === 'precio_max' ? priceError : priceMinError}</p>}
                       </div>
                     );
                   }
@@ -257,7 +264,8 @@ export function Listing() {
                     return (
                       <div key={k} className="field">
                         <label className="field__label" htmlFor={id}>{labels[k]}</label>
-                        <AreaInput id={id} placeholder={k === 'superficie' ? '0' : 'Sin límite'} value={draft[k]} onChange={set} suggestions={AREAS} />
+                        <AreaInput id={id} placeholder={k === 'superficie' ? '0' : 'Sin límite'} value={draft[k]} onChange={set} suggestions={AREAS} aria-invalid={k === 'superficie_max' && !!areaError} />
+                        {k === 'superficie_max' && areaError && <p className="field__error flex" role="alert"><Icon id="alert" size="sm" />{areaError}</p>}
                       </div>
                     );
                   }

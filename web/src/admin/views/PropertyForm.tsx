@@ -33,7 +33,7 @@ function Form({ src }: { src?: Property }) {
   const D = useStore();
   const navigate = useNavigate();
   const { toast } = useOverlay();
-  const { errors, check, clear, set: setErrors } = useErrors();
+  const { errors, check, live, clear, set: setErrors } = useErrors();
   const editing = !!src;
   const [f, setF] = useState<Draft>(() => (src ? JSON.parse(JSON.stringify(src)) : EMPTY()));
 
@@ -212,7 +212,7 @@ function Form({ src }: { src?: Property }) {
           <div><strong>Revisa {Object.keys(errors).length === 1 ? 'el campo marcado' : `los ${Object.keys(errors).length} campos marcados`}</strong>Tus datos se conservan; corrige lo señalado y vuelve a intentarlo.</div>
         </div>
       )}
-      <form id="prop-form" ref={formRef} noValidate onSubmit={onSubmit}>
+      <form id="prop-form" ref={formRef} noValidate {...live} onSubmit={onSubmit}>
         <div className="form-layout">
           <div className="stack">
             <section className="card card--pad form-section" aria-labelledby="s1">

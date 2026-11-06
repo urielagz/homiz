@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { appLink } from '../lib/appLink';
+import { downloadLink } from '../lib/appLink';
 import { Icon } from './Icon';
 import { PrivacyLink } from './PrivacyNotice';
 
@@ -29,8 +29,8 @@ export function SiteFooter() {
                 </a>
               </li>
               <li>
-                <a href={appLink()} target="_blank" rel="noopener" aria-label="Abrir la app Homiz">
-                  <Icon id="phone" />
+                <a href={downloadLink()} target="_blank" rel="noopener" aria-label="Descarga nuestra app">
+                  <Icon id="download" />
                 </a>
               </li>
             </ul>

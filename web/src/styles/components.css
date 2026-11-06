@@ -966,6 +966,7 @@ form:has(:user-invalid) .alert--on-invalid { display: flex; }
 .lead-done { display: grid; gap: 1.5rem; justify-items: center; text-align: center; }
 .lead-done .alert { margin: 0; justify-content: center; text-align: center; max-width: 40rem; width: 100%; }
 .lead-done .alert > div { text-align: center; }
+.lead-done__again { display: grid; gap: .5rem; justify-items: center; }
 .lead-done__matches { width: 100%; }
 .lead-done__matches h3 { font-family: var(--font-serif); font-size: var(--fs-lg); color: var(--marino); margin-bottom: 1rem; }
 /* La cuenta de la app: se creó sola con la solicitud */
@@ -1151,3 +1152,15 @@ form:has(:user-invalid) .alert--on-invalid { display: flex; }
 .slot-time__grid--hours { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 /* a.m. / p.m. antes de la hora */
 .slot-ap { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .75rem; }
+
+/* Hora de la cita: reloj que gira */
+.dial-read { display: flex; align-items: center; justify-content: center; gap: .25rem; margin-top: 1rem; font-size: 2rem; color: var(--marino, #0b2545); }
+.dial-read__part { min-width: 4rem; height: 3.5rem; border: 0; border-radius: .5rem; background: #eef1f6; color: inherit; font: inherit; cursor: pointer; }
+.dial-read__part[aria-pressed="true"] { background: var(--marino, #0b2545); color: #fff; }
+.dial-read__ap { margin-left: .5rem; font-size: 1rem; }
+.dial { position: relative; width: min(240px, 100%); aspect-ratio: 1; margin: 1rem auto 0; border-radius: 50%; background: #eef1f6; touch-action: none; user-select: none; cursor: pointer; }
+.dial__pin { position: absolute; left: 50%; top: 50%; width: .625rem; height: .625rem; margin: -.3125rem; border-radius: 50%; background: var(--marino, #0b2545); }
+.dial__hand { position: absolute; left: calc(50% - 1px); top: 10%; width: 2px; height: 40%; background: var(--marino, #0b2545); transform-origin: 50% 100%; transition: transform .15s ease; pointer-events: none; }
+.dial__n { position: absolute; width: 2.25rem; height: 2.25rem; margin: -1.125rem; border: 0; border-radius: 50%; background: transparent; color: var(--marino, #0b2545); font-size: .9375rem; cursor: pointer; }
+.dial__n:disabled { color: #b4bcc9; cursor: not-allowed; }
+.dial__n[aria-pressed="true"] { background: var(--marino, #0b2545); color: #fff; }

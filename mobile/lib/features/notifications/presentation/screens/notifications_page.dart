@@ -81,7 +81,7 @@ class NotificationTile extends StatelessWidget {
   }
 
   static String when(DateTime d) {
-    final now = DateTime.now();
+    final now = Fmt.now();
     final sameDay = d.year == now.year && d.month == now.month && d.day == now.day;
     return sameDay ? Fmt.time(d) : '${Fmt.dayMonthShort(d)} · ${Fmt.time(d)}';
   }

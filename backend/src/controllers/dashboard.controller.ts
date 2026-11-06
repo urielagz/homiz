@@ -79,7 +79,7 @@ async function staffDashboard(user: AuthUser) {
   const reports = (await pool.query(
     `SELECT r.id, r.title, r.priority, r.status, p.name AS "propertyName", p.id AS "propertyId", r.created_at AS "createdAt"
        FROM maintenance_reports r JOIN properties p ON p.id = r.property_id
-      WHERE r.status = 'reported' AND ${inScope('r.property_id')} ORDER BY r.created_at DESC LIMIT 5`,
+      WHERE r.status NOT IN ('resolved', 'cancelled') AND ${inScope('r.property_id')} ORDER BY r.created_at DESC LIMIT 5`,
     p,
   )).rows;
   return { profile: 'staff', roles: user.roles, counts, pendingAppointments, overdueNotes: overdue, newReports: reports };

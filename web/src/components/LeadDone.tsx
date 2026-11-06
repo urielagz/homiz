@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChangeMyData, type Contact } from './ChangeMyData';
 import { AppQr } from './AppQr';
 import { Link } from 'react-router';
-import { appAccountLink } from '../lib/appLink';
+import { appAccountLink, downloadLink } from '../lib/appLink';
 import { fichaOf, inPlace, photoOf, priceUnit, type House } from '../lib/catalog';
 import { money } from '../lib/format';
 import { Icon } from './Icon';
@@ -82,7 +82,7 @@ export function LeadDone({ title, text, folio, houses, wish, email: sentEmail, a
             ? <>Entra con <b>{email}</b>: en «Mis solicitudes» tu asesor te contesta, te propone casas y agendas tus visitas.</>
             : <>La creamos con <b>{email}</b> y los datos que escribiste. Te enviamos por correo una <b>contraseña temporal</b>: entra con ella, crea la tuya y verás tu solicitud y lo que te proponga tu asesor.</>}
         </p>
-        <a className="btn btn--lg" href={appAccountLink(email)} data-direct=""><Icon id="arrow-ur" />{account === 'existing' ? 'Entrar a la app' : 'Ir a la app Homiz'}</a>
+        <a className="btn btn--lg" href={downloadLink()} target="_blank" rel="noopener"><Icon id="download" />Descarga nuestra app</a>
         <AppQr href={appAccountLink(email)} title="¿Estás en la computadora? Escanéalo con tu celular"
           text={`Abre la app con tu correo ${email} ya escrito; entra con la contraseña temporal que te enviamos y sigue todo ahí.`} />
         {changed && <p className="alert alert-success is-visible" role="status" style={{ marginTop: '1rem' }}>{changed}</p>}
@@ -101,7 +101,10 @@ export function LeadDone({ title, text, folio, houses, wish, email: sentEmail, a
         </div>
       ))}
 
-      <button className="link" type="button" onClick={onReset}>Enviar otra solicitud</button>
+      <div className="lead-done__again">
+        <button className="btn btn--secondary btn--lg" type="button" onClick={onReset}>Enviar otra solicitud</button>
+        <p className="form-note">Puedes enviar las solicitudes que necesites. La cita de una misma casa solo se agenda una vez; para cambiarla, usa la app.</p>
+      </div>
     </div>
   );
 }

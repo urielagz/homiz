@@ -4,6 +4,11 @@ import { apiChangePassword, apiForgot, apiReset, type ApiFailure } from '../api'
 import { clearSession, currentSession, lockState, loggedOut, login, passwordChanged } from '../auth';
 import { Icon } from '../components/ui';
 
+const passwordRules = (v: string) =>
+  !v ? 'Escribe tu nueva contraseña.' : v.length < 8 ? 'La contraseña debe tener al menos 8 caracteres.'
+    : !/[A-ZÁÉÍÓÚÑ]/.test(v) ? 'La contraseña debe incluir al menos una mayúscula.' : !/[a-záéíóúñ]/.test(v) ? 'La contraseña debe incluir al menos una minúscula.'
+    : !/\d/.test(v) ? 'La contraseña debe incluir al menos un número.' : '';
+
 const emailError = (v: string) =>
   !v ? 'Escribe tu correo electrónico.' : /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) ? '' : 'Escribe un correo válido, por ejemplo nombre@zugar.example.';
 
@@ -33,7 +38,8 @@ export function Login() {
     p.get('salida') ? { tone: 'info', icon: 'check-c', text: 'Cerraste sesión correctamente. ¡Hasta pronto!' } : p.get('volver') ? { tone: 'info', icon: 'info', text: 'Inicia sesión para continuar en el panel.' } : null;
   const [info, setInfo] = useState<Notice>(noticeFor(params));
   useEffect(() => setInfo(noticeFor(params)), [params.toString()]); // al cerrar sesión llega ?salida=1 con el acceso ya abierto
-  const [error, setError] = useState<Notice>(null);
+  const NO_ACCESS: Notice = { tone: 'error', icon: 'alert', title: 'Esta cuenta no tiene acceso al panel', text: 'El panel es solo del propietario. Brokers, administradores y clientes entran desde la app Homiz.' };
+  const [error, setError] = useState<Notice>(params.get('sinacceso') ? NO_ACCESS : null);
   const [forgotEmail, setForgotEmail] = useState('');
   const pwRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -84,7 +90,7 @@ export function Login() {
     if (r.ok) return navigate(back, { replace: true });
     if (r.error === 'locked') return setLocked(r.lockedFor);
     if (r.error === 'noaccess') {
-      setError({ tone: 'error', icon: 'alert', title: 'Esta cuenta no tiene acceso al panel', text: 'Las cuentas de clientes e inquilinos entran desde la app Homiz.' });
+      setError(NO_ACCESS);
       setPassword('');
       return emailRef.current?.focus();
     }
@@ -112,9 +118,7 @@ export function Login() {
   /* Nueva contraseña: tras entrar con la temporal (change) o desde el enlace de correos anteriores (reset) */
   const onReset = async (e: FormEvent) => {
     e.preventDefault();
-    const rules = !newPw ? 'Escribe tu nueva contraseña.' : newPw.length < 8 ? 'La contraseña debe tener al menos 8 caracteres.'
-      : !/[A-ZÁÉÍÓÚÑ]/.test(newPw) ? 'La contraseña debe incluir al menos una mayúscula.' : !/[a-záéíóúñ]/.test(newPw) ? 'La contraseña debe incluir al menos una minúscula.'
-      : !/\d/.test(newPw) ? 'La contraseña debe incluir al menos un número.' : '';
+    const rules = passwordRules(newPw);
     const errs: Record<string, string> = {};
     if (view === 'change' && !tempPw) errs['temp-password'] = 'Escribe la contraseña temporal del correo.';
     if (rules) errs['new-password'] = rules;
@@ -182,12 +186,12 @@ export function Login() {
                 )}
                 <div className="field">
                   <label className="field__label" htmlFor="new-password">Nueva contraseña</label>
-                  <input className="input" id="new-password" type="password" autoComplete="new-password" value={newPw} onChange={(e) => setNewPw(e.target.value)} {...inv('new-password')} />
+                  <input className="input" id="new-password" type="password" autoComplete="new-password" value={newPw} onChange={(e) => { const v = e.target.value; setNewPw(v); setErrors((x) => ({ ...x, 'new-password': passwordRules(v), 'new-password2': newPw2 && newPw2 !== v ? 'Las contraseñas no coinciden.' : '' })); }} {...inv('new-password')} />
                   {fieldErr('new-password')}
                 </div>
                 <div className="field">
                   <label className="field__label" htmlFor="new-password2">Confirma la contraseña</label>
-                  <input className="input" id="new-password2" type="password" autoComplete="new-password" value={newPw2} onChange={(e) => setNewPw2(e.target.value)} {...inv('new-password2')} />
+                  <input className="input" id="new-password2" type="password" autoComplete="new-password" value={newPw2} onChange={(e) => { const v = e.target.value; setNewPw2(v); setErrors((x) => ({ ...x, 'new-password2': v !== newPw ? 'Las contraseñas no coinciden.' : '' })); }} {...inv('new-password2')} />
                   {fieldErr('new-password2')}
                 </div>
                 <button className="btn btn--block" type="submit" disabled={busy}><Icon id="lock" />{busy ? 'Guardando…' : view === 'change' ? 'Guardar y entrar al panel' : 'Guardar contraseña'}</button>
@@ -211,14 +215,14 @@ export function Login() {
                 <div className="field">
                   <label className="field__label" htmlFor="email">Correo electrónico</label>
                   <input ref={emailRef} className="input" id="email" name="email" type="email" autoComplete="username" placeholder="nombre@zugar.example" spellCheck={false}
-                    value={email} onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: '' })); }} {...inv('email')} />
+                    value={email} onChange={(e) => { const v = e.target.value; setEmail(v); setErrors((x) => ({ ...x, email: emailError(v.trim()) })); }} {...inv('email')} />
                   {fieldErr('email')}
                 </div>
                 <div className="field">
                   <label className="field__label" htmlFor="password">Contraseña</label>
                   <div className="password">
                     <input ref={pwRef} className="input" id="password" name="password" type={showPw ? 'text' : 'password'} autoComplete="current-password"
-                      value={password} onChange={(e) => { setPassword(e.target.value); setErrors((x) => ({ ...x, password: '' })); }}
+                      value={password} onChange={(e) => { const v = e.target.value; setPassword(v); setErrors((x) => ({ ...x, password: !v ? 'Escribe tu contraseña.' : v.length < 8 ? 'La contraseña tiene al menos 8 caracteres.' : '' })); }}
                       onKeyDown={(e) => setCaps(e.getModifierState?.('CapsLock'))} onKeyUp={(e) => setCaps(e.getModifierState?.('CapsLock'))} {...inv('password')} />
                     <button className="icon-btn password__toggle" type="button" id="toggle-password" aria-label={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPw} aria-controls="password"
                       onClick={() => { setShowPw(!showPw); pwRef.current?.focus(); }}>
@@ -243,7 +247,7 @@ export function Login() {
               <form id="forgot-form" noValidate onSubmit={onForgot}>
                 <div className="field">
                   <label className="field__label" htmlFor="forgot-email">Correo electrónico</label>
-                  <input className="input" id="forgot-email" type="email" autoComplete="email" placeholder="nombre@zugar.example" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} {...inv('forgot-email')} />
+                  <input className="input" id="forgot-email" type="email" autoComplete="email" placeholder="nombre@zugar.example" value={forgotEmail} onChange={(e) => { const v = e.target.value; setForgotEmail(v); setErrors((x) => ({ ...x, 'forgot-email': emailError(v.trim()) })); }} {...inv('forgot-email')} />
                   {fieldErr('forgot-email')}
                 </div>
                 <button className="btn btn--block" type="submit">Enviarme una contraseña temporal</button>

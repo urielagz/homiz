@@ -9,7 +9,7 @@ const PNG = Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
 
 const future = (days: number, time = '10:00') => {
-  const d = new Date(Date.now() + days * 86400000).toISOString().slice(0, 10);
+  const d = new Date(Date.now() + days * 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Cancun' });
   return { date: d, iso: `${d}T${time}:00-05:00` };
 };
 const userIdOf = async (email: string) => (await pool.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [email])).rows[0].id;
@@ -51,7 +51,7 @@ describe('Catálogo público y solicitudes del sitio', () => {
     expect((await api().get('/api/v1/public/properties/casa-almendra')).status).toBe(404); // borrador
   });
 
-  test('una solicitud de visita llega sin broker a administración, que se la asigna a un broker con su cita', async () => {
+  test('una solicitud de visita llega sin broker y avisa a todos; administración también puede asignarla con su cita', async () => {
     const f = future(10);
     const res = await api().post('/api/v1/public/leads').send({ consent: true,
       reason: 'visita', name: 'Pedro Solano', email: 'pedro.solano@correo.com', phone: '998 123 4567', propertySlug: 'casa-ceiba',
@@ -63,11 +63,11 @@ describe('Catálogo público y solicitudes del sitio', () => {
     const { rows } = await pool.query(`SELECT status FROM appointments WHERE code = $1`, [res.body.appointmentCode]);
     expect(rows[0].status).toBe('por-confirmar');
     expect((await notificationsOf(EMAILS.admin, 'appointment_requested')).length).toBeGreaterThan(0);
-    expect(await notificationsOf(EMAILS.mariana, 'appointment_requested')).toHaveLength(0);
-    // Sin asignar: el broker de la casa no la ve; administración la asigna sin cambiar los datos de la persona
+    expect((await notificationsOf(EMAILS.mariana, 'appointment_requested')).length).toBeGreaterThan(0);
+    // Sin asignar: todos los brokers la ven; administración puede asignarla sin cambiar los datos de la persona
     const { rows: [lead] } = await pool.query(`SELECT id, broker_id FROM leads WHERE folio = $1`, [res.body.folio]);
     expect(lead.broker_id).toBeNull();
-    expect((await api().get(`/api/v1/leads/${lead.id}`).set(bearer(mariana))).status).toBe(403);
+    expect((await api().get(`/api/v1/leads/${lead.id}`).set(bearer(mariana))).status).toBe(200);
     const sinAsignar = await api().get('/api/v1/leads?unassigned=true').set(bearer(admin));
     expect(sinAsignar.body.data.map((l: { id: string }) => l.id)).toContain(lead.id);
     const marianaId = await userIdOf(EMAILS.mariana);
@@ -102,16 +102,12 @@ describe('Catálogo público y solicitudes del sitio', () => {
     expect(bad.status).toBe(400);
   });
 
-  test('el broker solo ve las solicitudes que le asignaron y puede darles seguimiento', async () => {
+  test('en su lista el broker ve las suyas; al atender una libre se queda con ella', async () => {
     const all = await api().get('/api/v1/leads').set(bearer(admin));
     const lead = all.body.data.find((l: { reason: string }) => l.reason === 'publicar');
     const list = await api().get('/api/v1/leads').set(bearer(mariana));
     expect(list.status).toBe(200);
     expect(list.body.data.every((l: { broker: { name: string } | null }) => l.broker?.name === 'Mariana Solís')).toBe(true);
-    if (!lead.broker) {
-      expect((await api().patch(`/api/v1/leads/${lead.id}`).set(bearer(mariana)).send({ status: 'en_seguimiento' })).status).toBe(403);
-      await api().patch(`/api/v1/leads/${lead.id}/broker`).set(bearer(admin)).send({ brokerId: await userIdOf(EMAILS.mariana) });
-    }
     const upd = await api().patch(`/api/v1/leads/${lead.id}`).set(bearer(mariana)).send({ status: 'en_seguimiento' });
     expect(upd.status).toBe(200);
     expect((await api().get('/api/v1/leads').set(bearer(laura))).status).toBe(403);
@@ -156,8 +152,6 @@ describe('Solicitudes: el cliente pide en la app; el asesor contesta y propone c
   });
 
   test('el asesor propone casas y contesta; al cliente le llega el aviso y lo ve en la app', async () => {
-    // Llega sin broker: hasta que administración la asigna, el asesor no la puede atender
-    expect((await api().post(`/api/v1/leads/${leadId}/proposals`).set(bearer(mariana)).send({ propertyId: await propertyId('ZUG-001') })).status).toBe(403);
     expect((await api().patch(`/api/v1/leads/${leadId}/broker`).set(bearer(admin)).send({ brokerId: await userIdOf(EMAILS.mariana) })).status).toBe(200);
     const casa = await propertyId('ZUG-001');
     const p = await api().post(`/api/v1/leads/${leadId}/proposals`).set(bearer(mariana)).send({ propertyId: casa, note: 'Tiene jardín' });
@@ -342,7 +336,7 @@ describe('Clientes y contratos', () => {
     const ceiba = await propertyId('ZUG-001');
     const ana = (await pool.query(`SELECT id FROM clients WHERE email = 'ana@example.com'`)).rows[0].id;
     const res = await api().post('/api/v1/contracts').set(bearer(admin)).send({
-      propertyId: ceiba, clientId: ana, startDate: '2026-11-01', endDate: '2027-10-31', monthlyRent: 28000, paymentDay: 5, deposit: 28000,
+      propertyId: ceiba, clientId: ana, startDate: '2026-12-01', endDate: '2027-11-30', monthlyRent: 28000, paymentDay: 5, deposit: 28000,
     });
     expect(res.status).toBe(201);
     expect(res.body.notes).toMatchObject({ total: 12, paid: 0 });
@@ -360,7 +354,7 @@ describe('Clientes y contratos', () => {
       notes: { total: 12, paid: 0, overdue: 0, owed: 0, nextDue: expect.any(String) }, openReports: expect.any(Number), utilities: expect.any(Object),
     });
     const notes = await pool.query(`SELECT to_char(min(due_date), 'YYYY-MM-DD') AS first, to_char(max(due_date), 'YYYY-MM-DD') AS last FROM promissory_notes WHERE contract_id = $1`, [contractId]);
-    expect(notes.rows[0]).toEqual({ first: '2026-11-05', last: '2027-10-05' });
+    expect(notes.rows[0]).toEqual({ first: '2026-12-05', last: '2027-11-05' });
   });
 
   test('hacer inquilino es solo de administración: el broker no registra contratos', async () => {
@@ -406,7 +400,7 @@ describe('Clientes y contratos', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('finished');
     const { rows } = await pool.query(`SELECT status, count(*)::int AS n FROM promissory_notes WHERE contract_id = $1 GROUP BY status ORDER BY status`, [contractId]);
-    expect(rows).toEqual([{ status: 'pending', n: 3 }, { status: 'cancelled', n: 9 }]);
+    expect(rows).toEqual([{ status: 'pending', n: 2 }, { status: 'cancelled', n: 10 }]);
   });
 
   test('terminar un contrato el mismo día que empieza lo deja cancelado (no da error)', async () => {
@@ -528,7 +522,8 @@ describe('Pagarés y pagos', () => {
     expect(fix.body.payment.notes).toBe('Pagó en la oficina');
     const v = await api().post(`${path}/void`).set(bearer(admin)).send({ reason: 'Se registró en el pagaré equivocado' });
     expect(v.status).toBe(200);
-    expect(v.body.status).toBe('pending');
+    // Sin pago vuelve a estar por cobrar: pendiente, o vencido si su fecha ya pasó
+    expect(['pending', 'overdue']).toContain(v.body.status);
     const detail = await api().get(`/api/v1/promissory-notes/${note5}`).set(bearer(admin));
     expect(detail.body.voidedPayments).toHaveLength(1);
     // Volver a registrar: el folio no se repite
@@ -747,9 +742,11 @@ describe('Proveedores, gastos, usuarios, notificaciones y dashboard', () => {
 
 describe('Tareas diarias', () => {
   test('marcan vencidos, recuerdan lo próximo y no repiten avisos el mismo día', async () => {
-    const day = '2026-11-03';
+    // Tres días antes del siguiente pagaré pendiente: así la prueba no depende de la fecha de hoy
+    const { rows: [next] } = await pool.query<{ day: string }>(`SELECT to_char(min(due_date) - 3, 'YYYY-MM-DD') AS day FROM promissory_notes WHERE status = 'pending'`);
+    const day = next.day;
     const first = await runDailyJobs(day);
-    expect(first.noteReminders).toBeGreaterThan(0); // pagaré 05 de Laura (5 nov)
+    expect(first.noteReminders).toBeGreaterThan(0);
     expect(first.overdueReceipts + first.overdueNotes).toBeGreaterThanOrEqual(0);
     const again = await runDailyJobs(day);
     expect(again.noteReminders).toBe(0);

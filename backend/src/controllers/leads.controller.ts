@@ -7,7 +7,7 @@ import { insertActivity } from '../models/activity.model.js';
 import { currentUser, type AuthUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { dateTimeField, pagination, paged } from '../middlewares/validate.js';
-import { withTransaction } from '../config/database.js';
+import { withTransaction, type Db } from '../config/database.js';
 import { isAdmin, isBroker } from '../services/access.service.js';
 import * as Appointments from '../services/appointment.service.js';
 import { clientForLead, createLead } from '../services/lead.service.js';
@@ -53,6 +53,8 @@ export const appointmentDto = z.object({
   propertyId: z.uuid({ error: 'Elige la casa.' }),
   scheduledAt: dateTimeField,
   note: z.string().trim().max(500).optional().nullable(),
+  /** El personal está de acuerdo con la fecha y hora que pidió la persona: la cita queda confirmada */
+  agreed: z.boolean().optional(),
 });
 export const proposalDto = z.object({ propertyId: z.uuid({ error: 'Elige una casa.' }), note: z.string().trim().max(300).optional().nullable() });
 export const proposalParams = z.object({ id: z.uuid(), proposalId: z.uuid() });
@@ -73,6 +75,14 @@ export const myRequestDto = z
   .refine((v) => !v.preferredDate || !!v.propertySlug || !!v.propertyCode, { message: 'Indica la casa de la cita.', path: ['propertySlug'] })
   .refine((v) => !v.preferredDate === !v.preferredTime, { message: 'Elige el día y la hora de la cita.', path: ['preferredTime'] });
 
+/** Editar lo que mandó en el formulario. La casa, el motivo y la cita no cambian aquí. */
+export const editRequestDto = z.object({
+  message: z.string().trim().max(2000).optional().nullable(),
+  payload: z.record(z.string().max(40), z.union([z.string().max(500), z.number(), z.boolean()])),
+});
+/** Datos del sistema dentro del formulario: el cliente no los cambia al editar */
+const SYSTEM_FIELDS = ['origen', 'quiere', 'aviso_privacidad', 'fecha_preferida', 'horario'];
+
 const STATUS_TEXT = { nuevo: 'Recibida', en_seguimiento: 'En seguimiento', cerrado: 'Cerrada' } as const;
 
 async function presentProposals(rows: Leads.ProposalRow[]) {
@@ -87,7 +97,10 @@ async function presentProposals(rows: Leads.ProposalRow[]) {
 
 /** Personal: todo. Cliente: sin teléfono ni correo del asesor ni datos internos. */
 const presentAppointments = (rows: Leads.LeadAppointmentRow[]) =>
-  rows.map((a) => ({ id: a.id, code: a.code, scheduledAt: a.scheduled_at, status: a.status, property: { id: a.property_id, code: a.property_code, name: a.property_name }, broker: a.broker_name }));
+  rows.map((a) => ({ id: a.id, code: a.code, scheduledAt: a.scheduled_at, status: a.status, awaiting: a.status === 'por-confirmar' ? a.awaiting : null, property: { id: a.property_id, code: a.property_code, name: a.property_name }, broker: a.broker_name }));
+
+/** Una casa rentada o vendida ya no se ofrece: la solicitud abierta sigue, pero sin esa casa. */
+const houseGone = (l: Leads.LeadRow) => l.status !== 'cerrado' && (l.property_status === 'rentada' || l.property_status === 'vendida');
 
 const present = (l: Leads.LeadRow, proposals?: Awaited<ReturnType<typeof presentProposals>>, appointments?: ReturnType<typeof presentAppointments>) => ({
   id: l.id,
@@ -97,7 +110,7 @@ const present = (l: Leads.LeadRow, proposals?: Awaited<ReturnType<typeof present
   email: l.email,
   phone: l.phone,
   message: l.message,
-  property: l.property_id ? { id: l.property_id, code: l.property_code, name: l.property_name } : null,
+  property: l.property_id && !houseGone(l) ? { id: l.property_id, code: l.property_code, name: l.property_name } : null,
   preferredDate: l.preferred_date,
   preferredTime: l.preferred_time,
   payload: l.payload,
@@ -119,7 +132,7 @@ const present = (l: Leads.LeadRow, proposals?: Awaited<ReturnType<typeof present
 async function full(id: string) {
   const lead = (await Leads.findById(id))!;
   const others = (await Leads.othersOf(lead.email, id)).map((o) => ({
-    id: o.id, folio: o.folio, reason: o.reason, status: o.status, statusLabel: STATUS_TEXT[o.status], property: o.property_name, payload: o.payload, message: o.message, createdAt: o.created_at,
+    id: o.id, folio: o.folio, reason: o.reason, status: o.status, statusLabel: STATUS_TEXT[o.status], property: houseGone(o) ? null : o.property_name, payload: o.payload, message: o.message, createdAt: o.created_at,
   }));
   return { ...present(lead, await presentProposals(await Leads.proposalsFor([id])), presentAppointments(await Leads.appointmentsFor(id))), others };
 }
@@ -128,9 +141,44 @@ async function full(id: string) {
 async function loadForStaff(user: AuthUser, id: string): Promise<Leads.LeadRow> {
   const lead = await Leads.findById(id);
   if (!lead) throw new AppError(404, 'NOT_FOUND', 'La solicitud no existe.');
-  if (!isAdmin(user) && lead.broker_id !== user.id) throw new AppError(403, 'NOT_OWNER', 'Esta solicitud no te la han asignado.');
+  // Sin broker: todos la ven y el primero que la atiende se queda con ella
+  if (!isAdmin(user) && lead.broker_id && lead.broker_id !== user.id) throw new AppError(403, 'NOT_OWNER', `Esta solicitud la atiende ${lead.broker_name ?? 'otro broker'}.`);
   return lead;
 }
+
+/** La solicitud, sus citas vigentes y el expediente de la persona pasan a ese broker. */
+async function moveToBroker(db: Db, lead: Leads.LeadRow, brokerId: string, brokerName: string): Promise<void> {
+  await db.query('UPDATE leads SET broker_id = $2 WHERE id = $1', [lead.id, brokerId]);
+  await db.query(`UPDATE appointments SET broker_id = $2 WHERE lead_id = $1 AND status IN ('por-confirmar', 'confirmada')`, [lead.id, brokerId]).catch((err) => {
+    if ((err as { code?: string }).code === '23505') throw new AppError(409, 'BROKER_BUSY', `${brokerName} ya tiene otra cita a esa hora. Cambia primero la hora de la cita.`);
+    throw err;
+  });
+  if (lead.client_id) await db.query('UPDATE clients SET broker_id = $2 WHERE id = $1', [lead.client_id, brokerId]);
+}
+
+/** El primer broker que atiende una solicitud sin broker se queda con su seguimiento. Dos a la vez: gana el primero. */
+async function takeIfFree(user: AuthUser, lead: Leads.LeadRow): Promise<Leads.LeadRow> {
+  if (lead.broker_id || !isBroker(user)) return lead;
+  await withTransaction(async (db) => {
+    const { rowCount } = await db.query('UPDATE leads SET broker_id = $2 WHERE id = $1 AND broker_id IS NULL', [lead.id, user.id]);
+    if (!rowCount) {
+      const now = await Leads.findById(lead.id);
+      throw new AppError(409, 'ALREADY_TAKEN', `Esta solicitud ya la atiende ${now?.broker_name ?? 'otro broker'}.`);
+    }
+    await moveToBroker(db, lead, user.id, user.name);
+    await insertActivity({ userId: user.id, propertyId: lead.property_id, entity: 'lead', entityId: lead.id, action: 'take', description: `${user.name} tomó la solicitud ${lead.folio} de ${lead.name}.` }, db);
+  });
+  return { ...lead, broker_id: user.id };
+}
+
+/** POST /leads/:id/take — el broker toma la solicitud («Atender esta solicitud»). */
+export const take: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  if (!isBroker(user)) throw new AppError(403, 'FORBIDDEN', 'Solo un broker puede atender una solicitud.');
+  const lead = await loadForStaff(user, (res.locals.params as { id: string }).id);
+  await takeIfFree(user, lead);
+  res.json(await full(lead.id));
+};
 
 /** Usuario de la app de la persona que hizo la solicitud (para avisarle). */
 async function clientUser(lead: Leads.LeadRow): Promise<string | null> {
@@ -140,11 +188,12 @@ async function clientUser(lead: Leads.LeadRow): Promise<string | null> {
   return u && u.type === 'client' ? u.id : null;
 }
 
-/** GET /leads — administrador: todas (o solo las sin asignar); broker: las que le asignaron. */
+/** GET /leads — administrador: todas (o solo las sin asignar); broker: las suyas o las que nadie atiende. */
 export const list: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const q = res.locals.query as z.infer<typeof listQueryDto>;
-  const { rows, total } = await Leads.list({ ...q, brokerId: isAdmin(user) ? undefined : user.id, unassigned: isAdmin(user) ? q.unassigned : undefined });
+  // Broker: las suyas; con unassigned, las que aún nadie atiende
+  const { rows, total } = await Leads.list({ ...q, brokerId: isAdmin(user) || q.unassigned ? undefined : user.id });
   res.json(paged(rows.map((l) => present(l)), total, q));
 };
 
@@ -182,6 +231,14 @@ export const remove: RequestHandler = async (_req, res) => {
   res.status(204).end();
 };
 
+/** «Hacer cita» solo vale para la casa, el día y la hora que pidió la persona. */
+async function assertAgreedDate(lead: Leads.LeadRow, propertyId: string, scheduledAt: string): Promise<void> {
+  const msg = 'Esa no es la fecha que pidió la persona. Usa «Agendar cita» para proponerle otra.';
+  if (!lead.preferred_date || !lead.preferred_time || lead.property_id !== propertyId) throw new AppError(400, 'VALIDATION_ERROR', msg);
+  const { rows: [t] } = await pool.query<{ at: Date }>(`SELECT ($1::date + $2::time) AT TIME ZONE 'America/Cancun' AS at`, [lead.preferred_date, lead.preferred_time]);
+  if (t.at.getTime() !== new Date(scheduledAt).getTime()) throw new AppError(400, 'VALIDATION_ERROR', msg);
+}
+
 /**
  * POST /leads/:id/appointment — agenda la visita: crea (si falta) el expediente y la cita ligada a la solicitud.
  * Si la solicitud ya tiene una cita vigente de esa casa, la reprograma (no se crea otra: evitaba citas duplicadas).
@@ -189,8 +246,9 @@ export const remove: RequestHandler = async (_req, res) => {
 export const schedule: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const { id } = res.locals.params as { id: string };
-  const lead = await loadForStaff(user, id);
+  const lead = await takeIfFree(user, await loadForStaff(user, id));
   const d = res.locals.body as z.infer<typeof appointmentDto>;
+  if (d.agreed) await assertAgreedDate(lead, d.propertyId, d.scheduledAt);
   const { rows: open } = await pool.query<{ id: string; code: string; property_id: string }>(
     `SELECT id, code, property_id FROM appointments WHERE lead_id = $1 AND status IN ('por-confirmar', 'confirmada') ORDER BY scheduled_at DESC`,
     [id],
@@ -206,6 +264,11 @@ export const schedule: RequestHandler = async (_req, res) => {
   // Una cita vigente por persona: si ya tiene una (de otra casa), esa misma cita se cambia a esta
   // La cita queda con el broker asignado a la solicitud (o sin broker si administración aún no lo asigna)
   const placed = await Appointments.createOrMove(user, { propertyId: d.propertyId, clientId, scheduledAt: d.scheduledAt, note: d.note ?? lead.message, leadId: id, assigned: lead.broker_id });
+  if (d.agreed) {
+    // Ya la pidió la persona: al aceptarla el personal, la fecha queda acordada por ambos
+    await pool.query(`UPDATE appointments SET awaiting = 'staff' WHERE id = $1`, [placed.id]);
+    await Appointments.transition(user, placed.id, 'confirm');
+  }
   if (lead.status === 'nuevo') await pool.query(`UPDATE leads SET status = 'en_seguimiento' WHERE id = $1`, [id]);
   await insertActivity({ userId: user.id, entity: 'lead', entityId: id, action: 'schedule', description: `${user.name} ${placed.moved ? 'cambió' : 'agendó'} la cita ${placed.code} desde la solicitud ${lead.folio}.` });
   res.status(placed.moved ? 200 : 201).json({ appointment: { id: placed.id, code: placed.code }, rescheduled: placed.moved, moved: placed.moved, lead: await full(id) });
@@ -222,18 +285,12 @@ export const assignBroker: RequestHandler = async (_req, res) => {
   const lead = await loadForStaff(user, id);
   const { brokerId } = res.locals.body as z.infer<typeof brokerDto>;
   const { rows: [b] } = await pool.query<{ name: string }>(
-    `SELECT u.name FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id WHERE u.id = $1 AND u.active AND r.code = 'broker'`,
+    `SELECT u.name FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id WHERE u.id = $1 AND u.active AND r.code IN ('broker', 'admin')`,
     [brokerId],
   );
   if (!b) throw new AppError(400, 'INVALID_BROKER', 'Elige un broker activo.');
   await withTransaction(async (db) => {
-    await db.query('UPDATE leads SET broker_id = $2 WHERE id = $1', [id, brokerId]);
-    // Sus citas vigentes que salieron de esta solicitud y su expediente pasan al broker
-    await db.query(`UPDATE appointments SET broker_id = $2 WHERE lead_id = $1 AND status IN ('por-confirmar', 'confirmada')`, [id, brokerId]).catch((err) => {
-      if ((err as { code?: string }).code === '23505') throw new AppError(409, 'BROKER_BUSY', `${b.name} ya tiene otra cita a esa hora. Elige otro broker o cambia primero la hora de la cita.`);
-      throw err;
-    });
-    if (lead.client_id) await db.query('UPDATE clients SET broker_id = $2 WHERE id = $1', [lead.client_id, brokerId]);
+    await moveToBroker(db, lead, brokerId, b.name);
     await insertActivity({ userId: user.id, propertyId: lead.property_id, entity: 'lead', entityId: id, action: 'assign', description: `${user.name} asignó la solicitud ${lead.folio} de ${lead.name} a ${b.name}.`, oldValues: { brokerId: lead.broker_id }, newValues: { brokerId } }, db);
     await notify([brokerId], { type: 'lead_assigned', title: 'Te asignaron una solicitud', message: `${lead.name} · folio ${lead.folio}${lead.property_name ? ` · ${lead.property_name}` : ''}.`, entity: 'lead', entityId: id }, db);
   });
@@ -244,7 +301,7 @@ export const assignBroker: RequestHandler = async (_req, res) => {
 export const update: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const { id } = res.locals.params as { id: string };
-  const lead = await loadForStaff(user, id);
+  const lead = await takeIfFree(user, await loadForStaff(user, id));
   const d = res.locals.body as z.infer<typeof updateDto>;
   if (d.name !== undefined || d.phone !== undefined || d.message !== undefined || d.reason !== undefined) {
     await Leads.updateDetails(id, d);
@@ -272,10 +329,11 @@ export const update: RequestHandler = async (_req, res) => {
 export const addProposal: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const { id } = res.locals.params as { id: string };
-  const lead = await loadForStaff(user, id);
+  const lead = await takeIfFree(user, await loadForStaff(user, id));
   const d = res.locals.body as z.infer<typeof proposalDto>;
   const { rows: p } = await pool.query<{ name: string }>(`SELECT name FROM properties WHERE id = $1 AND active`, [d.propertyId]);
   if (!p[0]) throw new AppError(404, 'NOT_FOUND', 'La casa no existe.');
+  await Appointments.assertVisitable(pool, d.propertyId);
   try {
     await pool.query('INSERT INTO lead_proposals (lead_id, property_id, note, proposed_by) VALUES ($1, $2, $3, $4)', [id, d.propertyId, d.note ?? null, user.id]);
   } catch (err) {
@@ -331,7 +389,7 @@ export const staffMessages: RequestHandler = async (_req, res) => {
 /** POST /leads/:id/messages — el asesor escribe; al cliente le llega el aviso en la app. */
 export const staffSend: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
-  const lead = await loadForStaff(user, (res.locals.params as { id: string }).id);
+  const lead = await takeIfFree(user, await loadForStaff(user, (res.locals.params as { id: string }).id));
   const { body } = res.locals.body as z.infer<typeof messageDto>;
   await pool.query('INSERT INTO lead_messages (lead_id, sender_id, from_staff, body) VALUES ($1, $2, TRUE, $3)', [lead.id, user.id, body]);
   if (lead.status === 'nuevo') await pool.query(`UPDATE leads SET status = 'en_seguimiento' WHERE id = $1`, [lead.id]);
@@ -394,6 +452,25 @@ export const mineOne: RequestHandler = async (_req, res) => {
   const lead = (await Leads.listOfClient(user.clientId, user.email)).find((l) => l.id === id);
   if (!lead) throw new AppError(404, 'NOT_FOUND', 'La solicitud no existe.');
   res.json(forClient(present(lead, await presentProposals(await Leads.proposalsFor([id])))));
+};
+
+/** PATCH /requests/:id — el cliente corrige lo que mandó; su asesor (o administración) recibe el aviso. */
+export const updateMine: RequestHandler = async (_req, res) => {
+  const user = currentUser(res);
+  onlyClient(user);
+  const { id } = res.locals.params as { id: string };
+  const lead = await loadMine(user, id);
+  if (lead.status === 'cerrado') throw new AppError(409, 'REQUEST_CLOSED', 'Esta solicitud ya está cerrada. Si necesitas algo más, envía una nueva.');
+  const d = res.locals.body as z.infer<typeof editRequestDto>;
+  const old = (lead.payload ?? {}) as Record<string, unknown>;
+  const kept = Object.fromEntries(SYSTEM_FIELDS.filter((k) => k in old).map((k) => [k, old[k]]));
+  const sent = Object.fromEntries(Object.entries(d.payload).filter(([k]) => !SYSTEM_FIELDS.includes(k)));
+  await pool.query('UPDATE leads SET message = $2, payload = $3 WHERE id = $1', [id, d.message || null, { ...sent, ...kept }]);
+  await insertActivity({ userId: user.id, entity: 'lead', entityId: id, action: 'update', description: `${user.name} corrigió los datos de su solicitud ${lead.folio}.` });
+  await notify(lead.broker_id ? [lead.broker_id] : await staffWithPermission('properties.reassign'), {
+    type: 'lead_received', title: 'Solicitud actualizada', message: `${user.name} corrigió los datos de su solicitud ${lead.folio}.`, entity: 'lead', entityId: id,
+  });
+  res.json(forClient(present((await Leads.findById(id))!, await presentProposals(await Leads.proposalsFor([id])))));
 };
 
 /** POST /requests — «Busco casa» desde la app: nombre, correo y teléfono salen de la cuenta. */

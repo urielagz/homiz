@@ -205,6 +205,7 @@ FakeReply lauraBackend(RequestOptions o, {Map<String, Object?>? log}) {
     ('GET', '/properties/$propertyId/dossier') => (200, dossierJson),
     ('GET', '/requests') => (200, {'data': [requestJson]}),
     ('GET', '/requests/lead-1') => (200, requestJson),
+    ('PATCH', '/requests/lead-1') => (200, requestJson),
     ('GET', '/requests/lead-1/messages') => (200, {'data': requestMessages}),
     ('POST', '/requests/lead-1/messages') => (201, {
         'data': [

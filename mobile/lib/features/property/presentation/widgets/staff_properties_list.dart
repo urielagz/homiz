@@ -33,7 +33,7 @@ class _StaffPropertiesListState extends ConsumerState<StaffPropertiesList> {
   @override
   Widget build(BuildContext context) {
     final list = ref.watch(inventoryProvider(_q));
-    final isAdmin = ref.watch(sessionProvider.select((s) => s.value?.isAdmin ?? false));
+    final user = ref.watch(sessionProvider).value;
     return Column(
       children: [
         Padding(
@@ -71,7 +71,12 @@ class _StaffPropertiesListState extends ConsumerState<StaffPropertiesList> {
                   padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.xl),
                   itemCount: value.length,
                   separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, i) => StaffPropertyTile(property: value[i], showBroker: isAdmin, onTap: () => context.go('/property/${value[i].id}')),
+                  itemBuilder: (context, i) {
+                    final h = value[i];
+                    // Sin administrarla, se consulta para proponerla; expediente y pagos los lleva su administrador
+                    final manages = user?.manages(h.broker?.id) ?? false;
+                    return StaffPropertyTile(property: h, showBroker: true, onTap: manages ? () => context.go('/property/${value[i].id}') : () => _showInfo(context, h));
+                  },
                 ),
               ),
             AsyncError(:final error) => ErrorState(error: error, onRetry: () => ref.invalidate(inventoryProvider(_q))),
@@ -82,6 +87,32 @@ class _StaffPropertiesListState extends ConsumerState<StaffPropertiesList> {
     );
   }
 }
+
+/// Casa de otro broker: los datos para proponerla o agendarla.
+void _showInfo(BuildContext context, PropertyDetail h) => showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.screen, 0, AppSpacing.screen, AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(h.name, style: AppTextStyles.pageTitle),
+              const SizedBox(height: AppSpacing.xs),
+              Text([h.code, h.zone].whereType<String>().join(' · '), style: AppTextStyles.secondary),
+              const SizedBox(height: AppSpacing.md),
+              Text('${Fmt.money(h.price)}${h.operation == 'renta' ? ' / mes' : ''}', style: AppTextStyles.cardTitle),
+              const SizedBox(height: AppSpacing.xs),
+              Text('${h.rec ?? 0} recámaras · ${h.banos ?? 0} baños', style: AppTextStyles.body),
+              const SizedBox(height: AppSpacing.md),
+              Text('La administra ${h.broker?.name ?? 'la inmobiliaria'}. Puedes proponerla y agendarla desde una solicitud; su expediente y sus pagos los lleva su administrador.', style: AppTextStyles.secondary),
+            ],
+          ),
+        ),
+      ),
+    );
 
 /// Fila de inventario: foto pequeña, nombre, clave, zona, precio, estado y (administración) broker.
 class StaffPropertyTile extends StatelessWidget {

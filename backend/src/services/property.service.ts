@@ -4,7 +4,8 @@ import { AppError } from '../middlewares/error-handler.js';
 import type { AuthUser } from '../middlewares/authenticate.js';
 import * as Properties from '../models/property.model.js';
 import { insertActivity } from '../models/activity.model.js';
-import { isAdmin, assertPropertyAccess } from './access.service.js';
+import { isAdmin, assertPropertyEdit } from './access.service.js';
+import { cancelVisitsOfHouse } from './appointment.service.js';
 import { nextCode, slugify, uniqueSlug } from './codes.service.js';
 import { notify, userOfClient } from './notification.service.js';
 
@@ -151,10 +152,10 @@ export async function loadExtras(rows: Properties.PropertyRow[]) {
 async function assertBroker(brokerId: string): Promise<void> {
   const { rows } = await pool.query(
     `SELECT 1 FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id
-      WHERE u.id = $1 AND u.active AND r.code = 'broker'`,
+      WHERE u.id = $1 AND u.active AND r.code IN ('broker', 'admin')`,
     [brokerId],
   );
-  if (!rows.length) throw new AppError(400, 'INVALID_BROKER', 'El responsable debe ser un broker activo.');
+  if (!rows.length) throw new AppError(400, 'INVALID_BROKER', 'El responsable debe ser un broker o administrador activo.');
 }
 
 async function validatePhotoKeys(code: string, propertyId: string, photos: { storageKey: string }[]): Promise<void> {
@@ -200,7 +201,7 @@ export async function update(
   id: string,
   data: Properties.PropertyWrite & { amenities?: string[]; photos?: { storageKey: string; label: string }[] },
 ): Promise<void> {
-  await assertPropertyAccess(user, id);
+  await assertPropertyEdit(user, id);
   const before = await Properties.findById(id);
   if (!before) throw new AppError(404, 'NOT_FOUND', 'La propiedad no existe.');
   // Los números de servicio de agua y luz los captura administración
@@ -221,7 +222,7 @@ export async function update(
 }
 
 export async function setAvailability(user: AuthUser, id: string, data: { status?: Properties.PropertyRow['status']; visibility?: Properties.PropertyRow['visibility'] }): Promise<void> {
-  await assertPropertyAccess(user, id);
+  await assertPropertyEdit(user, id);
   const p = await Properties.findById(id);
   if (!p) throw new AppError(404, 'NOT_FOUND', 'La propiedad no existe.');
   const status = data.status ?? p.status;
@@ -262,6 +263,7 @@ export async function setAvailability(user: AuthUser, id: string, data: { status
       WHERE id = $1`,
     [id, status, finalVisibility],
   );
+  if (status === 'rentada' || status === 'vendida') await cancelVisitsOfHouse(pool, id, status === 'rentada' ? 'La casa ya se rentó.' : 'La casa se vendió.');
   await insertActivity({
     userId: user.id, propertyId: id, entity: 'property', entityId: id, action: 'availability',
     description: `${user.name} cambió ${p.name} a ${status} · ${finalVisibility}.`,
@@ -302,7 +304,7 @@ export async function reassignBroker(user: AuthUser, id: string, brokerId: strin
 
 /** Baja lógica. Cancela sus citas próximas (quedan en historial) y avisa a los clientes. */
 export async function remove(user: AuthUser, id: string): Promise<number> {
-  await assertPropertyAccess(user, id);
+  await assertPropertyEdit(user, id);
   const p = await Properties.findById(id);
   if (!p) throw new AppError(404, 'NOT_FOUND', 'La propiedad no existe.');
   const { rowCount: contracts } = await pool.query(`SELECT 1 FROM contracts WHERE property_id = $1 AND status = 'active'`, [id]);

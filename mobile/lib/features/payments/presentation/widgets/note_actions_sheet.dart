@@ -36,7 +36,7 @@ List<(IconData, String, Future<void> Function())> noteActions(BuildContext conte
     if (n.documentId != null) (Icons.picture_as_pdf_outlined, 'Ver pagaré (PDF)', () => openDocument(context, ref, n.documentId!)),
     if (n.property != null && can('documents.manage'))
       (Icons.upload_file_outlined, n.documentId == null ? 'Subir pagaré (PDF)' : 'Reemplazar PDF del pagaré', () => _uploadNotePdf(context, ref, n)),
-    if (n.proofDocumentId != null) (Icons.receipt_long_outlined, 'Ver comprobante', () => openDocument(context, ref, n.proofDocumentId!)),
+    if (n.proofDocumentId != null) (Icons.receipt_long_outlined, 'Ver recibo', () => openDocument(context, ref, n.proofDocumentId!)),
     // Sellos: fotos de la entrega del pagaré en físico y digital
     if (n.stamps.isNotEmpty) (Icons.photo_library_outlined, 'Ver sellos (${n.stamps.length})', () => showStamps(context, ref, n)),
     if (n.property != null && can('documents.manage')) (Icons.add_a_photo_outlined, 'Agregar foto del sello', () => _addStamps(context, ref, n)),
@@ -270,6 +270,7 @@ class _EditNoteSheetState extends ConsumerState<EditNoteSheet> with _SheetState 
   @override
   Widget build(BuildContext context) {
     return Form(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       key: form,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -339,6 +340,7 @@ class _CorrectPaymentSheetState extends ConsumerState<CorrectPaymentSheet> with 
   @override
   Widget build(BuildContext context) {
     return Form(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       key: form,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -401,6 +403,7 @@ class _NewNoteSheetState extends ConsumerState<NewNoteSheet> with _SheetState {
   @override
   Widget build(BuildContext context) {
     return Form(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       key: form,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -455,6 +458,7 @@ class _CancelNoteSheetState extends ConsumerState<CancelNoteSheet> with _SheetSt
   @override
   Widget build(BuildContext context) {
     return Form(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       key: form,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -501,6 +505,7 @@ class _VoidPaymentSheetState extends ConsumerState<VoidPaymentSheet> with _Sheet
   Widget build(BuildContext context) {
     final p = widget.note.payment!;
     return Form(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       key: form,
       child: Column(
         mainAxisSize: MainAxisSize.min,

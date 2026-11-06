@@ -1,4 +1,5 @@
 import { pool, withTransaction, type Db } from '../config/database.js';
+import { env } from '../config/env.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { AuthUser } from '../middlewares/authenticate.js';
 import { insertActivity } from '../models/activity.model.js';
@@ -57,6 +58,8 @@ export interface ApptRow {
   lead_preferred_date: string | null;
   lead_preferred_time: string | null;
   lead_created_at: Date | null;
+  lead_broker_id: string | null;
+  client_broker_id: string | null;
 }
 
 const SELECT = `
@@ -69,7 +72,7 @@ const SELECT = `
          a.lead_id, l.id AS form_id, l.folio AS lead_folio, l.payload AS lead_payload, l.message AS lead_message,
          l.reason AS lead_reason, l.status AS lead_status, l.name AS lead_name, l.email AS lead_email, l.phone AS lead_phone,
          lp.code AS lead_property_code, lp.name AS lead_property_name, to_char(l.preferred_date, 'YYYY-MM-DD') AS lead_preferred_date,
-         l.preferred_time AS lead_preferred_time, l.created_at AS lead_created_at
+         l.preferred_time AS lead_preferred_time, l.created_at AS lead_created_at, l.broker_id AS lead_broker_id, c.broker_id AS client_broker_id
     FROM appointments a
     JOIN properties p ON p.id = a.property_id
     JOIN clients c ON c.id = a.client_id
@@ -141,7 +144,11 @@ export async function list(user: AuthUser, f: { status?: string[]; from?: string
   const params: unknown[] = [];
   const where: string[] = [];
   if (user.type === 'client') where.push(`a.client_id = $${params.push(user.clientId ?? '00000000-0000-0000-0000-000000000000')}`);
-  else if (!isAdmin(user)) where.push(`a.broker_id = $${params.push(user.id)}`);
+  else if (!isAdmin(user)) {
+    // También las de las personas que le asignaron, aunque la casa sea de otro broker
+    const me = params.push(user.id);
+    where.push(`(a.broker_id = $${me} OR EXISTS (SELECT 1 FROM leads x WHERE x.client_id = a.client_id AND x.broker_id = $${me}))`);
+  }
   if (f.status?.length) where.push(`a.status::text = ANY($${params.push(f.status)}::text[])`);
   if (f.from) where.push(`a.scheduled_at >= $${params.push(f.from)}::date`);
   if (f.to) where.push(`a.scheduled_at < ($${params.push(f.to)}::date + 1)`);
@@ -165,7 +172,7 @@ export async function loadFor(user: AuthUser, id: string): Promise<ApptRow> {
   if (!a) throw notFound;
   if (user.type === 'client') {
     if (a.client_id !== user.clientId) throw notFound;
-  } else if (!isAdmin(user) && a.broker_id !== user.id && (await checkPropertyAccess(user, a.property_id)) !== 'ok') {
+  } else if (!isAdmin(user) && ![a.broker_id, a.lead_broker_id, a.client_broker_id].includes(user.id) && (await checkPropertyAccess(user, a.property_id)) !== 'ok') {
     throw new AppError(403, 'NOT_OWNER', 'Esta cita no está asignada a ti.');
   }
   return a;
@@ -178,6 +185,39 @@ const when = (d: Date) =>
 function conflict(err: unknown): never {
   if ((err as { code?: string }).code === '23505') throw new AppError(409, 'SCHEDULE_CONFLICT', 'Ese horario ya está ocupado. Elige otro.');
   throw err;
+}
+
+/** Horario de visitas de la inmobiliaria: de 7:00 a.m. a 11:00 p.m. (la última empieza a las 10:45 p.m. y dura 15 minutos). */
+export const VISIT_HOURS_TEXT = 'Las visitas son de 7:00 a.m. a 11:00 p.m.';
+export const visitTimeOk = (hhmm: string) => hhmm >= '07:00' && hhmm <= '22:45';
+
+function assertVisitHour(at: string | Date): void {
+  const hhmm = new Date(at).toLocaleTimeString('en-GB', { timeZone: env.TZ_APP, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  if (!visitTimeOk(hhmm)) throw new AppError(400, 'VALIDATION_ERROR', VISIT_HOURS_TEXT, { scheduledAt: [VISIT_HOURS_TEXT] });
+}
+
+/** Rentada, vendida o con contrato vigente: ya tiene inquilino o dueño y no recibe visitas (cliente, broker ni administración). */
+export async function assertVisitable(db: Db, propertyId: string): Promise<void> {
+  const { rows: [h] } = await db.query<{ status: string; rented: boolean }>(
+    `SELECT p.status::text AS status, EXISTS (SELECT 1 FROM contracts c WHERE c.property_id = p.id AND c.status = 'active') AS rented
+       FROM properties p WHERE p.id = $1`,
+    [propertyId],
+  );
+  if (h?.status === 'vendida') throw new AppError(409, 'NOT_AVAILABLE', 'Esta casa ya se vendió: no se pueden agendar visitas.');
+  if (h?.status === 'rentada' || h?.rented) throw new AppError(409, 'NOT_AVAILABLE', 'Esta casa está rentada y tiene inquilino: no se pueden agendar visitas.');
+}
+
+/** La casa se rentó o se vendió: sus citas por venir se cancelan y a cada persona le llega el aviso. */
+export async function cancelVisitsOfHouse(db: Db, propertyId: string, reason: string): Promise<void> {
+  const { rows } = await db.query<{ id: string; code: string; client_id: string }>(
+    `UPDATE appointments SET status = 'cancelada', reason = $2
+      WHERE property_id = $1 AND status IN ('por-confirmar', 'confirmada') AND scheduled_at > now()
+      RETURNING id, code, client_id`,
+    [propertyId, reason],
+  );
+  for (const a of rows) {
+    await notify([await userOfClient(a.client_id, db)], { type: 'appointment_cancelled', title: 'Cita cancelada', message: `Cancelamos tu cita ${a.code}: ${reason}`, entity: 'appointment', entityId: a.id }, db);
+  }
 }
 
 export interface PlacedVisit { id: string; code: string; moved: boolean; previous: { propertyId: string; propertyName: string; brokerId: string | null } | null }
@@ -193,6 +233,8 @@ export async function placeVisit(
 ): Promise<PlacedVisit> {
   // Quien propone la fecha espera a la otra parte: lo pide el cliente → confirma el personal, y al revés
   const awaiting = d.awaiting ?? 'staff';
+  assertVisitHour(d.scheduledAt);
+  await assertVisitable(db, d.propertyId);
   await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['cita:' + d.clientId]);
   const { rows: [active] } = await db.query<{ id: string; code: string; property_id: string; property_name: string; broker_id: string | null }>(
     `SELECT a.id, a.code, a.property_id, p.name AS property_name, a.broker_id FROM appointments a JOIN properties p ON p.id = a.property_id
@@ -218,7 +260,7 @@ export async function placeVisit(
   return { id: rows[0].id, code, moved: false, previous: null };
 }
 
-/** El cliente pide visita a una casa del catálogo (o a la que renta); el personal puede agendar por un cliente. */
+/** El cliente pide visita a una casa del catálogo; el personal puede agendar por un cliente. */
 export async function create(user: AuthUser, d: { propertyId: string; clientId?: string; scheduledAt: string; note?: string | null; leadId?: string | null }): Promise<string> {
   return (await createOrMove(user, d)).id;
 }
@@ -254,7 +296,9 @@ export async function createOrMove(
 
   try {
     return await withTransaction(async (db) => {
-      const brokerId = d.assigned === undefined ? p.broker_id : d.assigned;
+      // Si a la persona ya le asignaron un broker, la cita es con él aunque la casa sea de otro
+      const assigned = user.type === 'client' ? (await db.query<{ broker_id: string | null }>('SELECT broker_id FROM clients WHERE id = $1', [clientId])).rows[0]?.broker_id : null;
+      const brokerId = d.assigned === undefined ? (assigned ?? p.broker_id) : d.assigned;
       // La propone el cliente → la confirma el personal; la propone el personal → la acepta el cliente
       const awaiting = user.type === 'client' ? 'staff' : 'client';
       const placed = await placeVisit(db, { clientId, propertyId: d.propertyId, brokerId, scheduledAt: d.scheduledAt, note: d.note, leadId: d.leadId, awaiting });
@@ -321,8 +365,10 @@ export async function transition(user: AuthUser, id: string, action: Action, d: 
     if (user.type === 'staff' && a.awaiting === 'client') throw new AppError(409, 'WAITING_CLIENT', `Esperamos que ${a.client_name} acepte esta fecha. Si necesitas otra, reprográmala.`);
   }
   if (action === 'reject' && !d.reason) throw new AppError(400, 'VALIDATION_ERROR', 'Indica el motivo del rechazo.', { reason: ['Indica el motivo del rechazo.'] });
+  if (action === 'confirm' || action === 'reschedule') await assertVisitable(pool, a.property_id);
   if (action === 'reschedule') {
     if (!d.scheduledAt || new Date(d.scheduledAt).getTime() <= Date.now()) throw new AppError(400, 'VALIDATION_ERROR', 'Elige una fecha y hora futuras.', { scheduledAt: ['Elige una fecha y hora futuras.'] });
+    assertVisitHour(d.scheduledAt);
   }
 
   try {

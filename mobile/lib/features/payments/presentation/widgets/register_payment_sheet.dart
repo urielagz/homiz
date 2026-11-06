@@ -140,6 +140,7 @@ class _RegisterPaymentSheetState extends ConsumerState<RegisterPaymentSheet> {
     final n = widget.note;
     final loading = _busy != null;
     return Form(
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       key: _form,
       child: Column(
         mainAxisSize: MainAxisSize.min,

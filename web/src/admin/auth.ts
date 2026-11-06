@@ -107,6 +107,12 @@ export function can(permission: string) {
 
 /** Al abrir el panel se leen de nuevo roles y permisos (pudieron cambiar desde el último acceso) */
 export function refreshAccess(roles: string[], permissions: string[]) {
+  if (!roles.includes('owner')) {
+    // Sesión abierta antes de la regla, o ya no es propietario: sale del panel
+    clearSession();
+    window.location.hash = '#/login?sinacceso=1';
+    return;
+  }
   updateSession({ roles, permissions, role: roleLabel(roles) });
 }
 
@@ -155,7 +161,7 @@ export async function login(email: string, password: string, remember: boolean):
   try {
     const r = await apiLogin(email, password);
     const u = r.user;
-    if (u.type !== 'staff') return { ok: false, error: 'noaccess' }; // las cuentas de cliente usan la app
+    if (!u.roles?.includes('owner')) return { ok: false, error: 'noaccess' }; // el panel es del propietario; todos los demás usan la app
     return start(
       { email: u.email, name: u.name, role: roleLabel(u.roles), api: true, token: r.accessToken, refresh: r.refreshToken, roles: u.roles, permissions: u.permissions, mustChange: !!u.mustChangePassword },
       remember,

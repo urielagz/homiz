@@ -85,17 +85,21 @@ function file(req, res) {
   } catch {
     target = join(ROOT, 'index.html'); // rutas de la app (/home, /requests…): las resuelve la propia app
   }
+  let info;
   try {
-    statSync(target);
+    info = statSync(target);
   } catch {
     return res.writeHead(404).end();
   }
+  // Sin cambios, el navegador usa su copia: «sin caché» solo obliga a preguntar, no a descargar otra vez
+  const etag = `"${info.mtimeMs.toString(36)}-${info.size.toString(36)}"`;
+  if (req.headers['if-none-match'] === etag) return res.writeHead(304, { etag }).end();
   // index.html y el service worker sin caché, para que una compilación nueva se vea al recargar
-  const fresh = /index\.html$|flutter_service_worker\.js$|version\.json$/.test(target);
+  const fresh = /index\.html$|flutter_service_worker\.js$|flutter_bootstrap\.js$|main\.dart\.js$|version\.json$/.test(target);
   const type = TYPES[extname(target)] ?? 'application/octet-stream';
   // Comprimido (main.dart.js pesa ~4 MB; con gzip, ~1 MB): carga mucho más rápido por el túnel
   const zip = /gzip/.test(req.headers['accept-encoding'] ?? '') && /javascript|json|html|css|svg|wasm|font|octet-stream/.test(type);
-  res.writeHead(200, { ...securityHeaders(req), 'content-type': type, 'cache-control': fresh ? 'no-cache' : 'public, max-age=3600', vary: 'Accept-Encoding', ...(zip ? { 'content-encoding': 'gzip' } : {}) });
+  res.writeHead(200, { ...securityHeaders(req), 'content-type': type, 'cache-control': fresh ? 'no-cache' : 'public, max-age=3600', etag, vary: 'Accept-Encoding', ...(zip ? { 'content-encoding': 'gzip' } : {}) });
   const body = createReadStream(target);
   (zip ? body.pipe(createGzip({ level: 6 })) : body).pipe(res);
 }

@@ -24,7 +24,7 @@ const sizeLabel = (b: number) => (b >= 1024 * 1024 ? (b / 1024 / 1024).toFixed(1
 const value = (id: string) => (document.getElementById(id) as HTMLInputElement).value.trim();
 
 function DocForm({ doc, propertyId, close, done }: { doc: DossierDoc | null; propertyId: string; close: () => void; done: (msg: string) => void }) {
-  const { errors, check, clear, set } = useErrors();
+  const { errors, check, live, clear, set } = useErrors();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [visible, setVisible] = useState(doc ? doc.visibleToClient : true);
@@ -58,7 +58,7 @@ function DocForm({ doc, propertyId, close, done }: { doc: DossierDoc | null; pro
     <>
       <h2 id="dialog-title">{doc ? 'Editar documento' : 'Subir documento'}</h2>
       <p className="lead">{doc ? `${typeLabel(doc.type)} · subido el ${dateShort(doc.createdAt.slice(0, 10))}` : `PDF o imagen de hasta ${MAX_MB} MB. Se guarda de forma privada; solo se ve con enlaces temporales.`}</p>
-      <form noValidate onSubmit={(e) => { e.preventDefault(); if (!busy) submit(e.currentTarget); }}>
+      <form noValidate {...live} onSubmit={(e) => { e.preventDefault(); if (!busy) submit(e.currentTarget); }}>
         {error && <div className="notice notice--error" role="alert"><Icon id="alert" /><span>{error}</span></div>}
         <div className="form-grid">
           {!doc && (
