@@ -51,7 +51,7 @@ describe('Catálogo público y solicitudes del sitio', () => {
     expect((await api().get('/api/v1/public/properties/casa-almendra')).status).toBe(404); // borrador
   });
 
-  test('una solicitud de visita llega sin broker y avisa a todos; administración también puede asignarla con su cita', async () => {
+  test('una visita llega sin broker y avisa al asesor de la casa; la dueña también puede asignarla con su cita', async () => {
     const f = future(10);
     const res = await api().post('/api/v1/public/leads').send({ consent: true,
       reason: 'visita', name: 'Pedro Solano', email: 'pedro.solano@correo.com', phone: '998 123 4567', propertySlug: 'casa-ceiba',
@@ -62,9 +62,9 @@ describe('Catálogo público y solicitudes del sitio', () => {
     expect(res.body.appointmentCode).toMatch(/^CIT-\d{3}$/);
     const { rows } = await pool.query(`SELECT status FROM appointments WHERE code = $1`, [res.body.appointmentCode]);
     expect(rows[0].status).toBe('por-confirmar');
-    expect((await notificationsOf(EMAILS.admin, 'appointment_requested')).length).toBeGreaterThan(0);
+    expect((await notificationsOf(EMAILS.admin, 'appointment_requested')).length).toBe(0); // A la dueña le llega el aviso si nadie la atiende
     expect((await notificationsOf(EMAILS.mariana, 'appointment_requested')).length).toBeGreaterThan(0);
-    // Sin asignar: todos los brokers la ven; administración puede asignarla sin cambiar los datos de la persona
+    // Sin asignar: los brokers la ven; la dueña puede asignarla sin cambiar los datos de la persona
     const { rows: [lead] } = await pool.query(`SELECT id, broker_id FROM leads WHERE folio = $1`, [res.body.folio]);
     expect(lead.broker_id).toBeNull();
     expect((await api().get(`/api/v1/leads/${lead.id}`).set(bearer(mariana))).status).toBe(200);

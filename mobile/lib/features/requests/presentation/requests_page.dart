@@ -75,7 +75,8 @@ class _RequestsPageState extends ConsumerState<RequestsPage> {
                       title: staff ? '${r.name ?? ''} · ${r.folio}' : '${r.reasonLabel} · ${r.folio}',
                       subtitle: [
                         if (staff) r.reasonLabel,
-                        if (staff) r.brokerName ?? 'Sin broker asignado',
+                        if (staff) r.priorityLabel ?? r.brokerName ?? 'Sin broker asignado',
+                        if (staff && r.overdue) 'Sin atender',
                         r.propertyName ?? r.summary,
                         Fmt.dayMonthShort(r.createdAt),
                         if (r.proposalCount > 0) '${r.proposalCount} ${r.proposalCount == 1 ? 'casa propuesta' : 'casas propuestas'}' else if (r.response != null) 'Respondida',

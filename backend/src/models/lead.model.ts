@@ -13,6 +13,9 @@ export interface LeadRow {
   property_name: string | null;
   /** Estado de la casa: rentada o vendida ya no se muestra en una solicitud abierta */
   property_status: string | null;
+  /** Asesor de la casa: tiene la prioridad en las visitas */
+  house_broker_id: string | null;
+  house_broker_name: string | null;
   preferred_date: string | null;
   preferred_time: string | null;
   payload: Record<string, unknown>;
@@ -67,12 +70,12 @@ const SELECT = `
   SELECT l.id, l.folio, l.reason, l.name, l.email, l.phone, l.message, l.property_id, p.code AS property_code,
          p.name AS property_name, to_char(l.preferred_date, 'YYYY-MM-DD') AS preferred_date, l.preferred_time,
          l.payload, l.status, l.client_id, l.broker_id, ab.name AS broker_name, l.response, l.responded_at, rb.name AS responded_by_name,
-         p.status::text AS property_status,
+         p.status::text AS property_status, p.broker_id AS house_broker_id, hb.name AS house_broker_name,
          (SELECT count(*)::int FROM lead_proposals lp JOIN properties h ON h.id = lp.property_id WHERE lp.lead_id = l.id AND h.status NOT IN ('rentada', 'vendida')) AS proposals,
          (SELECT count(*)::int FROM appointments a WHERE a.lead_id = l.id AND a.status NOT IN ('cancelada', 'rechazada')) AS appointments,
          l.created_at
     FROM leads l LEFT JOIN properties p ON p.id = l.property_id LEFT JOIN users rb ON rb.id = l.responded_by
-    LEFT JOIN users ab ON ab.id = l.broker_id`;
+    LEFT JOIN users ab ON ab.id = l.broker_id LEFT JOIN users hb ON hb.id = p.broker_id`;
 
 export async function insert(
   db: Db,
@@ -87,7 +90,7 @@ export async function insert(
 }
 
 /** brokerId: solo las solicitudes que administración le asignó. unassigned: solo las que aún no tienen broker. */
-export async function list(f: { brokerId?: string; unassigned?: boolean; status?: string; reason?: string; page: number; limit: number }): Promise<{ rows: LeadRow[]; total: number }> {
+export async function list(f: { brokerId?: string; unassigned?: boolean; status?: string; reason?: string; hidePoolNewerThan?: number; page: number; limit: number }): Promise<{ rows: LeadRow[]; total: number }> {
   const where: string[] = [];
   const params: unknown[] = [];
   if (f.brokerId) {
@@ -95,6 +98,12 @@ export async function list(f: { brokerId?: string; unassigned?: boolean; status?
     where.push(`l.broker_id = $${params.length}`);
   }
   if (f.unassigned) where.push('l.broker_id IS NULL');
+  if (f.hidePoolNewerThan !== undefined) {
+    // Administración espera su turno en el pool. Las visitas con prioridad sí se ven, en solo lectura
+    params.push(f.hidePoolNewerThan);
+    where.push(`NOT (l.broker_id IS NULL AND l.status <> 'cerrado' AND l.created_at > now() - make_interval(mins => $${params.length}::int)
+      AND NOT (l.reason IN ('visita', 'comprar') AND p.broker_id IS NOT NULL AND p.status NOT IN ('rentada', 'vendida')))`);
+  }
   if (f.status) {
     params.push(f.status);
     where.push(`l.status = $${params.length}`);

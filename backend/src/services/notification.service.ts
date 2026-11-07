@@ -55,6 +55,16 @@ export async function tenantUserOf(propertyId: string, db: Db = pool): Promise<s
 }
 
 /** Personal activo que tiene un permiso (p. ej. administradores con notifications.overdue). */
+/** Brokers que no son administración: son los primeros en ver una solicitud del pool. */
+export async function plainBrokers(db: Db = pool): Promise<string[]> {
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT u.id FROM users u WHERE u.active AND u.type = 'staff'
+        AND EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = u.id AND r.code = 'broker')
+        AND NOT EXISTS (SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = u.id AND r.code IN ('admin', 'owner'))`,
+  );
+  return rows.map((r) => r.id);
+}
+
 export async function staffWithPermission(code: string, db: Db = pool): Promise<string[]> {
   const { rows } = await db.query<{ id: string }>(
     `SELECT DISTINCT u.id FROM users u

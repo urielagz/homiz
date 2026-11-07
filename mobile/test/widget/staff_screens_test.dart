@@ -344,6 +344,50 @@ void main() {
     expect(find.textContaining('confirmada. Le avisamos al cliente.'), findsOneWidget);
   });
 
+  testWidgets('Prioridad de otro broker: solo lectura; el broker prioritario y la dueña sí atienden', (tester) async {
+    final conPrioridad = {
+      ...staffRequestJson,
+      'priority': {'brokerId': 'otro-broker', 'brokerName': 'Diego Rivera', 'until': DateTime.now().add(const Duration(hours: 1)).toUtc().toIso8601String()},
+    };
+    Future<void> abre(Map<String, Object?> user) async {
+      tester.view.physicalSize = const Size(1080, 12000);
+      tester.view.devicePixelRatio = 2.6;
+      final storage = MemoryTokenStorage()
+        ..access = 'a1'
+        ..refresh = 'r1';
+      final adapter = FakeAdapter((o) => o.method == 'GET' && o.path == '/leads/lead-1' ? (200, conPrioridad) : staffBackend(o, log: {}, user: user));
+      await tester.pumpWidget(testApp(testOverrides(adapter: adapter, storage: storage)));
+      await settle(tester);
+      await tester.tap(find.textContaining('Solicitudes ·'));
+      await settle(tester);
+      await tester.tap(find.text('Laura Mendez · Z-10001'));
+      await settle(tester);
+    }
+    addTearDown(tester.view.reset);
+
+    await abre(marianaJson);
+    expect(find.textContaining('Prioridad de Diego Rivera hasta las'), findsOneWidget);
+    expect(find.textContaining('Puedes verla, pero aún no atenderla'), findsOneWidget);
+    for (final accion in ['Atender esta solicitud', 'Agendar cita', 'Proponer una casa']) {
+      expect(find.text(accion), findsNothing, reason: accion);
+    }
+    expect(find.byType(SegmentedButton<String>), findsNothing);
+    expect(find.byTooltip('Enviar mensaje'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+
+    await abre({...marianaJson, 'id': 'otro-broker'});
+    expect(find.text('Atender esta solicitud'), findsOneWidget);
+    expect(find.text('Agendar cita'), findsOneWidget);
+    expect(find.byTooltip('Enviar mensaje'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+
+    await abre(ownerJson);
+    expect(find.text('Agendar cita'), findsOneWidget);
+    expect(find.text('Proponer una casa'), findsOneWidget);
+    expect(find.text('Sin asignar · elige un broker'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('Solicitudes: «Agendar cita» crea la cita desde la solicitud', (tester) async {
     await start(tester);
     await tapVisible(tester, find.textContaining('Solicitudes ·'));

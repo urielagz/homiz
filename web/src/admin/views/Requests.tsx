@@ -101,6 +101,8 @@ const S = { tab: 'nuevo', selected: '' as string };
 
 export const ReasonBadge = ({ l }: { l: Lead }) => <Badge label={l.statusLabel} tone={TONE[l.status]} />;
 /** Eliminar solicitudes: solo administración (y propietario) */
+const priorityLabel = (l: Lead) => l.priority && `Prioridad de ${l.priority.brokerName} hasta las ${new Date(l.priority.until).toLocaleTimeString('es-MX', { timeZone: 'America/Cancun', hour: 'numeric', minute: '2-digit', hourCycle: 'h12' })}`;
+
 const isAdminSession = () => (currentSession()?.roles ?? []).some((r) => r === 'admin' || r === 'owner');
 const val = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value.trim();
 /** Casas a las que se puede agendar visita: las que no están rentadas ni vendidas; primero las propuestas y la de la solicitud */
@@ -417,6 +419,8 @@ function Detail({ id, onChanged, onDeleted, onOpen }: { id: string; onChanged: (
       <div className="stack">
         <section className={'card card--pad' + (l.broker ? '' : ' card--alert')} aria-labelledby="rq-broker">
           <h2 className="card__title" id="rq-broker" style={{ marginBottom: '.75rem' }}>Broker asignado</h2>
+          {l.priority && <p className="small" style={{ marginBottom: '.5rem' }}>{priorityLabel(l)}</p>}
+          {l.overdue && <p style={{ marginBottom: '.5rem' }}><Badge label="Sin atender" tone="err" /></p>}
           {isAdminSession() ? (
             <>
               <label className="sr-only" htmlFor="rq-assign">Broker</label>
@@ -497,7 +501,7 @@ export function RequestsPage() {
                         <td>{REASON[l.reason]}</td>
                         <td className="small">{l.property ? l.property.name : [budgetOf(l.payload), l.payload.recamaras && `${l.payload.recamaras} rec.`, l.payload.zona || l.payload.inmueble_zona].filter(Boolean).join(' · ') || '—'}</td>
                         <td>{dateShort(l.createdAt.slice(0, 10))}</td>
-                        <td><ReasonBadge l={l} />{l.broker ? <span className="sub">{l.broker.name}</span> : <span className="sub"><Badge label="Sin asignar" tone="error" /></span>}</td>
+                        <td><ReasonBadge l={l} />{l.broker ? <span className="sub">{l.broker.name}</span> : l.priority ? <span className="sub">{priorityLabel(l)}</span> : <span className="sub"><Badge label="Sin asignar" tone="error" /></span>}</td>
                         <td className="small">{[l.appointmentCount && `${l.appointmentCount} ${plural(l.appointmentCount, 'cita', 'citas')}`, l.proposalCount && `${l.proposalCount} ${plural(l.proposalCount, 'casa propuesta', 'casas propuestas')}`, !l.appointmentCount && !l.proposalCount && l.response && 'Respondida'].filter(Boolean).join(' · ') || '—'}</td>
                         <td><button className="btn btn--sm btn--secondary" type="button" onClick={() => choose(l.id)}>{l.id === selected ? 'Abierta' : 'Atender'}</button></td>
                       </tr>

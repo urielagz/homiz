@@ -3,7 +3,9 @@ import { env } from '../config/env.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { AuthUser } from '../middlewares/authenticate.js';
 import { insertActivity } from '../models/activity.model.js';
-import { assertPropertyAccess, checkPropertyAccess, isAdmin } from './access.service.js';
+import * as Leads from '../models/lead.model.js';
+import { assertPropertyAccess, checkPropertyAccess, isAdmin, isBroker } from './access.service.js';
+import { assertMayAct } from './lead-window.service.js';
 import { nextCode } from './codes.service.js';
 import { notify, staffWithPermission, userOfClient } from './notification.service.js';
 
@@ -356,6 +358,9 @@ export async function transition(user: AuthUser, id: string, action: Action, d: 
   const a = await loadFor(user, id);
   if (rule.staffOnly && user.type !== 'staff') throw new AppError(403, 'FORBIDDEN', 'No tienes permiso para realizar esta acción.');
   if (user.type === 'staff' && !user.permissions.has('appointments.manage')) throw new AppError(403, 'FORBIDDEN', 'No tienes permiso para realizar esta acción.', { missingPermissions: ['appointments.manage'] });
+  // Una cita de una solicitud con prioridad la atiende solo quien tiene la prioridad
+  const lead = user.type === 'staff' && a.lead_id ? await Leads.findById(a.lead_id) : null;
+  if (lead) assertMayAct(user, lead);
   if (!rule.from.includes(a.status)) {
     throw new AppError(409, 'INVALID_STATUS', `No se puede ${action === 'complete' ? 'marcar como realizada' : rule.verb.replace(/ó$/, 'ar')} una cita ${a.status.replace('-', ' ')}.`);
   }
@@ -387,6 +392,11 @@ export async function transition(user: AuthUser, id: string, action: Action, d: 
         // Al reprogramar, quien propone la nueva fecha espera a que la otra parte la acepte
         [id, rule.to, d.reason ?? null, action === 'reschedule' ? d.scheduledAt : null, confirmedBy, action === 'reschedule' ? (user.type === 'client' ? 'staff' : 'client') : null],
       );
+      // Atender la cita es atender la solicitud: se queda con su seguimiento
+      if (lead && !lead.broker_id && isBroker(user) && (action === 'confirm' || action === 'reschedule')) {
+        const { rowCount } = await db.query('UPDATE leads SET broker_id = $2 WHERE id = $1 AND broker_id IS NULL', [lead.id, user.id]);
+        if (rowCount && lead.client_id) await db.query('UPDATE clients SET broker_id = $2 WHERE id = $1 AND broker_id IS NULL', [lead.client_id, user.id]);
+      }
       const newWhen = when(action === 'reschedule' ? new Date(d.scheduledAt!) : a.scheduled_at);
       await insertActivity({
         userId: user.id, propertyId: a.property_id, entity: 'appointment', entityId: id, action,

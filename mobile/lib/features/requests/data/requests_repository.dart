@@ -111,6 +111,10 @@ class LeadRequest {
     this.others = const [],
     this.brokerId,
     this.brokerName,
+    this.priorityBrokerId,
+    this.priorityBrokerName,
+    this.priorityUntil,
+    this.overdue = false,
     required this.createdAt,
   });
 
@@ -151,8 +155,22 @@ class LeadRequest {
     others: [for (final o in (j['others'] as List? ?? const [])) LeadRequest.summaryFromJson(o as Map<String, dynamic>)],
     brokerId: (j['broker'] as Map<String, dynamic>?)?['id'] as String?,
     brokerName: (j['broker'] as Map<String, dynamic>?)?['name'] as String?,
+    priorityBrokerId: (j['priority'] as Map<String, dynamic>?)?['brokerId'] as String?,
+    priorityBrokerName: (j['priority'] as Map<String, dynamic>?)?['brokerName'] as String?,
+    priorityUntil: switch ((j['priority'] as Map<String, dynamic>?)?['until']) { final String u => Fmt.parse(u), _ => null },
+    overdue: j['overdue'] as bool? ?? false,
     createdAt: Fmt.parse(j['createdAt'] as String),
   );
+
+  /// Asesor de la casa que tiene la prioridad mientras nadie toma la solicitud.
+  final String? priorityBrokerId;
+  final String? priorityBrokerName;
+  final DateTime? priorityUntil;
+
+  /// Lleva demasiado tiempo sin que nadie la atienda.
+  final bool overdue;
+
+  String? get priorityLabel => priorityUntil == null ? null : 'Prioridad de $priorityBrokerName hasta las ${Fmt.time(priorityUntil!)}';
 
   final String id;
   final String folio;

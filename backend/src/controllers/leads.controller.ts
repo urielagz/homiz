@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 import { pool } from '../config/database.js';
+import { env } from '../config/env.js';
 import * as Leads from '../models/lead.model.js';
 import * as Users from '../models/user.model.js';
 import { insertActivity } from '../models/activity.model.js';
@@ -8,8 +9,9 @@ import { currentUser, type AuthUser } from '../middlewares/authenticate.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { dateTimeField, pagination, paged } from '../middlewares/validate.js';
 import { withTransaction, type Db } from '../config/database.js';
-import { isAdmin, isBroker } from '../services/access.service.js';
+import { isAdmin, isBroker, isOwner } from '../services/access.service.js';
 import * as Appointments from '../services/appointment.service.js';
+import { assertMayAct, hiddenFromAdmin, leadWindow, warnOwnerOfUnattended } from '../services/lead-window.service.js';
 import { clientForLead, createLead } from '../services/lead.service.js';
 import { notify, staffWithPermission, userOfClient } from '../services/notification.service.js';
 import { photoUrl } from '../services/property.service.js';
@@ -99,6 +101,12 @@ async function presentProposals(rows: Leads.ProposalRow[]) {
 const presentAppointments = (rows: Leads.LeadAppointmentRow[]) =>
   rows.map((a) => ({ id: a.id, code: a.code, scheduledAt: a.scheduled_at, status: a.status, awaiting: a.status === 'por-confirmar' ? a.awaiting : null, property: { id: a.property_id, code: a.property_code, name: a.property_name }, broker: a.broker_name }));
 
+/** Lo que el personal necesita para mostrar la prioridad o el aviso de «sin atender». */
+const windowView = (l: Leads.LeadRow) => {
+  const { priority, overdue } = leadWindow(l);
+  return { priority: priority ? { brokerId: priority.brokerId, brokerName: priority.brokerName, until: priority.until.toISOString() } : null, overdue };
+};
+
 /** Una casa rentada o vendida ya no se ofrece: la solicitud abierta sigue, pero sin esa casa. */
 const houseGone = (l: Leads.LeadRow) => l.status !== 'cerrado' && (l.property_status === 'rentada' || l.property_status === 'vendida');
 
@@ -110,6 +118,7 @@ const present = (l: Leads.LeadRow, proposals?: Awaited<ReturnType<typeof present
   email: l.email,
   phone: l.phone,
   message: l.message,
+  ...windowView(l),
   property: l.property_id && !houseGone(l) ? { id: l.property_id, code: l.property_code, name: l.property_name } : null,
   preferredDate: l.preferred_date,
   preferredTime: l.preferred_time,
@@ -141,7 +150,8 @@ async function full(id: string) {
 async function loadForStaff(user: AuthUser, id: string): Promise<Leads.LeadRow> {
   const lead = await Leads.findById(id);
   if (!lead) throw new AppError(404, 'NOT_FOUND', 'La solicitud no existe.');
-  // Sin broker: todos la ven y el primero que la atiende se queda con ella
+  // Sin broker: la ven los brokers; administración, cuando le toca
+  if (hiddenFromAdmin(user, lead)) throw new AppError(403, 'LEAD_ADMIN_WAIT', 'Esta solicitud aún no está disponible para administración.');
   if (!isAdmin(user) && lead.broker_id && lead.broker_id !== user.id) throw new AppError(403, 'NOT_OWNER', `Esta solicitud la atiende ${lead.broker_name ?? 'otro broker'}.`);
   return lead;
 }
@@ -158,6 +168,7 @@ async function moveToBroker(db: Db, lead: Leads.LeadRow, brokerId: string, broke
 
 /** El primer broker que atiende una solicitud sin broker se queda con su seguimiento. Dos a la vez: gana el primero. */
 async function takeIfFree(user: AuthUser, lead: Leads.LeadRow): Promise<Leads.LeadRow> {
+  assertMayAct(user, lead); // La prioridad de otro broker no se salta agendando, proponiendo o escribiendo
   if (lead.broker_id || !isBroker(user)) return lead;
   await withTransaction(async (db) => {
     const { rowCount } = await db.query('UPDATE leads SET broker_id = $2 WHERE id = $1 AND broker_id IS NULL', [lead.id, user.id]);
@@ -193,7 +204,12 @@ export const list: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const q = res.locals.query as z.infer<typeof listQueryDto>;
   // Broker: las suyas; con unassigned, las que aún nadie atiende
-  const { rows, total } = await Leads.list({ ...q, brokerId: isAdmin(user) || q.unassigned ? undefined : user.id });
+  await warnOwnerOfUnattended();
+  const { rows, total } = await Leads.list({
+    ...q,
+    brokerId: isAdmin(user) || q.unassigned ? undefined : user.id,
+    hidePoolNewerThan: isAdmin(user) && !isOwner(user) ? env.LEAD_ADMIN_WAIT_MINUTES : undefined,
+  });
   res.json(paged(rows.map((l) => present(l)), total, q));
 };
 
@@ -224,6 +240,7 @@ export const remove: RequestHandler = async (_req, res) => {
   if (!isAdmin(user)) throw new AppError(403, 'FORBIDDEN', 'Solo administración puede eliminar solicitudes.');
   const { id } = res.locals.params as { id: string };
   const lead = await loadForStaff(user, id);
+  assertMayAct(user, lead);
   await withTransaction(async (db) => {
     await Leads.remove(db, id);
     await insertActivity({ userId: user.id, propertyId: lead.property_id, entity: 'lead', entityId: id, action: 'delete', description: `${user.name} eliminó la solicitud ${lead.folio} de ${lead.name}.` }, db);
@@ -283,6 +300,7 @@ export const assignBroker: RequestHandler = async (_req, res) => {
   if (!isAdmin(user)) throw new AppError(403, 'FORBIDDEN', 'Solo administración asigna brokers a las solicitudes.');
   const { id } = res.locals.params as { id: string };
   const lead = await loadForStaff(user, id);
+  assertMayAct(user, lead);
   const { brokerId } = res.locals.body as z.infer<typeof brokerDto>;
   const { rows: [b] } = await pool.query<{ name: string }>(
     `SELECT u.name FROM users u JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id WHERE u.id = $1 AND u.active AND r.code IN ('broker', 'admin')`,
@@ -350,7 +368,7 @@ export const addProposal: RequestHandler = async (_req, res) => {
 export const removeProposal: RequestHandler = async (_req, res) => {
   const user = currentUser(res);
   const { id, proposalId } = res.locals.params as z.infer<typeof proposalParams>;
-  await loadForStaff(user, id);
+  assertMayAct(user, await loadForStaff(user, id));
   const del = await pool.query('DELETE FROM lead_proposals WHERE id = $1 AND lead_id = $2', [proposalId, id]);
   if (!del.rowCount) throw new AppError(404, 'NOT_FOUND', 'La propuesta no existe.');
   res.json(present((await Leads.findById(id))!, await presentProposals(await Leads.proposalsFor([id]))));
@@ -359,7 +377,7 @@ export const removeProposal: RequestHandler = async (_req, res) => {
 /* ---------- Cliente de la app: «Mis solicitudes» ---------- */
 
 const forClient = (l: ReturnType<typeof present>) => {
-  const { clientId: _c, email: _e, phone: _p, name: _n, ...rest } = l;
+  const { clientId: _c, email: _e, phone: _p, name: _n, priority: _r, overdue: _v, ...rest } = l;
   return rest;
 };
 

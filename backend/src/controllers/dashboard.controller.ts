@@ -1,7 +1,9 @@
 import type { RequestHandler } from 'express';
 import { pool } from '../config/database.js';
+import { env } from '../config/env.js';
 import { currentUser, type AuthUser } from '../middlewares/authenticate.js';
-import { propertyScope } from '../services/access.service.js';
+import { isAdmin, isOwner, propertyScope } from '../services/access.service.js';
+import { warnOwnerOfUnattended } from '../services/lead-window.service.js';
 
 /* GET /dashboard — resumen según el perfil. */
 
@@ -52,6 +54,12 @@ async function staffDashboard(user: AuthUser) {
   const oneMine = async (sql: string) => Number((await pool.query<{ n: string }>(sql, mine)).rows[0].n);
   const one = async (sql: string) => Number((await pool.query<{ n: string }>(sql, p)).rows[0].n);
 
+  await warnOwnerOfUnattended();
+  // Administración no cuenta lo que aún no puede abrir: espera su turno en el pool
+  const adminWaits = isAdmin(user) && !isOwner(user)
+    ? ` AND NOT (broker_id IS NULL AND created_at > now() - make_interval(mins => ${env.LEAD_ADMIN_WAIT_MINUTES})
+        AND NOT (reason IN ('visita', 'comprar') AND EXISTS (SELECT 1 FROM properties h WHERE h.id = leads.property_id AND h.broker_id IS NOT NULL AND h.status NOT IN ('rentada', 'vendida'))))`
+    : '';
   const counts = {
     appointmentsToConfirm: await oneMine(`SELECT count(*) AS n FROM appointments WHERE status = 'por-confirmar' AND scheduled_at > now() AND ${myAppts()}`),
     appointmentsToday: await oneMine(`SELECT count(*) AS n FROM appointments WHERE status = 'confirmada' AND (scheduled_at AT TIME ZONE 'America/Cancun')::date = (now() AT TIME ZONE 'America/Cancun')::date AND ${myAppts()}`),
@@ -62,7 +70,7 @@ async function staffDashboard(user: AuthUser) {
     overdueReceipts: await one(`SELECT count(*) AS n FROM receipts WHERE status = 'overdue' AND ${inScope('property_id')}`),
     pendingExpenses: await one(`SELECT count(*) AS n FROM expenses WHERE status = 'pending' AND ${inScope('property_id')}`),
     upcomingMaintenance: await one(`SELECT count(*) AS n FROM expenses WHERE next_maintenance_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 14 AND ${inScope('property_id')}`),
-    newLeads: await one(`SELECT count(*) AS n FROM leads WHERE status = 'nuevo' AND (property_id IS NULL OR ${inScope('property_id')})`),
+    newLeads: await one(`SELECT count(*) AS n FROM leads WHERE status = 'nuevo' AND (property_id IS NULL OR ${inScope('property_id')})${adminWaits}`),
   };
   const pendingAppointments = (await pool.query(
     `SELECT a.id, a.code, c.name AS "clientName", p.name AS "propertyName", a.scheduled_at AS "scheduledAt"

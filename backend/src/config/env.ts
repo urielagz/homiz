@@ -53,6 +53,10 @@ const schema = z.object({
   JOBS_ENABLED: z.enum(['true', 'false']).default('true'),
   JOBS_CRON: z.string().default('0 7 * * *'),
   TZ_APP: z.string().default('America/Cancun'),
+  // Solicitudes sin broker: prioridad del asesor de la casa, espera de administración en el pool y aviso a la dueña
+  LEAD_PRIORITY_MINUTES: z.coerce.number().int().positive().default(120),
+  LEAD_ADMIN_WAIT_MINUTES: z.coerce.number().int().nonnegative().default(30),
+  LEAD_ESCALATE_MINUTES: z.coerce.number().int().positive().default(240),
   // Ubicación de las casas (enlace de Google Maps → coordenadas). Sin clave se usa Nominatim (OpenStreetMap).
   GOOGLE_MAPS_API_KEY: z.string().default(''),
   NOMINATIM_URL: z.string().default('https://nominatim.openstreetmap.org'),

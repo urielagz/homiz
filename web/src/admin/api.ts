@@ -509,6 +509,10 @@ export interface Lead {
   clientId: string | null; appointmentCount: number; appointments?: LeadAppointment[];
   /** Lo asigna administración; mientras tanto la solicitud está «sin asignar» */
   broker: { id: string; name: string } | null;
+  /** Asesor de la casa con prioridad mientras nadie toma la solicitud */
+  priority: { brokerId: string; brokerName: string; until: string } | null;
+  /** Lleva demasiado tiempo sin que nadie la atienda */
+  overdue: boolean;
   /** Otras solicitudes de la misma persona (mismo correo) */
   others?: { id: string; folio: string; reason: Lead['reason']; status: Lead['status']; statusLabel: string; property: string | null; payload: Lead['payload']; message: string | null; createdAt: string }[];
 }

@@ -386,3 +386,129 @@ describe('renta del dueño, cita acordada y casas ocupadas', () => {
     expect(detalle.body.proposalCount).toBe(0);
   });
 });
+
+describe('ventanas de la solicitud sin broker', () => {
+  const OTHERS = [EMAILS.mariana, EMAILS.diego, EMAILS.valeria];
+  let n = 0;
+  const rewind = (id: string, minutes: number) => pool.query(`UPDATE leads SET created_at = now() - make_interval(mins => $2::int) WHERE id = $1`, [id, minutes]);
+  const leadId = async (folio: string) => (await pool.query('SELECT id FROM leads WHERE folio = $1', [folio])).rows[0].id as string;
+  const seen = async (token: string, id: string) =>
+    (await api().get('/api/v1/leads?unassigned=true&limit=100').set(bearer(token))).body.data.some((l: { id: string }) => l.id === id);
+
+  /** Cliente nuevo que pide visitar una casa en venta con asesor. */
+  async function saleVisit() {
+    const { rows: [h] } = await pool.query(
+      `SELECT p.id, p.slug, u.name, u.email FROM properties p JOIN users u ON u.id = p.broker_id
+        WHERE p.operation = 'venta' AND p.status = 'disponible' AND p.visibility = 'publicada' AND u.email = ANY($1) LIMIT 1`, [OTHERS]);
+    n += 1;
+    const sent = await api().post('/api/v1/public/leads').send({
+      consent: true, reason: 'visita', name: `Nueva Clienta ${n}`, email: `nueva.clienta${n}@correo.com`, phone: '998 111 0000',
+      propertySlug: h.slug, preferredDate: at(5 + n, '10:00').date, preferredTime: '10:00',
+    });
+    expect(sent.status).toBeLessThan(300);
+    const other = OTHERS.find((e) => e !== h.email)!;
+    return { id: await leadId(sent.body.folio), house: h, mine: (await login(h.email)).accessToken, other: (await login(other)).accessToken };
+  }
+  const generalLead = async () => {
+    n += 1;
+    const sent = await api().post('/api/v1/public/leads').send({ consent: true, reason: 'rentar', name: `General ${n}`, email: `general${n}@correo.com`, payload: {} });
+    return leadId(sent.body.folio);
+  };
+  /** Valeria como administración y broker, igual que en producción. */
+  const asAdmin = async <T>(run: (token: string) => Promise<T>) => {
+    const { rows: [v] } = await pool.query(`SELECT id FROM users WHERE email = $1`, [EMAILS.valeria]);
+    await pool.query(`INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE code = 'admin' ON CONFLICT DO NOTHING`, [v.id]);
+    try {
+      return await run((await login(EMAILS.valeria)).accessToken);
+    } finally {
+      await pool.query(`DELETE FROM user_roles WHERE user_id = $1 AND role_id = (SELECT id FROM roles WHERE code = 'admin')`, [v.id]);
+    }
+  };
+
+  test('cliente nuevo y casa en venta: el asesor tiene la prioridad, los demás solo leen', async () => {
+    const { id, house, mine, other } = await saleVisit();
+    const seenByOther = await api().get(`/api/v1/leads/${id}`).set(bearer(other));
+    expect(seenByOther.status).toBe(200);
+    expect(seenByOther.body.broker).toBeNull();
+    expect(seenByOther.body.priority.brokerName).toBe(house.name);
+
+    const blocked = [
+      await api().post(`/api/v1/leads/${id}/take`).set(bearer(other)),
+      await api().post(`/api/v1/leads/${id}/proposals`).set(bearer(other)).send({ propertyId: house.id }),
+      await api().post(`/api/v1/leads/${id}/messages`).set(bearer(other)).send({ body: 'Hola' }),
+      await api().patch(`/api/v1/leads/${id}`).set(bearer(other)).send({ status: 'en_seguimiento' }),
+      await api().post(`/api/v1/leads/${id}/appointment`).set(bearer(other)).send({ propertyId: house.id, scheduledAt: at(9, '11:00').iso }),
+    ];
+    for (const r of blocked) {
+      expect(r.status).toBe(403);
+      expect(r.body.error.code).toBe('LEAD_PRIORITY');
+      expect(r.body.error.message).toContain(`Prioridad de ${house.name} hasta las`);
+    }
+    expect((await pool.query('SELECT broker_id FROM leads WHERE id = $1', [id])).rows[0].broker_id).toBeNull();
+
+    const took = await api().post(`/api/v1/leads/${id}/take`).set(bearer(mine));
+    expect(took.status).toBe(200);
+    expect(took.body.broker.name).toBe(house.name);
+    expect(took.body.priority).toBeNull();
+  });
+
+  test('el asesor que acepta la cita se queda con la solicitud', async () => {
+    const { id, mine } = await saleVisit();
+    const cita = (await pool.query('SELECT id FROM appointments WHERE lead_id = $1', [id])).rows[0].id;
+    expect((await api().post(`/api/v1/appointments/${cita}/confirm`).set(bearer(mine))).status).toBeLessThan(300);
+    expect((await pool.query('SELECT broker_id FROM leads WHERE id = $1', [id])).rows[0].broker_id).not.toBeNull();
+  });
+
+  test('pasadas las 2 horas pasa al pool y la toma otro broker; la dueña asigna en cualquier momento', async () => {
+    const first = await saleVisit();
+    await rewind(first.id, 121);
+    expect((await api().get(`/api/v1/leads/${first.id}`).set(bearer(first.other))).body.priority).toBeNull();
+    expect((await api().post(`/api/v1/leads/${first.id}/take`).set(bearer(first.other))).status).toBe(200);
+
+    const second = await saleVisit();
+    const { rows: [b] } = await pool.query(`SELECT id FROM users WHERE email = $1`, [EMAILS.diego]);
+    expect((await api().patch(`/api/v1/leads/${second.id}/broker`).set(bearer(admin)).send({ brokerId: b.id })).status).toBe(200);
+  });
+
+  test('solicitud general: 30 minutos solo brokers y luego también administración', async () => {
+    const id = await generalLead();
+    const diego = (await login(EMAILS.diego)).accessToken;
+    expect(await seen(diego, id)).toBe(true);
+    await asAdmin(async (valeria) => {
+      expect(await seen(valeria, id)).toBe(false);
+      expect((await api().get(`/api/v1/leads/${id}`).set(bearer(valeria))).status).toBe(403);
+      const take = await api().post(`/api/v1/leads/${id}/take`).set(bearer(valeria));
+      expect(take.status).toBe(403);
+      expect(take.body.error.code).toBe('LEAD_ADMIN_WAIT');
+      await rewind(id, 31);
+      expect(await seen(valeria, id)).toBe(true);
+      expect((await api().post(`/api/v1/leads/${id}/take`).set(bearer(valeria))).status).toBe(200);
+    });
+  });
+
+  test('dos brokers toman a la vez: solo uno se la queda', async () => {
+    const id = await generalLead();
+    const [a, b] = await Promise.all([login(EMAILS.mariana), login(EMAILS.diego)]);
+    const res = await Promise.all([a, b].map((u) => api().post(`/api/v1/leads/${id}/take`).set(bearer(u.accessToken))));
+    expect(res.map((r) => r.status).filter((s) => s === 200)).toHaveLength(1);
+  });
+
+  test('a las 4 horas avisa a la dueña una sola vez, al consultar', async () => {
+    const id = await generalLead();
+    await rewind(id, 241);
+    const count = async () => Number((await pool.query(`SELECT count(*) FROM notifications WHERE type = 'lead_unattended' AND entity_id = $1`, [id])).rows[0].count);
+    await api().get('/api/v1/leads?unassigned=true').set(bearer(mariana));
+    await api().get('/api/v1/dashboard').set(bearer(mariana));
+    expect(await count()).toBe(1);
+    expect((await api().get(`/api/v1/leads/${id}`).set(bearer(admin))).body.overdue).toBe(true);
+  });
+
+  test('el cliente no recibe la prioridad ni el aviso', async () => {
+    const mine = await api().get('/api/v1/requests').set(bearer(laura));
+    expect(mine.status).toBe(200);
+    for (const l of mine.body.data ?? mine.body) {
+      expect(l).not.toHaveProperty('priority');
+      expect(l).not.toHaveProperty('overdue');
+    }
+  });
+});
